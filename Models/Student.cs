@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
 
 namespace DotNetCoreSqlDb.Models
 {
@@ -20,30 +21,12 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Ongoing Notes")]
         public string? OngoingNotes { get; set; }
 
-        // Contact Info:
-        [DisplayName("Email")]
-        [DataType(DataType.EmailAddress)]
-        public string? Email { get; set; }
-
-        [DisplayName("Phone Number")]
-        [DataType(DataType.PhoneNumber)]
-        public string? PhoneNumber { get; set; }
-
-        [DisplayName("Facebook")]
-        public string? Facebook { get; set; }
-
-        [DisplayName("Instagram")]
-        public string? Instagram { get; set; }
-
-        [DisplayName("Telegram")]
-        public string? Telegram { get; set; }
-
-        [DisplayName("Twitter")]
-        public string? Twitter { get; set; }
-
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime CreatedDate { get; set; }
+
+        // Navigation property for one-to-many relationship with Contact
+        public virtual ICollection<Contact> Contacts { get; set; } = new List<Contact>();
     }
 }

@@ -4,57 +4,58 @@
     ViewData["Title"] = "Student Details";
 }
 
-<h1>Student Details</h1>
+<h2>Student Details</h2>
 
 <div>
     <h4>Student</h4>
     <hr />
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.ParentOrEmployer)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.ParentOrEmployer)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.MainNotes)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.MainNotes)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.OngoingNotes)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.OngoingNotes)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Email)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Email)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.PhoneNumber)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.PhoneNumber)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.CreatedDate)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.CreatedDate)
-        </dd>
+    <dl class="dl-horizontal">
+        <dt>Name</dt>
+        <dd>@Html.DisplayFor(model => model.Name)</dd>
+        <dt>Parent/Employer</dt>
+        <dd>@Html.DisplayFor(model => model.ParentOrEmployer)</dd>
+        <dt>Main Notes</dt>
+        <dd>@Html.DisplayFor(model => model.MainNotes)</dd>
+        <dt>Ongoing Notes</dt>
+        <dd>@Html.DisplayFor(model => model.OngoingNotes)</dd>
+        <dt>Created Date</dt>
+        <dd>@Html.DisplayFor(model => model.CreatedDate)</dd>
     </dl>
 </div>
+
+<h4>Contact Information</h4>
+@if(Model.Contacts != null && Model.Contacts.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Value</th>
+                <th>Invitation</th>
+                <th>Emergency</th>
+                <th>Money</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var contact in Model.Contacts)
+            {
+                <tr>
+                    <td>@contact.Type</td>
+                    <td>@contact.Value</td>
+                    <td>@contact.Invitation</td>
+                    <td>@contact.Emergency</td>
+                    <td>@contact.Money</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No contact information available.</p>
+}
+
 <div>
-    <a asp-action="Edit" asp-route-id="@Model.ID">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+    <a href="@Url.Action("Edit", new { id = Model.ID })">Edit</a> |
+    <a href="@Url.Action("Index")">Back to List</a>
 </div>

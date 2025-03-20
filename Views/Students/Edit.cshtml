@@ -4,80 +4,166 @@
     ViewData["Title"] = "Edit Student";
 }
 
-<h1>Edit Student</h1>
+<h2>Edit Student</h2>
 
-<h4>Student</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <input type="hidden" asp-for="ID" />
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
+@using (Html.BeginForm()) 
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(model => model.ID)
+    <div class="form-horizontal">
+        <h4>Student</h4>
+        <hr />
+        <div class="form-group">
+            @Html.LabelFor(model => model.Name, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Name, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
             </div>
-            <div class="form-group">
-                <label asp-for="ParentOrEmployer" class="control-label"></label>
-                <input asp-for="ParentOrEmployer" class="form-control" />
-                <span asp-validation-for="ParentOrEmployer" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.ParentOrEmployer, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.ParentOrEmployer, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.ParentOrEmployer, "", new { @class = "text-danger" })
             </div>
-            <div class="form-group">
-                <label asp-for="MainNotes" class="control-label"></label>
-                <textarea asp-for="MainNotes" class="form-control"></textarea>
-                <span asp-validation-for="MainNotes" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.MainNotes, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.MainNotes, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.MainNotes, "", new { @class = "text-danger" })
             </div>
-            <div class="form-group">
-                <label asp-for="OngoingNotes" class="control-label"></label>
-                <textarea asp-for="OngoingNotes" class="form-control"></textarea>
-                <span asp-validation-for="OngoingNotes" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.OngoingNotes, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.OngoingNotes, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.OngoingNotes, "", new { @class = "text-danger" })
             </div>
-            <div class="form-group">
-                <label asp-for="Email" class="control-label"></label>
-                <input asp-for="Email" class="form-control" />
-                <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.CreatedDate, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.CreatedDate, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.CreatedDate, "", new { @class = "text-danger" })
             </div>
-            <div class="form-group">
-                <label asp-for="Facebook" class="control-label"></label>
-                <input asp-for="Facebook" class="form-control" />
-                <span asp-validation-for="Facebook" class="text-danger"></span>
+        </div>
+
+        <h4>Contact Information</h4>
+        <div id="contacts">
+            @if(Model.Contacts != null && Model.Contacts.Any())
+            {
+                for(int i = 0; i < Model.Contacts.Count; i++)
+                {
+                    <div class="contact-entry">
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Contact Type</label>
+                            <div class="col-md-10">
+                                @Html.DropDownList("Contacts[" + i + "].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text", Model.Contacts.ElementAt(i).Type), "Select Contact Type", new { @class = "form-control contact-type" })
+                            </div>
+                        </div>
+                        <div class="contact-fields" style="@(string.IsNullOrEmpty(Model.Contacts.ElementAt(i).Type) ? "display:none;" : "display:block;")">
+                            <div class="form-group">
+                                <label class="control-label col-md-2">Value</label>
+                                <div class="col-md-10">
+                                    @Html.TextBox("Contacts[" + i + "].Value", Model.Contacts.ElementAt(i).Value, new { @class = "form-control" })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-md-2">Invitation</label>
+                                <div class="col-md-10">
+                                    @Html.CheckBox("Contacts[" + i + "].Invitation", Model.Contacts.ElementAt(i).Invitation)
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-md-2">Emergency</label>
+                                <div class="col-md-10">
+                                    @Html.CheckBox("Contacts[" + i + "].Emergency", Model.Contacts.ElementAt(i).Emergency)
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-md-2">Money</label>
+                                <div class="col-md-10">
+                                    @Html.CheckBox("Contacts[" + i + "].Money", Model.Contacts.ElementAt(i).Money)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="contact-entry">
+                    <div class="form-group">
+                        <label class="control-label col-md-2">Contact Type</label>
+                        <div class="col-md-10">
+                            @Html.DropDownList("Contacts[0].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
+                        </div>
+                    </div>
+                    <div class="contact-fields" style="display:none;">
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Value</label>
+                            <div class="col-md-10">
+                                @Html.TextBox("Contacts[0].Value", null, new { @class = "form-control" })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Invitation</label>
+                            <div class="col-md-10">
+                                @Html.CheckBox("Contacts[0].Invitation", false)
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Emergency</label>
+                            <div class="col-md-10">
+                                @Html.CheckBox("Contacts[0].Emergency", false)
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Money</label>
+                            <div class="col-md-10">
+                                @Html.CheckBox("Contacts[0].Money", false)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <button type="button" id="addContact" class="btn btn-secondary">Add Another Contact</button>
+        <br /><br />
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Save" class="btn btn-default" />
             </div>
-            <div class="form-group">
-                <label asp-for="Instagram" class="control-label"></label>
-                <input asp-for="Instagram" class="form-control" />
-                <span asp-validation-for="Instagram" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Telegram" class="control-label"></label>
-                <input asp-for="Telegram" class="form-control" />
-                <span asp-validation-for="Telegram" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Twitter" class="control-label"></label>
-                <input asp-for="Twitter" class="form-control" />
-                <span asp-validation-for="Twitter" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="PhoneNumber" class="control-label"></label>
-                <input asp-for="PhoneNumber" class="form-control" />
-                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CreatedDate" class="control-label"></label>
-                <input asp-for="CreatedDate" class="form-control" />
-                <span asp-validation-for="CreatedDate" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
+        </div>
     </div>
-</div>
-
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+}
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $(".contact-type").change(function(){
+                var selectedVal = $(this).val();
+                if(selectedVal) {
+                    $(this).closest(".contact-entry").find(".contact-fields").show();
+                } else {
+                    $(this).closest(".contact-entry").find(".contact-fields").hide();
+                }
+            });
+
+            $("#addContact").click(function(){
+                var index = $("#contacts .contact-entry").length;
+                var newEntry = $("#contacts .contact-entry:first").clone();
+
+                newEntry.find("select.contact-type").attr("name", "Contacts[" + index + "].Type").val("");
+                newEntry.find("input[name$='.Value']").attr("name", "Contacts[" + index + "].Value").val("");
+                newEntry.find("input[name$='.Invitation']").attr("name", "Contacts[" + index + "].Invitation").prop("checked", false);
+                newEntry.find("input[name$='.Emergency']").attr("name", "Contacts[" + index + "].Emergency").prop("checked", false);
+                newEntry.find("input[name$='.Money']").attr("name", "Contacts[" + index + "].Money").prop("checked", false);
+                newEntry.find(".contact-fields").hide();
+
+                $("#contacts").append(newEntry);
+            });
+        });
+    </script>
 }

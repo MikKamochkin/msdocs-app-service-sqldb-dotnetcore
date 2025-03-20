@@ -17,5 +17,7 @@ namespace DotNetCoreSqlDb.Data
         public DbSet<DotNetCoreSqlDb.Models.Todo> Todo { get; set; } = default!;
 
         public DbSet<DotNetCoreSqlDb.Models.Student> Student { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.Contact> Contact { get; set; } = default!;
     }
 }

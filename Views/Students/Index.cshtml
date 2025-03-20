@@ -1,52 +1,37 @@
 @model IEnumerable<DotNetCoreSqlDb.Models.Student>
 
 @{
-    ViewData["Title"] = "Students";
+    ViewData["Title"] = "Students List";
 }
 
-<h1>Students</h1>
+<h2>Students List</h2>
 
 <p>
-    <a asp-action="Create">Create New Student</a>
+    <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
 </p>
 
 <table class="table">
     <thead>
         <tr>
-            <th>@Html.DisplayNameFor(model => model.First().Name)</th>
-            <th>@Html.DisplayNameFor(model => model.First().ParentOrEmployer)</th>
-            <th>@Html.DisplayNameFor(model => model.First().MainNotes)</th>
-            <th>@Html.DisplayNameFor(model => model.First().OngoingNotes)</th>
-            @*<th>@Html.DisplayNameFor(model => model.First().Email)</th>*@
-            @*<th>@Html.DisplayNameFor(model => model.First().PhoneNumber)</th>*@
-            @*<th>@Html.DisplayNameFor(model => model.First().Facebook)</th>*@
-            @*<th>@Html.DisplayNameFor(model => model.First().Instagram)</th>*@
-            @*<th>@Html.DisplayNameFor(model => model.First().Telegram)</th>*@
-            @*<th>@Html.DisplayNameFor(model => model.First().Twitter)*@
-            <th>@Html.DisplayNameFor(model => model.First().CreatedDate)</th>
+            <th>Name</th>
+            <th>Parent/Employer</th>
+            <th>Created Date</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-    @foreach (var item in Model) {
-        <tr>
-            <td>@Html.DisplayFor(modelItem => item.Name)</td>
-            <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
-            <td>@Html.DisplayFor(modelItem => item.MainNotes)</td>
-            <td>@Html.DisplayFor(modelItem => item.OngoingNotes)</td>
-            @*<td>@Html.DisplayFor(modelItem => item.Email)</td>*@
-            @*<td>@Html.DisplayFor(modelItem => item.PhoneNumber)</td>*@
-            @*<td>@Html.DisplayFor(modelItem => item.Facebook)</td>*@
-            @*<td>@Html.DisplayFor(modelItem => item.Instagram)</td>*@
-            @*<td>@Html.DisplayFor(modelItem => item.Telegram)</td>*@
-            @*<td>@Html.DisplayFor(modelItem => item.Twitter)</td>*@
-            <td>@Html.DisplayFor(modelItem => item.CreatedDate)</td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.ID">Edit</a> |
-                @* <a asp-action="Details" asp-route-id="@item.ID">Details</a> |*@
-                <a asp-action="Delete" asp-route-id="@item.ID">Delete</a>
-            </td>
-        </tr>
-    }
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
+                <td>@Html.DisplayFor(modelItem => item.CreatedDate)</td>
+                <td>
+                    <a href="@Url.Action("Details", new { id = item.ID })">Details</a> |
+                    <a href="@Url.Action("Edit", new { id = item.ID })">Edit</a> |
+                    <a href="@Url.Action("Delete", new { id = item.ID })">Delete</a>
+                </td>
+            </tr>
+        }
     </tbody>
 </table>

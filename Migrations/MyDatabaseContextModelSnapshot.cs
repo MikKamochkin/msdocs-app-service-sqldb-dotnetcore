@@ -22,6 +22,39 @@ namespace DotNetCoreSqlDb.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Contact", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<bool?>("Emergency")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("Invitation")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("Money")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("StudentID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("StudentID");
+
+                    b.ToTable("Contact");
+                });
+
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Student", b =>
                 {
                     b.Property<int>("ID")
@@ -32,15 +65,6 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Facebook")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Instagram")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("MainNotes")
                         .HasColumnType("nvarchar(max)");
@@ -53,15 +77,6 @@ namespace DotNetCoreSqlDb.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ParentOrEmployer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Telegram")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Twitter")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ID");
@@ -90,6 +105,22 @@ namespace DotNetCoreSqlDb.Migrations
                     b.HasKey("ID");
 
                     b.ToTable("Todo");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Contact", b =>
+                {
+                    b.HasOne("DotNetCoreSqlDb.Models.Student", "Student")
+                        .WithMany("Contacts")
+                        .HasForeignKey("StudentID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Student", b =>
+                {
+                    b.Navigation("Contacts");
                 });
 #pragma warning restore 612, 618
         }
