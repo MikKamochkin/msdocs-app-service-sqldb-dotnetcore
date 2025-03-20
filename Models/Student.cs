@@ -12,22 +12,34 @@ namespace DotNetCoreSqlDb.Models
         public required string Name { get; set; } 
 
         [DisplayName("Parents/Employer")]
-        public string ParentOrEmployer { get; set; } = string.Empty;
+        public string? ParentOrEmployer { get; set; }
 
         [DisplayName("Main Notes")]
-        public string MainNotes { get; set; } = string.Empty;
+        public string? MainNotes { get; set; }
 
         [DisplayName("Ongoing Notes")]
-        public string OngoingNotes { get; set; } = string.Empty;
+        public string? OngoingNotes { get; set; }
 
         // Contact Info:
         [DisplayName("Email")]
         [DataType(DataType.EmailAddress)]
-        public string Email { get; set; } = string.Empty;
+        public string? Email { get; set; }
 
         [DisplayName("Phone Number")]
         [DataType(DataType.PhoneNumber)]
-        public string PhoneNumber { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+
+        [DisplayName("Facebook")]
+        public string? Facebook { get; set; }
+
+        [DisplayName("Instagram")]
+        public string? Instagram { get; set; }
+
+        [DisplayName("Telegram")]
+        public string? Telegram { get; set; }
+
+        [DisplayName("Twitter")]
+        public string? Twitter { get; set; }
 
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
