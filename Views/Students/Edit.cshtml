@@ -142,12 +142,12 @@
 @section Scripts {
     <script type="text/javascript">
         $(document).ready(function(){
+            // When any contact type dropdown changes, hide all contact-fields first
             $(".contact-type").change(function(){
+                $(".contact-fields").hide();
                 var selectedVal = $(this).val();
                 if(selectedVal) {
                     $(this).closest(".contact-entry").find(".contact-fields").show();
-                } else {
-                    $(this).closest(".contact-entry").find(".contact-fields").hide();
                 }
             });
 
