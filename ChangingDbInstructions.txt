@@ -1,0 +1,11 @@
+Add/edit model
+Go to MyDBContext->Add ref
+run dotnet ef migrations add AddStudentTableFix in terminal
+git add ., commit, push
+wait for program to deploy
+wait for ssh to reconnect
+in ssh:
+cd /home/site/wwwroot
+./migrationsbundle -- --environment Production
+
+done

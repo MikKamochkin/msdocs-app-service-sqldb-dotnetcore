@@ -15,8 +15,7 @@ namespace DotNetCoreSqlDb.Models
         public string ParentOrEmployer { get; set; } = string.Empty;
 
         [DisplayName("Main Notes")]
-        [Required]
-        public required string MainNotes { get; set; }
+        public string MainNotes { get; set; } = string.Empty;
 
         [DisplayName("Ongoing Notes")]
         public string OngoingNotes { get; set; } = string.Empty;
