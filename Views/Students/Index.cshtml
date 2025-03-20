@@ -19,6 +19,10 @@
             <th>@Html.DisplayNameFor(model => model.First().OngoingNotes)</th>
             <th>@Html.DisplayNameFor(model => model.First().Email)</th>
             <th>@Html.DisplayNameFor(model => model.First().PhoneNumber)</th>
+            <th>@Html.DisplayNameFor(model => model.First().Facebook)</th>
+            <th>@Html.DisplayNameFor(model => model.First().Instagram)</th>
+            <th>@Html.DisplayNameFor(model => model.First().Telegram)</th>
+            <th>@Html.DisplayNameFor(model => model.First().Twitter)</th>
             <th>@Html.DisplayNameFor(model => model.First().CreatedDate)</th>
             <th></th>
         </tr>
@@ -32,6 +36,10 @@
             <td>@Html.DisplayFor(modelItem => item.OngoingNotes)</td>
             <td>@Html.DisplayFor(modelItem => item.Email)</td>
             <td>@Html.DisplayFor(modelItem => item.PhoneNumber)</td>
+            <td>@Html.DisplayFor(modelItem => item.Facebook)</td>
+            <td>@Html.DisplayFor(modelItem => item.Instagram)</td>
+            <td>@Html.DisplayFor(modelItem => item.Telegram)</td>
+            <td>@Html.DisplayFor(modelItem => item.Twitter)</td>
             <td>@Html.DisplayFor(modelItem => item.CreatedDate)</td>
             <td>
                 <a asp-action="Edit" asp-route-id="@item.ID">Edit</a> |
