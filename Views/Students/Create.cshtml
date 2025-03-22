@@ -10,7 +10,7 @@
 @using (Html.BeginForm())
 {
     @Html.AntiForgeryToken()
-
+    
     <div class="form-horizontal">
         <h4>Student</h4>
         <hr />
@@ -50,18 +50,17 @@
                 @Html.ValidationMessageFor(m => m.CreatedDate, "", new { @class = "text-danger" })
             </div>
         </div>
-
+        
         <h4>Contact Information</h4>
-        <!-- Container where finalized contacts (read-only summaries) are placed -->
+        <!-- Container where finalized (read-only) contacts are placed -->
         <div id="finalizedContacts"></div>
-        <!-- Container for the current (active) contact form -->
+        <!-- Container for the active (editable) contact -->
         <div id="activeContactContainer"></div>
-
+        
         <!-- Button to add a new contact -->
         <button type="button" id="addContactBtn" class="btn btn-secondary">Add New Contact</button>
-
+        
         <br /><br />
-
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
                 <input type="submit" value="Save" class="btn btn-primary" />
@@ -73,6 +72,9 @@
 <!-- Template for the active (editable) contact form -->
 <script id="activeContactTemplate" type="text/template">
 <div class="active-contact" data-index="__INDEX__">
+    <!-- Hidden index field for model binding -->
+    <input type="hidden" name="Contacts.Index" value="__INDEX__" />
+    
     <div class="form-group">
         <label class="control-label col-md-2">Contact Type</label>
         <div class="col-md-10">
@@ -120,54 +122,53 @@
     <script>
         $(function() {
             var contactIndex = 0;
-
-            // When "Add New Contact" is clicked
+            
+            // When "Add New Contact" is clicked:
             $("#addContactBtn").click(function() {
                 finalizeActiveContact();
                 createActiveContact();
             });
-
+            
             // Finalize the active contact by converting it into a read-only summary,
-            // while hiding its input fields so they still post on submission.
+            // while keeping its hidden inputs (so they will post).
             function finalizeActiveContact() {
                 var $active = $("#activeContactContainer .active-contact");
                 if ($active.length === 0) {
                     return;
                 }
-
                 var idx = $active.data("index");
                 var type = $active.find("select[name='Contacts[" + idx + "].Type'] option:selected").text();
                 var val = $active.find("input[name='Contacts[" + idx + "].Value']").val();
                 var invit = $active.find("input[name='Contacts[" + idx + "].Invitation']").prop("checked");
                 var emerg = $active.find("input[name='Contacts[" + idx + "].Emergency']").prop("checked");
                 var money = $active.find("input[name='Contacts[" + idx + "].Money']").prop("checked");
-
+                
                 var checks = [];
                 if (invit) checks.push("Invitation");
                 if (emerg) checks.push("Emergency");
                 if (money) checks.push("Money");
-
+                
                 var summary = "[Contact #" + idx + ": " + type + " " + val;
                 if (checks.length > 0) {
                     summary += " (" + checks.join(", ") + ")";
                 }
                 summary += "]";
-
-                // Create a container for the finalized contact
+                
+                // Create a container for the finalized contact.
                 var $final = $("<div class='finalized-contact'/>");
                 $final.append($("<div class='summary-text'/>").text(summary));
-
-                // Hide the actual inputs so the user cannot change them but they still post
-                $active.find("select, input[type='text'], input[type='checkbox']").each(function() {
-                    $(this).css("display", "none");
-                });
-                // Append the hidden inputs and summary text, then remove the active container
+                
+                // Instead of removing the inputs, just hide them so they remain in the DOM.
+                $active.find("select, input[type='text'], input[type='checkbox'], input[type='hidden']")
+                       .css("display", "none");
+                
+                // Append the finalized contact to the finalized container.
                 $final.append($active.contents());
                 $active.remove();
                 $("#finalizedContacts").append($final);
             }
-
-            // Create a new active contact form for user entry
+            
+            // Create a new active contact form for user entry.
             function createActiveContact() {
                 contactIndex++;
                 var template = $("#activeContactTemplate").html();
