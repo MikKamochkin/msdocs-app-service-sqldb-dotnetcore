@@ -2,8 +2,6 @@
 
 @{
     ViewData["Title"] = "Create Student";
-
-    // The dropdown list items for contact types:
     var contactTypes = (List<SelectListItem>)ViewBag.ContactTypes ?? new List<SelectListItem>();
 }
 
@@ -16,29 +14,54 @@
     <div class="form-horizontal">
         <h4>Student</h4>
         <hr />
-
-        <!-- Example: Student Name -->
+        <!-- Student fields -->
         <div class="form-group">
             @Html.LabelFor(m => m.Name, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
                 @Html.EditorFor(m => m.Name, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(m => m.ParentOrEmployer, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(m => m.ParentOrEmployer, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(m => m.ParentOrEmployer, "", new { @class = "text-danger" })
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(m => m.MainNotes, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(m => m.MainNotes, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(m => m.MainNotes, "", new { @class = "text-danger" })
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(m => m.OngoingNotes, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(m => m.OngoingNotes, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(m => m.OngoingNotes, "", new { @class = "text-danger" })
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(m => m.CreatedDate, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(m => m.CreatedDate, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(m => m.CreatedDate, "", new { @class = "text-danger" })
             </div>
         </div>
 
-        <!-- (Optional) Additional fields for the Student (ParentOrEmployer, etc.) -->
-
         <h4>Contact Information</h4>
-
-        <!-- All finalized contacts go here as read-only text + hidden inputs. -->
+        <!-- Container where finalized contacts (read-only summaries) are placed -->
         <div id="finalizedContacts"></div>
-
-        <!-- Container for the one "active" contact form (if any). -->
+        <!-- Container for the current (active) contact form -->
         <div id="activeContactContainer"></div>
 
         <!-- Button to add a new contact -->
         <button type="button" id="addContactBtn" class="btn btn-secondary">Add New Contact</button>
 
         <br /><br />
+
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
                 <input type="submit" value="Save" class="btn btn-primary" />
@@ -47,10 +70,7 @@
     </div>
 }
 
-<!-- 
-    A hidden <script> template for the "active" contact form.
-    We use a placeholder __INDEX__ that we'll replace with the real contact index (0, 1, 2, ...).
--->
+<!-- Template for the active (editable) contact form -->
 <script id="activeContactTemplate" type="text/template">
 <div class="active-contact" data-index="__INDEX__">
     <div class="form-group">
@@ -58,7 +78,6 @@
         <div class="col-md-10">
             <select name="Contacts[__INDEX__].Type" class="form-control contact-type">
                 <option value="">Select Contact Type</option>
-                <!-- We'll insert the real <option> list below -->
             </select>
         </div>
     </div>
@@ -89,10 +108,7 @@
 </div>
 </script>
 
-<!-- 
-    Another hidden <script> that just contains all your contact type <option> items
-    from ViewBag.ContactTypes. We'll dynamically append them to the dropdown above.
--->
+<!-- Template for populating contact type options -->
 <script id="contactOptions" type="text/template">
     @foreach (var ct in contactTypes)
     {
@@ -103,33 +119,29 @@
 @section Scripts {
     <script>
         $(function() {
-            var contactIndex = 0; // We'll increment each time we add a new contact.
+            var contactIndex = 0;
 
+            // When "Add New Contact" is clicked
             $("#addContactBtn").click(function() {
-                // 1) Finalize the currently active contact, if any
                 finalizeActiveContact();
-
-                // 2) Create a new blank contact form
                 createActiveContact();
             });
 
+            // Finalize the active contact by converting it into a read-only summary,
+            // while hiding its input fields so they still post on submission.
             function finalizeActiveContact() {
                 var $active = $("#activeContactContainer .active-contact");
                 if ($active.length === 0) {
-                    // No active contact to finalize
                     return;
                 }
 
-                // Extract user-entered data from the active contact
-                var idx   = $active.data("index");
-                var type  = $active.find("select[name='Contacts[" + idx + "].Type'] option:selected").text();
-                var val   = $active.find("input[name='Contacts[" + idx + "].Value']").val();
+                var idx = $active.data("index");
+                var type = $active.find("select[name='Contacts[" + idx + "].Type'] option:selected").text();
+                var val = $active.find("input[name='Contacts[" + idx + "].Value']").val();
                 var invit = $active.find("input[name='Contacts[" + idx + "].Invitation']").prop("checked");
                 var emerg = $active.find("input[name='Contacts[" + idx + "].Emergency']").prop("checked");
                 var money = $active.find("input[name='Contacts[" + idx + "].Money']").prop("checked");
 
-                // Build a readable summary string, e.g.:
-                // [Contact #1: Phone 555-1234 (Invitation, Money)]
                 var checks = [];
                 if (invit) checks.push("Invitation");
                 if (emerg) checks.push("Emergency");
@@ -141,51 +153,28 @@
                 }
                 summary += "]";
 
-                // We'll move that entire active contact into #finalizedContacts:
-                //   - Show the summary as read-only
-                //   - Keep the hidden inputs so the data still posts
-
-                // Build a container for the finalized contact
+                // Create a container for the finalized contact
                 var $final = $("<div class='finalized-contact'/>");
+                $final.append($("<div class='summary-text'/>").text(summary));
 
-                // 1) Add a visible label
-                $final.append(
-                    $("<div class='summary-text'/>").text(summary)
-                );
-
-                // 2) Move (not clone) the actual input fields into $final,
-                //    but hide them so user cannot edit but they still submit.
-                $active.find("select, input[type='text'], input[type='checkbox']")
-                       .each(function() {
-                           $(this).css("display", "none");
-                       });
-
-                // Append the entire .active-contact to $final
+                // Hide the actual inputs so the user cannot change them but they still post
+                $active.find("select, input[type='text'], input[type='checkbox']").each(function() {
+                    $(this).css("display", "none");
+                });
+                // Append the hidden inputs and summary text, then remove the active container
                 $final.append($active.contents());
-                // Now $active is empty, we can remove it
                 $active.remove();
-
-                // Finally, add $final to #finalizedContacts
                 $("#finalizedContacts").append($final);
             }
 
+            // Create a new active contact form for user entry
             function createActiveContact() {
-                // Increment contact index
                 contactIndex++;
-
-                // Get the template HTML
                 var template = $("#activeContactTemplate").html();
-                // Replace __INDEX__ with the actual index
                 template = template.replace(/__INDEX__/g, contactIndex);
-
-                // Convert the string to a DOM element
                 var $contact = $(template);
-
-                // Append the <option> items from #contactOptions into the dropdown
                 var optionHtml = $("#contactOptions").html();
                 $contact.find("select.contact-type").append(optionHtml);
-
-                // Put this new active contact into the container
                 $("#activeContactContainer").html($contact);
             }
         });
