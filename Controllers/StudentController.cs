@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
+using System.Diagnostics; // For Debug.WriteLine
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -59,11 +60,26 @@ namespace DotNetCoreSqlDb.Controllers
         {
             if (ModelState.IsValid)
             {
+                // Debug: Log the contact information being posted
+                if (student.Contacts != null && student.Contacts.Any())
+                {
+                    int count = 1;
+                    foreach (var contact in student.Contacts)
+                    {
+                        Debug.WriteLine($"Contact #{count}: Type = {contact.Type}, Value = {contact.Value}, Invitation = {contact.Invitation}, Emergency = {contact.Emergency}, Money = {contact.Money}");
+                        count++;
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("No contacts were posted.");
+                }
+
                 _context.Add(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            // If model state is invalid, repopulate the contact types
+            // If model state is invalid, repopulate the contact types.
             ViewBag.ContactTypes = new List<SelectListItem>
             {
                 new SelectListItem { Text = "Email", Value = "Email" },
