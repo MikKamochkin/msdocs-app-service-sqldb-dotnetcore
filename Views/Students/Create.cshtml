@@ -14,7 +14,7 @@
     <div class="form-horizontal">
         <h4>Student</h4>
         <hr />
-        <!-- Student fields -->
+        <!-- Student Fields -->
         <div class="form-group">
             @Html.LabelFor(m => m.Name, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
@@ -52,9 +52,9 @@
         </div>
         
         <h4>Contact Information</h4>
-        <!-- Container where finalized (read-only) contacts are placed -->
+        <!-- This container will hold finalized contacts (read-only summaries with hidden inputs) -->
         <div id="finalizedContacts"></div>
-        <!-- Container for the active (editable) contact -->
+        <!-- This container will hold the active (editable) contact form -->
         <div id="activeContactContainer"></div>
         
         <!-- Button to add a new contact -->
@@ -69,10 +69,10 @@
     </div>
 }
 
-<!-- Template for the active (editable) contact form -->
+<!-- Template for an active (editable) contact -->
 <script id="activeContactTemplate" type="text/template">
 <div class="active-contact" data-index="__INDEX__">
-    <!-- Hidden index field for model binding -->
+    <!-- This hidden field is required for MVC collection binding -->
     <input type="hidden" name="Contacts.Index" value="__INDEX__" />
     
     <div class="form-group">
@@ -110,7 +110,7 @@
 </div>
 </script>
 
-<!-- Template for populating contact type options -->
+<!-- Template for contact type options -->
 <script id="contactOptions" type="text/template">
     @foreach (var ct in contactTypes)
     {
@@ -123,19 +123,24 @@
         $(function() {
             var contactIndex = 0;
             
-            // When "Add New Contact" is clicked:
+            // When "Add New Contact" is clicked, finalize any active contact and create a new one.
             $("#addContactBtn").click(function() {
                 finalizeActiveContact();
                 createActiveContact();
             });
             
-            // Finalize the active contact by converting it into a read-only summary,
-            // while keeping its hidden inputs (so they will post).
+            // When the form is submitted, finalize any active contact.
+            $("form").submit(function() {
+                finalizeActiveContact();
+                // Let the submission proceed.
+            });
+            
+            // Finalize the active contact by converting it to a read-only summary,
+            // but keep all hidden inputs so they are submitted.
             function finalizeActiveContact() {
                 var $active = $("#activeContactContainer .active-contact");
-                if ($active.length === 0) {
-                    return;
-                }
+                if ($active.length === 0) { return; }
+                
                 var idx = $active.data("index");
                 var type = $active.find("select[name='Contacts[" + idx + "].Type'] option:selected").text();
                 var val = $active.find("input[name='Contacts[" + idx + "].Value']").val();
@@ -144,9 +149,9 @@
                 var money = $active.find("input[name='Contacts[" + idx + "].Money']").prop("checked");
                 
                 var checks = [];
-                if (invit) checks.push("Invitation");
-                if (emerg) checks.push("Emergency");
-                if (money) checks.push("Money");
+                if (invit) { checks.push("Invitation"); }
+                if (emerg)  { checks.push("Emergency"); }
+                if (money)  { checks.push("Money"); }
                 
                 var summary = "[Contact #" + idx + ": " + type + " " + val;
                 if (checks.length > 0) {
@@ -158,17 +163,17 @@
                 var $final = $("<div class='finalized-contact'/>");
                 $final.append($("<div class='summary-text'/>").text(summary));
                 
-                // Instead of removing the inputs, just hide them so they remain in the DOM.
+                // Hide all input elements (but do not remove them) so they still post.
                 $active.find("select, input[type='text'], input[type='checkbox'], input[type='hidden']")
                        .css("display", "none");
                 
-                // Append the finalized contact to the finalized container.
+                // Move the content of the active contact into the finalized contacts container.
                 $final.append($active.contents());
                 $active.remove();
                 $("#finalizedContacts").append($final);
             }
             
-            // Create a new active contact form for user entry.
+            // Create a new active contact form.
             function createActiveContact() {
                 contactIndex++;
                 var template = $("#activeContactTemplate").html();
