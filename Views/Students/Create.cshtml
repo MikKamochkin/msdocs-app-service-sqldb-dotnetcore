@@ -2,188 +2,126 @@
 
 @{
     ViewData["Title"] = "Create Student";
-    var contactTypes = (List<SelectListItem>)ViewBag.ContactTypes ?? new List<SelectListItem>();
 }
 
 <h2>Create Student</h2>
 
-@using (Html.BeginForm())
+@using (Html.BeginForm()) 
 {
     @Html.AntiForgeryToken()
-    
     <div class="form-horizontal">
         <h4>Student</h4>
         <hr />
-        <!-- Student Fields -->
         <div class="form-group">
-            @Html.LabelFor(m => m.Name, new { @class = "control-label col-md-2" })
+            @Html.LabelFor(model => model.Name, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
-                @Html.EditorFor(m => m.Name, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+                @Html.EditorFor(model => model.Name, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
             </div>
         </div>
         <div class="form-group">
-            @Html.LabelFor(m => m.ParentOrEmployer, new { @class = "control-label col-md-2" })
+            @Html.LabelFor(model => model.ParentOrEmployer, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
-                @Html.EditorFor(m => m.ParentOrEmployer, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(m => m.ParentOrEmployer, "", new { @class = "text-danger" })
+                @Html.EditorFor(model => model.ParentOrEmployer, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.ParentOrEmployer, "", new { @class = "text-danger" })
             </div>
         </div>
         <div class="form-group">
-            @Html.LabelFor(m => m.MainNotes, new { @class = "control-label col-md-2" })
+            @Html.LabelFor(model => model.MainNotes, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
-                @Html.EditorFor(m => m.MainNotes, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(m => m.MainNotes, "", new { @class = "text-danger" })
+                @Html.EditorFor(model => model.MainNotes, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.MainNotes, "", new { @class = "text-danger" })
             </div>
         </div>
         <div class="form-group">
-            @Html.LabelFor(m => m.OngoingNotes, new { @class = "control-label col-md-2" })
+            @Html.LabelFor(model => model.OngoingNotes, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
-                @Html.EditorFor(m => m.OngoingNotes, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(m => m.OngoingNotes, "", new { @class = "text-danger" })
+                @Html.EditorFor(model => model.OngoingNotes, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.OngoingNotes, "", new { @class = "text-danger" })
             </div>
         </div>
         <div class="form-group">
-            @Html.LabelFor(m => m.CreatedDate, new { @class = "control-label col-md-2" })
+            @Html.LabelFor(model => model.CreatedDate, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
-                @Html.EditorFor(m => m.CreatedDate, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(m => m.CreatedDate, "", new { @class = "text-danger" })
+                @Html.EditorFor(model => model.CreatedDate, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.CreatedDate, "", new { @class = "text-danger" })
             </div>
         </div>
-        
+
         <h4>Contact Information</h4>
-        <!-- Container for finalized (read-only) contacts -->
-        <div id="finalizedContacts"></div>
-        <!-- Container for the current active (editable) contact -->
-        <div id="activeContactContainer"></div>
-        
-        <!-- Button to add a new contact -->
-        <button type="button" id="addContactBtn" class="btn btn-secondary">Add New Contact</button>
-        
+        <div id="contacts">
+            <div class="contact-entry">
+                <div class="form-group">
+                    <label class="control-label col-md-2">Contact Type</label>
+                    <div class="col-md-10">
+                        @Html.DropDownList("Contacts[0].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
+                    </div>
+                </div>
+                <div class="contact-fields" style="display:none;">
+                    <div class="form-group">
+                        <label class="control-label col-md-2">Value</label>
+                        <div class="col-md-10">
+                            @Html.TextBox("Contacts[0].Value", null, new { @class = "form-control" })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-md-2">Invitation</label>
+                        <div class="col-md-10">
+                            @Html.CheckBox("Contacts[0].Invitation", false)
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-md-2">Emergency</label>
+                        <div class="col-md-10">
+                            @Html.CheckBox("Contacts[0].Emergency", false)
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-md-2">Money</label>
+                        <div class="col-md-10">
+                            @Html.CheckBox("Contacts[0].Money", false)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button type="button" id="addContact" class="btn btn-secondary">Add Another Contact</button>
         <br /><br />
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
-                <!-- Two submit buttons: one for "Save" and one for "Submit" -->
-                <input type="submit" name="SaveBtn" value="Save" class="btn btn-primary" />
-                <input type="submit" name="SubmitBtn" value="Submit" class="btn btn-success" />
+                <input type="submit" value="Create" class="btn btn-default" />
             </div>
         </div>
     </div>
 }
 
-<!-- Template for active (editable) contact -->
-<script id="activeContactTemplate" type="text/template">
-<div class="active-contact" data-index="__INDEX__">
-    <!-- Hidden field for collection binding -->
-    <input type="hidden" name="Contacts.Index" value="__INDEX__" />
-    
-    <div class="form-group">
-        <label class="control-label col-md-2">Contact Type</label>
-        <div class="col-md-10">
-            <select name="Contacts[__INDEX__].Type" class="form-control contact-type">
-                <option value="">Select Contact Type</option>
-            </select>
-        </div>
-    </div>
-    <div class="form-group">
-        <label class="control-label col-md-2">Value</label>
-        <div class="col-md-10">
-            <input type="text" name="Contacts[__INDEX__].Value" class="form-control" />
-        </div>
-    </div>
-    <div class="form-group">
-        <label class="control-label col-md-2">Invitation</label>
-        <div class="col-md-10">
-            <input type="checkbox" name="Contacts[__INDEX__].Invitation" />
-        </div>
-    </div>
-    <div class="form-group">
-        <label class="control-label col-md-2">Emergency</label>
-        <div class="col-md-10">
-            <input type="checkbox" name="Contacts[__INDEX__].Emergency" />
-        </div>
-    </div>
-    <div class="form-group">
-        <label class="control-label col-md-2">Money</label>
-        <div class="col-md-10">
-            <input type="checkbox" name="Contacts[__INDEX__].Money" />
-        </div>
-    </div>
-</div>
-</script>
-
-<!-- Template for contact type options -->
-<script id="contactOptions" type="text/template">
-    @foreach (var ct in contactTypes)
-    {
-        <option value="@ct.Value">@ct.Text</option>
-    }
-</script>
-
 @section Scripts {
-    <script>
-        $(function() {
-            var contactIndex = 0;
-            
-            // When "Add New Contact" is clicked, finalize any active contact and create a new one.
-            $("#addContactBtn").click(function() {
-                finalizeActiveContact();
-                createActiveContact();
-            });
-            
-            // When the form is submitted (either via Save or Submit button), finalize the active contact.
-            $("form").submit(function() {
-                finalizeActiveContact();
-                // Allow form submission to continue.
-            });
-            
-            // Finalize the active contact by converting it to a read-only summary while keeping inputs hidden.
-            function finalizeActiveContact() {
-                var $active = $("#activeContactContainer .active-contact");
-                if ($active.length === 0) { return; }
-                
-                var idx = $active.data("index");
-                var type = $active.find("select[name='Contacts[" + idx + "].Type'] option:selected").text();
-                var val = $active.find("input[name='Contacts[" + idx + "].Value']").val();
-                var invit = $active.find("input[name='Contacts[" + idx + "].Invitation']").prop("checked");
-                var emerg = $active.find("input[name='Contacts[" + idx + "].Emergency']").prop("checked");
-                var money = $active.find("input[name='Contacts[" + idx + "].Money']").prop("checked");
-                
-                var checks = [];
-                if (invit) { checks.push("Invitation"); }
-                if (emerg)  { checks.push("Emergency"); }
-                if (money)  { checks.push("Money"); }
-                
-                var summary = "[Contact #" + idx + ": " + type + " " + val;
-                if (checks.length > 0) {
-                    summary += " (" + checks.join(", ") + ")";
+    <script type="text/javascript">
+        $(document).ready(function(){
+            // When any contact type dropdown changes, hide all contact-fields first
+            $(".contact-type").change(function(){
+                $(".contact-fields").hide();
+                var selectedVal = $(this).val();
+                if(selectedVal) {
+                    // Only show the fields for the current row
+                    $(this).closest(".contact-entry").find(".contact-fields").show();
                 }
-                summary += "]";
-                
-                // Create a container for the finalized contact.
-                var $final = $("<div class='finalized-contact'/>");
-                $final.append($("<div class='summary-text'/>").text(summary));
-                
-                // Hide all inputs (but keep them in the DOM so they post)
-                $active.find("select, input[type='text'], input[type='checkbox'], input[type='hidden']")
-                       .css("display", "none");
-                
-                // Move the content of the active contact into the finalized contacts container.
-                $final.append($active.contents());
-                $active.remove();
-                $("#finalizedContacts").append($final);
-            }
-            
-            // Create a new active contact form.
-            function createActiveContact() {
-                contactIndex++;
-                var template = $("#activeContactTemplate").html();
-                template = template.replace(/__INDEX__/g, contactIndex);
-                var $contact = $(template);
-                var optionHtml = $("#contactOptions").html();
-                $contact.find("select.contact-type").append(optionHtml);
-                $("#activeContactContainer").html($contact);
-            }
+            });
+
+            // Add another contact entry dynamically
+            $("#addContact").click(function(){
+                var index = $("#contacts .contact-entry").length;
+                var newEntry = $("#contacts .contact-entry:first").clone();
+
+                newEntry.find("select.contact-type").attr("name", "Contacts[" + index + "].Type").val("");
+                newEntry.find("input[name$='.Value']").attr("name", "Contacts[" + index + "].Value").val("");
+                newEntry.find("input[name$='.Invitation']").attr("name", "Contacts[" + index + "].Invitation").prop("checked", false);
+                newEntry.find("input[name$='.Emergency']").attr("name", "Contacts[" + index + "].Emergency").prop("checked", false);
+                newEntry.find("input[name$='.Money']").attr("name", "Contacts[" + index + "].Money").prop("checked", false);
+                newEntry.find(".contact-fields").hide();
+
+                $("#contacts").append(newEntry);
+            });
         });
     </script>
 }

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
-using System.Diagnostics; // For Debug.WriteLine
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -58,39 +57,13 @@ namespace DotNetCoreSqlDb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,OngoingNotes,CreatedDate,Contacts")] Student student)
         {
-            // Log which button was pressed
-            var submitButton = Request.Form["SubmitBtn"];
-            if (!string.IsNullOrEmpty(submitButton))
-            {
-                Debug.WriteLine("Submit button was pressed.");
-            }
-            else
-            {
-                Debug.WriteLine("Save button was pressed.");
-            }
-
             if (ModelState.IsValid)
             {
-                // Log contact information for debugging
-                if (student.Contacts != null && student.Contacts.Any())
-                {
-                    int count = 1;
-                    foreach (var contact in student.Contacts)
-                    {
-                        Debug.WriteLine($"Contact #{count}: Type = {contact.Type}, Value = {contact.Value}, Invitation = {contact.Invitation}, Emergency = {contact.Emergency}, Money = {contact.Money}");
-                        count++;
-                    }
-                }
-                else
-                {
-                    Debug.WriteLine("No contacts were posted.");
-                }
-
                 _context.Add(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            // If ModelState is invalid, repopulate contact types.
+            // If model state is invalid, repopulate the contact types
             ViewBag.ContactTypes = new List<SelectListItem>
             {
                 new SelectListItem { Text = "Email", Value = "Email" },
