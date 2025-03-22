@@ -58,9 +58,20 @@ namespace DotNetCoreSqlDb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,OngoingNotes,CreatedDate,Contacts")] Student student)
         {
+            // Log which button was pressed
+            var submitButton = Request.Form["SubmitBtn"];
+            if (!string.IsNullOrEmpty(submitButton))
+            {
+                Debug.WriteLine("Submit button was pressed.");
+            }
+            else
+            {
+                Debug.WriteLine("Save button was pressed.");
+            }
+
             if (ModelState.IsValid)
             {
-                // Debug: Log the contact information being posted
+                // Log contact information for debugging
                 if (student.Contacts != null && student.Contacts.Any())
                 {
                     int count = 1;
@@ -79,7 +90,7 @@ namespace DotNetCoreSqlDb.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            // If model state is invalid, repopulate the contact types.
+            // If ModelState is invalid, repopulate contact types.
             ViewBag.ContactTypes = new List<SelectListItem>
             {
                 new SelectListItem { Text = "Email", Value = "Email" },
