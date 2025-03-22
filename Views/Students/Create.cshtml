@@ -19,24 +19,44 @@
                 @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
             </div>
         </div>
-        <!-- ... other Student fields omitted for brevity ... -->
+        <div class="form-group">
+            @Html.LabelFor(model => model.ParentOrEmployer, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.ParentOrEmployer, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.ParentOrEmployer, "", new { @class = "text-danger" })
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.MainNotes, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.MainNotes, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.MainNotes, "", new { @class = "text-danger" })
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.OngoingNotes, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.OngoingNotes, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.OngoingNotes, "", new { @class = "text-danger" })
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.CreatedDate, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.CreatedDate, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.CreatedDate, "", new { @class = "text-danger" })
+            </div>
+        </div>
 
         <h4>Contact Information</h4>
         <div id="contacts">
-            <!-- One "template" contact entry -->
             <div class="contact-entry">
                 <div class="form-group">
                     <label class="control-label col-md-2">Contact Type</label>
                     <div class="col-md-10">
-                        @Html.DropDownList(
-                            "Contacts[0].Type", 
-                            new SelectList(ViewBag.ContactTypes, "Value", "Text"), 
-                            "Select Contact Type", 
-                            new { @class = "form-control contact-type" }
-                        )
+                        @Html.DropDownList("Contacts[0].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
                     </div>
                 </div>
-                <!-- Extra fields: hidden until Type changes -->
                 <div class="contact-fields" style="display:none;">
                     <div class="form-group">
                         <label class="control-label col-md-2">Value</label>
@@ -44,19 +64,19 @@
                             @Html.TextBox("Contacts[0].Value", null, new { @class = "form-control" })
                         </div>
                     </div>
-                    <div class="form-group check-group">
+                    <div class="form-group">
                         <label class="control-label col-md-2">Invitation</label>
                         <div class="col-md-10">
                             @Html.CheckBox("Contacts[0].Invitation", false)
                         </div>
                     </div>
-                    <div class="form-group check-group">
+                    <div class="form-group">
                         <label class="control-label col-md-2">Emergency</label>
                         <div class="col-md-10">
                             @Html.CheckBox("Contacts[0].Emergency", false)
                         </div>
                     </div>
-                    <div class="form-group check-group">
+                    <div class="form-group">
                         <label class="control-label col-md-2">Money</label>
                         <div class="col-md-10">
                             @Html.CheckBox("Contacts[0].Money", false)
@@ -65,10 +85,8 @@
                 </div>
             </div>
         </div>
-
         <button type="button" id="addContact" class="btn btn-secondary">Add Another Contact</button>
         <br /><br />
-        
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
                 <input type="submit" value="Create" class="btn btn-default" />
@@ -79,82 +97,30 @@
 
 @section Scripts {
     <script type="text/javascript">
-        $(document).ready(function () {
+        $(document).ready(function(){
+            // When any contact type dropdown changes, hide all contact-fields first
+            $(".contact-type").change(function(){
+                $(".contact-fields").hide();
+                var selectedVal = $(this).val();
+                if(selectedVal) {
+                    // Only show the fields for the current row
+                    $(this).closest(".contact-entry").find(".contact-fields").show();
+                }
+            });
 
-            // 1. Show/hide fields based on contact-type selection
-            function bindContactTypeChange(contactEntry) {
-                // On change, hide all contact-fields by default, then show for current
-                contactEntry.find(".contact-type").off("change").on("change", function () {
-                    // Hide all .contact-fields in the entire form
-                    $(".contact-fields").hide();
-
-                    // If user selected a type, show only this row's .contact-fields
-                    var selectedVal = $(this).val();
-                    if (selectedVal) {
-                        $(this).closest(".contact-entry").find(".contact-fields").show();
-                    }
-                });
-            }
-
-            // Bind for the very first contact
-            bindContactTypeChange($("#contacts .contact-entry:first"));
-
-            // 2. Add another contact
-            $("#addContact").click(function () {
-
-                // (a) Finalize or hide the old contact's extra fields so that
-                //     only Type (and optionally the filled Value) remain visible.
-                //     Below we remove the checkboxes entirely and replace
-                //     the Value input with a read-only <span>. Adapt as needed.
-                var lastContact = $("#contacts .contact-entry").last();
-
-                // Remove the checkbox groups
-                lastContact.find(".check-group").remove();
-
-                // Turn the Value <input> into read-only text (so user can see what was entered)
-                var oldValue = lastContact.find("input[name$='.Value']").val();
-                lastContact.find("input[name$='.Value']").replaceWith(
-                    "<span class='final-value'>" + $("<div/>").text(oldValue).html() + "</span>"
-                );
-
-                // Optionally make the Type also read-only:
-                // (If you want to leave it as a dropdown, remove this block.)
-                var oldTypeText = lastContact.find(".contact-type option:selected").text();
-                lastContact.find(".contact-type").replaceWith(
-                    "<span class='final-type'>" + $("<div/>").text(oldTypeText).html() + "</span>"
-                );
-
-                // (b) Clone the *first* contact entry to create a brand-new blank one.
-                //     Use clone(true) so that event handlers are copied over, but
-                //     we'll re-bind below just to be sure.
+            // Add another contact entry dynamically
+            $("#addContact").click(function(){
                 var index = $("#contacts .contact-entry").length;
-                var newEntry = $("#contacts .contact-entry:first").clone(true);
+                var newEntry = $("#contacts .contact-entry:first").clone();
 
-                // Reset fields in the new contact
-                newEntry.find(".contact-type")
-                    .attr("name", "Contacts[" + index + "].Type")
-                    .val("");
-                newEntry.find("input[name$='.Value']")
-                    .attr("name", "Contacts[" + index + "].Value")
-                    .val("");
-                newEntry.find("input[name$='.Invitation']")
-                    .attr("name", "Contacts[" + index + "].Invitation")
-                    .prop("checked", false);
-                newEntry.find("input[name$='.Emergency']")
-                    .attr("name", "Contacts[" + index + "].Emergency")
-                    .prop("checked", false);
-                newEntry.find("input[name$='.Money']")
-                    .attr("name", "Contacts[" + index + "].Money")
-                    .prop("checked", false);
-
-                // Hide the extra fields on the new contact by default
+                newEntry.find("select.contact-type").attr("name", "Contacts[" + index + "].Type").val("");
+                newEntry.find("input[name$='.Value']").attr("name", "Contacts[" + index + "].Value").val("");
+                newEntry.find("input[name$='.Invitation']").attr("name", "Contacts[" + index + "].Invitation").prop("checked", false);
+                newEntry.find("input[name$='.Emergency']").attr("name", "Contacts[" + index + "].Emergency").prop("checked", false);
+                newEntry.find("input[name$='.Money']").attr("name", "Contacts[" + index + "].Money").prop("checked", false);
                 newEntry.find(".contact-fields").hide();
 
-                // (c) Append the new contact to #contacts
                 $("#contacts").append(newEntry);
-
-                // (d) Bind the type-change event on the new contact
-                bindContactTypeChange(newEntry);
             });
         });
     </script>
