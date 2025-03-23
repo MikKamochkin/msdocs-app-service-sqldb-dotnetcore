@@ -55,6 +55,30 @@ namespace DotNetCoreSqlDb.Migrations
                     b.ToTable("Contact");
                 });
 
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Notes", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("StudentID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("StudentID");
+
+                    b.ToTable("Note");
+                });
+
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Student", b =>
                 {
                     b.Property<int>("ID")
@@ -71,9 +95,6 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OngoingNotes")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ParentOrEmployer")
@@ -118,9 +139,22 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Notes", b =>
+                {
+                    b.HasOne("DotNetCoreSqlDb.Models.Student", "Student")
+                        .WithMany("Notes")
+                        .HasForeignKey("StudentID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Student", b =>
                 {
                     b.Navigation("Contacts");
+
+                    b.Navigation("Notes");
                 });
 #pragma warning restore 612, 618
         }

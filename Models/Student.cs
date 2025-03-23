@@ -18,8 +18,9 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Main Notes")]
         public string? MainNotes { get; set; }
 
-        [DisplayName("Ongoing Notes")]
+        /*[DisplayName("Ongoing Notes")]
         public string? OngoingNotes { get; set; }
+        */
 
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
@@ -28,5 +29,8 @@ namespace DotNetCoreSqlDb.Models
 
         // Navigation property for one-to-many relationship with Contact
         public virtual ICollection<Contact> Contacts { get; set; } = new List<Contact>();
+
+         // Navigation property for one-to-many relationship with Note
+        public virtual ICollection<Notes> Notes { get; set; } = new List<Notes>();
     }
 }

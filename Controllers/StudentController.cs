@@ -55,7 +55,7 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,OngoingNotes,CreatedDate,Contacts")] Student student)
+        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,CreatedDate,Contacts")] Student student)
         {
             if (ModelState.IsValid)
             {
@@ -104,7 +104,7 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ID,Name,ParentOrEmployer,MainNotes,OngoingNotes,CreatedDate,Contacts")] Student student)
+        public async Task<IActionResult> Edit(int id, [Bind("ID,Name,ParentOrEmployer,MainNotes,CreatedDate,Contacts")] Student student)
         {
             if (id != student.ID)
                 return NotFound();
