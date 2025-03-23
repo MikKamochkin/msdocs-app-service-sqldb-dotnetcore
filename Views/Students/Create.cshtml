@@ -18,7 +18,7 @@
                 @Html.EditorFor(model => model.Name, new { htmlAttributes = new { @class = "form-control" } })
                 @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
             </div>
-            </div>
+        </div>
         <div class="form-group">
             @Html.LabelFor(model => model.ParentOrEmployer, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
@@ -42,47 +42,18 @@
         </div>
 
         <h4>Contact Information</h4>
+
+        <!-- 
+            Initially, we have NO visible contact-entry blocks.
+            The user will click "Add Another Contact" to create the first one.
+        -->
         <div id="contacts">
-            <!-- First contact entry -->
-            <div class="contact-entry">
-                <div class="entry-input">
-                    <div class="form-group">
-                        <label class="control-label col-md-2">Contact Type</label>
-                        <div class="col-md-10">
-                            @Html.DropDownList("Contacts[0].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
-                        </div>
-                    </div>
-                    <div class="contact-fields" style="display:none;">
-                        <div class="form-group">
-                            <label class="control-label col-md-2">Value</label>
-                            <div class="col-md-10">
-                                @Html.TextBox("Contacts[0].Value", null, new { @class = "form-control" })
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label col-md-2">Invitation</label>
-                            <div class="col-md-10">
-                                @Html.CheckBox("Contacts[0].Invitation", false)
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label col-md-2">Emergency</label>
-                            <div class="col-md-10">
-                                @Html.CheckBox("Contacts[0].Emergency", false)
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label col-md-2">Money</label>
-                            <div class="col-md-10">
-                                @Html.CheckBox("Contacts[0].Money", false)
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Empty initially, filled by JavaScript when "Add Another Contact" is pressed -->
         </div>
+
         <button type="button" id="addContact" class="btn btn-secondary">Add Another Contact</button>
         <br /><br />
+
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
                 <input type="submit" value="Create" class="btn btn-default" />
@@ -101,7 +72,8 @@
                     @Html.DropDownList("Contacts[INDEX].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
                 </div>
             </div>
-            <div class="contact-fields" style="display:none;">
+            <!-- No more toggling. Fields are always visible once a contact entry is created. -->
+            <div class="contact-fields">
                 <div class="form-group">
                     <label class="control-label col-md-2">Value</label>
                     <div class="col-md-10">
@@ -135,77 +107,67 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script type="text/javascript">
         $(document).ready(function(){
-            // Show or hide the contact fields based on selection
-            $(document).on("change", "select.contact-type", function(){
-                var selectedVal = $(this).val();
-                if(selectedVal){
-                    $(this).closest(".contact-entry").find(".contact-fields").show();
-                } else {
-                    $(this).closest(".contact-entry").find(".contact-fields").hide();
-                }
-            });
-            
-            // Create a contacts summary table if it doesn't already exist.
-            // (Assumes that #contacts is the container for both the input form(s) and the summary table.)
-            if ($("#contactsSummary").length === 0) {
-                $("#contacts").append(
-                    '<table id="contactsSummary">' +
-                        '<thead>' +
-                            '<tr>' +
-                                '<th>Type</th>' +
-                                '<th>Value</th>' +
-                                '<th>Invitation</th>' +
-                                '<th>Emergency</th>' +
-                                '<th>Money</th>' +
-                            '</tr>' +
-                        '</thead>' +
-                        '<tbody></tbody>' +
-                    '</table>'
-                );
-            }
-            
+
+            // When the user clicks "Add Another Contact":
             $("#addContact").click(function(){
-                // Get the last contact entry (the input form)
+                // 1) Finalize the last contact entry if it hasn't been turned into a summary row yet.
                 var currentEntry = $("#contacts .contact-entry").last();
-                // If this entry hasn’t been finalized into a summary row yet, do it now.
-                if (currentEntry.find(".contact-summary").length === 0) {
+                if (currentEntry.length > 0 && currentEntry.find(".contact-summary").length === 0) {
+                    
+                    // Gather data from the last contact
                     var contactType = currentEntry.find("select.contact-type").val();
-                    if (!contactType) {
-                        alert("Please select a contact type before adding a new contact.");
-                        return;
+                    var typeText    = currentEntry.find("select.contact-type option:selected").text();
+                    var value       = currentEntry.find("input[name$='.Value']").val();
+                    var invitation  = currentEntry.find("input[name$='.Invitation']").is(":checked") ? "Yes" : "No";
+                    var emergency   = currentEntry.find("input[name$='.Emergency']").is(":checked") ? "Yes" : "No";
+                    var money       = currentEntry.find("input[name$='.Money']").is(":checked") ? "Yes" : "No";
+
+                    // If no summary table yet, create it. (Hide it initially or just create on the fly)
+                    if ($("#contactsSummary").length === 0) {
+                        var tableHtml = 
+                            '<table id="contactsSummary" style="margin-top:20px;">' +
+                                '<thead>' +
+                                    '<tr>' +
+                                        '<th>Type</th>' +
+                                        '<th>Value</th>' +
+                                        '<th>Invitation</th>' +
+                                        '<th>Emergency</th>' +
+                                        '<th>Money</th>' +
+                                    '</tr>' +
+                                '</thead>' +
+                                '<tbody></tbody>' +
+                            '</table>';
+                        
+                        // Append the table *after* the #contacts div, so it appears below the form
+                        $("#contacts").after(tableHtml);
                     }
-                    
-                    // Gather values from the current entry
-                    var typeText   = currentEntry.find("select.contact-type option:selected").text();
-                    var value      = currentEntry.find("input[name$='.Value']").val();
-                    var invitation = currentEntry.find("input[name$='.Invitation']").is(":checked") ? "Yes" : "No";
-                    var emergency  = currentEntry.find("input[name$='.Emergency']").is(":checked") ? "Yes" : "No";
-                    var money      = currentEntry.find("input[name$='.Money']").is(":checked") ? "Yes" : "No";
-                    
-                    // Create a table row as the summary (each column holds one field value)
+
+                    // Build a table row for the summary
                     var summaryHtml = '<tr class="contact-summary">' +
-                        '<td>' + typeText + '</td>' +
-                        '<td>' + value + '</td>' +
+                        '<td>' + (typeText || '') + '</td>' +
+                        '<td>' + (value || '') + '</td>' +
                         '<td>' + invitation + '</td>' +
                         '<td>' + emergency + '</td>' +
                         '<td>' + money + '</td>' +
                         '</tr>';
-                    
-                    // Append the new row to the table body
+
+                    // Append the new row and remove the finalized entry form
                     $("#contactsSummary tbody").append(summaryHtml);
-                    
-                    // Optionally remove the finalized entry form from the page
                     currentEntry.remove();
                 }
-                
-                // Append a new blank contact entry using the hidden template.
+
+                // 2) Add a fresh blank contact entry from the hidden template
                 var index = $("#contacts .contact-entry").length;
                 var templateHtml = $("#contactTemplate").html();
-                // Replace the placeholder 'INDEX' with the new index value.
+                // Replace placeholder 'INDEX' with the new index value
                 templateHtml = templateHtml.replace(/INDEX/g, index);
-                // Prepend the new form above the summary table (or adjust as needed)
-                $("#contacts").prepend(templateHtml);
+
+                // Append it to #contacts
+                $("#contacts").append(templateHtml);
+                // Make sure it’s visible
+                $("#contacts .contact-entry").last().show();
             });
+
         });
     </script>
 }
