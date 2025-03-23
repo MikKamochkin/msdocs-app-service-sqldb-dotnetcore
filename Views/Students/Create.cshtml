@@ -162,13 +162,7 @@
                     var emergency = currentEntry.find("input[name$='.Emergency']").is(":checked") ? "Yes" : "No";
                     var money = currentEntry.find("input[name$='.Money']").is(":checked") ? "Yes" : "No";
                     
-                    var summaryHtml = '<div class="contact-summary">' +
-                        '<p><strong>Contact Type:</strong> ' + typeText + '</p>' +
-                        '<p><strong>Value:</strong> ' + value + '</p>' +
-                        '<p><strong>Invitation:</strong> ' + invitation + '</p>' +
-                        '<p><strong>Emergency:</strong> ' + emergency + '</p>' +
-                        '<p><strong>Money:</strong> ' + money + '</p>' +
-                    '</div>';
+                    var summaryHtml = '<div class="contact-summary">' + '<p><strong>Type: </strong> ' + typeText + ' ' + value + '<strong> Invitation: </strong> ' + invitation + '<strong>Emergency: </strong> ' + emergency + ' ' + '<strong>Money: </strong> ' + money + '</p>' + '</div>';
                     
                     // Hide the input section and prepend the summary
                     currentEntry.find(".entry-input").hide();
