@@ -19,27 +19,7 @@
                 @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
             </div>
         </div>
-        <div class="form-group">
-            @Html.LabelFor(model => model.ParentOrEmployer, new { @class = "control-label col-md-2" })
-            <div class="col-md-10">
-                @Html.EditorFor(model => model.ParentOrEmployer, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(model => model.ParentOrEmployer, "", new { @class = "text-danger" })
-            </div>
-        </div>
-        <div class="form-group">
-            @Html.LabelFor(model => model.MainNotes, new { @class = "control-label col-md-2" })
-            <div class="col-md-10">
-                @Html.EditorFor(model => model.MainNotes, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(model => model.MainNotes, "", new { @class = "text-danger" })
-            </div>
-        </div>
-        <div class="form-group">
-            @Html.LabelFor(model => model.OngoingNotes, new { @class = "control-label col-md-2" })
-            <div class="col-md-10">
-                @Html.EditorFor(model => model.OngoingNotes, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(model => model.OngoingNotes, "", new { @class = "text-danger" })
-            </div>
-        </div>
+        <!-- Other student fields can go here -->
         <div class="form-group">
             @Html.LabelFor(model => model.CreatedDate, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
@@ -50,36 +30,39 @@
 
         <h4>Contact Information</h4>
         <div id="contacts">
+            <!-- First contact entry -->
             <div class="contact-entry">
-                <div class="form-group">
-                    <label class="control-label col-md-2">Contact Type</label>
-                    <div class="col-md-10">
-                        @Html.DropDownList("Contacts[0].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
-                    </div>
-                </div>
-                <div class="contact-fields" style="display:none;">
+                <div class="entry-input">
                     <div class="form-group">
-                        <label class="control-label col-md-2">Value</label>
+                        <label class="control-label col-md-2">Contact Type</label>
                         <div class="col-md-10">
-                            @Html.TextBox("Contacts[0].Value", null, new { @class = "form-control" })
+                            @Html.DropDownList("Contacts[0].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="control-label col-md-2">Invitation</label>
-                        <div class="col-md-10">
-                            @Html.CheckBox("Contacts[0].Invitation", false)
+                    <div class="contact-fields" style="display:none;">
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Value</label>
+                            <div class="col-md-10">
+                                @Html.TextBox("Contacts[0].Value", null, new { @class = "form-control" })
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="control-label col-md-2">Emergency</label>
-                        <div class="col-md-10">
-                            @Html.CheckBox("Contacts[0].Emergency", false)
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Invitation</label>
+                            <div class="col-md-10">
+                                @Html.CheckBox("Contacts[0].Invitation", false)
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="control-label col-md-2">Money</label>
-                        <div class="col-md-10">
-                            @Html.CheckBox("Contacts[0].Money", false)
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Emergency</label>
+                            <div class="col-md-10">
+                                @Html.CheckBox("Contacts[0].Emergency", false)
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Money</label>
+                            <div class="col-md-10">
+                                @Html.CheckBox("Contacts[0].Money", false)
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -95,32 +78,96 @@
     </div>
 }
 
+<!-- Hidden template for new contact entry -->
+<div id="contactTemplate" style="display:none;">
+    <div class="contact-entry">
+        <div class="entry-input">
+            <div class="form-group">
+                <label class="control-label col-md-2">Contact Type</label>
+                <div class="col-md-10">
+                    @Html.DropDownList("Contacts[INDEX].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
+                </div>
+            </div>
+            <div class="contact-fields" style="display:none;">
+                <div class="form-group">
+                    <label class="control-label col-md-2">Value</label>
+                    <div class="col-md-10">
+                        @Html.TextBox("Contacts[INDEX].Value", null, new { @class = "form-control" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="control-label col-md-2">Invitation</label>
+                    <div class="col-md-10">
+                        @Html.CheckBox("Contacts[INDEX].Invitation", false)
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="control-label col-md-2">Emergency</label>
+                    <div class="col-md-10">
+                        @Html.CheckBox("Contacts[INDEX].Emergency", false)
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="control-label col-md-2">Money</label>
+                    <div class="col-md-10">
+                        @Html.CheckBox("Contacts[INDEX].Money", false)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script type="text/javascript">
         $(document).ready(function(){
-            // When any contact type dropdown changes, hide all contact-fields first
-            $(".contact-type").change(function(){
-                $(".contact-fields").hide();
+            // Show the contact fields when a contact type is selected
+            $(document).on("change", "select.contact-type", function(){
                 var selectedVal = $(this).val();
-                if(selectedVal) {
-                    // Only show the fields for the current row
+                if(selectedVal){
                     $(this).closest(".contact-entry").find(".contact-fields").show();
+                } else {
+                    $(this).closest(".contact-entry").find(".contact-fields").hide();
                 }
             });
-
-            // Add another contact entry dynamically
+            
             $("#addContact").click(function(){
+                // Get the last contact entry
+                var currentEntry = $("#contacts .contact-entry").last();
+                // If this entry hasn’t been finalized into a summary yet, do it now.
+                if(currentEntry.find(".contact-summary").length === 0){
+                    var contactType = currentEntry.find("select.contact-type").val();
+                    if(!contactType){
+                        alert("Please select a contact type before adding a new contact.");
+                        return;
+                    }
+                    // Gather values from the current entry
+                    var typeText = currentEntry.find("select.contact-type option:selected").text();
+                    var value = currentEntry.find("input[name$='.Value']").val();
+                    var invitation = currentEntry.find("input[name$='.Invitation']").is(":checked") ? "Yes" : "No";
+                    var emergency = currentEntry.find("input[name$='.Emergency']").is(":checked") ? "Yes" : "No";
+                    var money = currentEntry.find("input[name$='.Money']").is(":checked") ? "Yes" : "No";
+                    
+                    var summaryHtml = '<div class="contact-summary">' +
+                        '<p><strong>Contact Type:</strong> ' + typeText + '</p>' +
+                        '<p><strong>Value:</strong> ' + value + '</p>' +
+                        '<p><strong>Invitation:</strong> ' + invitation + '</p>' +
+                        '<p><strong>Emergency:</strong> ' + emergency + '</p>' +
+                        '<p><strong>Money:</strong> ' + money + '</p>' +
+                    '</div>';
+                    
+                    // Hide the input section and prepend the summary
+                    currentEntry.find(".entry-input").hide();
+                    currentEntry.prepend(summaryHtml);
+                }
+                
+                // Append a new blank contact entry from the hidden template.
                 var index = $("#contacts .contact-entry").length;
-                var newEntry = $("#contacts .contact-entry:first").clone();
-
-                newEntry.find("select.contact-type").attr("name", "Contacts[" + index + "].Type").val("");
-                newEntry.find("input[name$='.Value']").attr("name", "Contacts[" + index + "].Value").val("");
-                newEntry.find("input[name$='.Invitation']").attr("name", "Contacts[" + index + "].Invitation").prop("checked", false);
-                newEntry.find("input[name$='.Emergency']").attr("name", "Contacts[" + index + "].Emergency").prop("checked", false);
-                newEntry.find("input[name$='.Money']").attr("name", "Contacts[" + index + "].Money").prop("checked", false);
-                newEntry.find(".contact-fields").hide();
-
-                $("#contacts").append(newEntry);
+                var templateHtml = $("#contactTemplate").html();
+                // Replace the placeholder 'INDEX' with the new index value
+                templateHtml = templateHtml.replace(/INDEX/g, index);
+                $("#contacts").append(templateHtml);
             });
         });
     </script>
