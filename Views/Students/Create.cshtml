@@ -135,7 +135,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script type="text/javascript">
         $(document).ready(function(){
-            // Show the contact fields when a contact type is selected
+            // Show or hide the contact fields based on selection
             $(document).on("change", "select.contact-type", function(){
                 var selectedVal = $(this).val();
                 if(selectedVal){
@@ -145,36 +145,66 @@
                 }
             });
             
+            // Create a contacts summary table if it doesn't already exist.
+            // (Assumes that #contacts is the container for both the input form(s) and the summary table.)
+            if ($("#contactsSummary").length === 0) {
+                $("#contacts").append(
+                    '<table id="contactsSummary">' +
+                        '<thead>' +
+                            '<tr>' +
+                                '<th>Type</th>' +
+                                '<th>Value</th>' +
+                                '<th>Invitation</th>' +
+                                '<th>Emergency</th>' +
+                                '<th>Money</th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody></tbody>' +
+                    '</table>'
+                );
+            }
+            
             $("#addContact").click(function(){
-                // Get the last contact entry
+                // Get the last contact entry (the input form)
                 var currentEntry = $("#contacts .contact-entry").last();
-                // If this entry hasn’t been finalized into a summary yet, do it now.
-                if(currentEntry.find(".contact-summary").length === 0){
+                // If this entry hasn’t been finalized into a summary row yet, do it now.
+                if (currentEntry.find(".contact-summary").length === 0) {
                     var contactType = currentEntry.find("select.contact-type").val();
-                    if(!contactType){
+                    if (!contactType) {
                         alert("Please select a contact type before adding a new contact.");
                         return;
                     }
+                    
                     // Gather values from the current entry
-                    var typeText = currentEntry.find("select.contact-type option:selected").text();
-                    var value = currentEntry.find("input[name$='.Value']").val();
+                    var typeText   = currentEntry.find("select.contact-type option:selected").text();
+                    var value      = currentEntry.find("input[name$='.Value']").val();
                     var invitation = currentEntry.find("input[name$='.Invitation']").is(":checked") ? "Yes" : "No";
-                    var emergency = currentEntry.find("input[name$='.Emergency']").is(":checked") ? "Yes" : "No";
-                    var money = currentEntry.find("input[name$='.Money']").is(":checked") ? "Yes" : "No";
+                    var emergency  = currentEntry.find("input[name$='.Emergency']").is(":checked") ? "Yes" : "No";
+                    var money      = currentEntry.find("input[name$='.Money']").is(":checked") ? "Yes" : "No";
                     
-                    var summaryHtml = '<div class="contact-summary">' + '<p><strong>Type: </strong> ' + typeText + ' ' + value + '<strong> Invitation: </strong> ' + invitation + '<strong>Emergency: </strong> ' + emergency + ' ' + '<strong>Money: </strong> ' + money + '</p>' + '</div>';
+                    // Create a table row as the summary (each column holds one field value)
+                    var summaryHtml = '<tr class="contact-summary">' +
+                        '<td>' + typeText + '</td>' +
+                        '<td>' + value + '</td>' +
+                        '<td>' + invitation + '</td>' +
+                        '<td>' + emergency + '</td>' +
+                        '<td>' + money + '</td>' +
+                        '</tr>';
                     
-                    // Hide the input section and prepend the summary
-                    currentEntry.find(".entry-input").hide();
-                    currentEntry.prepend(summaryHtml);
+                    // Append the new row to the table body
+                    $("#contactsSummary tbody").append(summaryHtml);
+                    
+                    // Optionally remove the finalized entry form from the page
+                    currentEntry.remove();
                 }
                 
-                // Append a new blank contact entry from the hidden template.
+                // Append a new blank contact entry using the hidden template.
                 var index = $("#contacts .contact-entry").length;
                 var templateHtml = $("#contactTemplate").html();
-                // Replace the placeholder 'INDEX' with the new index value
+                // Replace the placeholder 'INDEX' with the new index value.
                 templateHtml = templateHtml.replace(/INDEX/g, index);
-                $("#contacts").append(templateHtml);
+                // Prepend the new form above the summary table (or adjust as needed)
+                $("#contacts").prepend(templateHtml);
             });
         });
     </script>
