@@ -43,14 +43,13 @@
 
         <h4>Contact Information</h4>
 
-        <!-- Initially empty; new contacts are appended by JavaScript -->
+        <!-- New contact entries will be appended here -->
         <div id="contacts"></div>
 
         <!-- Button to add a new contact entry -->
         <button type="button" id="addContact" class="btn btn-secondary">Add Another Contact</button>
         <br /><br />
 
-        <!-- Submit button -->
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
                 <input type="submit" value="Create" class="btn btn-default" />
@@ -59,17 +58,14 @@
     </div>
 }
 
-<!-- Hidden template for a new contact entry -->
+<!-- Hidden template for new contact entry -->
 <div id="contactTemplate" style="display:none;">
     <div class="contact-entry" data-index="INDEX">
         <div class="entry-input">
             <div class="form-group">
                 <label class="control-label col-md-2">Contact Type</label>
                 <div class="col-md-10">
-                    @Html.DropDownList("Contacts[INDEX].Type", 
-                        new SelectList(ViewBag.ContactTypes, "Value", "Text"), 
-                        "Select Contact Type", 
-                        new { @class = "form-control contact-type" })
+                    @Html.DropDownList("Contacts[INDEX].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
                 </div>
             </div>
             <div class="contact-fields">
@@ -105,44 +101,34 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script type="text/javascript">
-
-        // Tracks how many contacts have been created so far (to assign unique indexes)
+        // Global counter to assign unique indexes to each contact
         var contactCount = 0;
 
-        // Finalizes the last contact entry (if not already summarized)
-        // and places hidden fields + a summary row into the summary table.
+        // Finalize the last contact entry (if any) by moving its values into the summary table
+        // and inserting hidden inputs so that the values post to the server.
         function finalizeLastContact() {
             var currentEntry = $("#contacts .contact-entry").last();
-            if (currentEntry.length === 0) return; // No contact to finalize
+            if (currentEntry.length === 0) return; // No entry to finalize
 
-            // If there's already a summary for it, do nothing
+            // If already finalized, do nothing.
             if (currentEntry.find(".contact-summary").length > 0) return;
 
-            // Gather data from the input fields
-            var index       = currentEntry.data("index");
+            var index = currentEntry.data("index");
             var contactType = currentEntry.find("select.contact-type").val();
-            var typeText    = currentEntry.find("select.contact-type option:selected").text() || "";
-            var value       = currentEntry.find("input[name='Contacts[" + index + "].Value']").val() || "";
-            // We'll store booleans for the hidden fields, but display "Yes"/"No" in the summary
+            var typeText = currentEntry.find("select.contact-type option:selected").text() || "";
+            var value = currentEntry.find("input[name='Contacts[" + index + "].Value']").val() || "";
             var invitationBool = currentEntry.find("input[name='Contacts[" + index + "].Invitation']").is(":checked");
             var emergencyBool  = currentEntry.find("input[name='Contacts[" + index + "].Emergency']").is(":checked");
             var moneyBool      = currentEntry.find("input[name='Contacts[" + index + "].Money']").is(":checked");
 
-            var invitationText = invitationBool ? "Yes" : "No";
-            var emergencyText  = emergencyBool ? "Yes" : "No";
-            var moneyText      = moneyBool ? "Yes" : "No";
-
-            // If you want to require a Contact Type:
-            if (!contactType) {
-                // If the user hasn't chosen a type, you can skip finalizing or alert them:
-                // alert("Please select a contact type before finalizing this contact.");
-                // return;
-                // or simply finalize anyway with an empty type
+            // Only finalize if at least one field has been changed (avoid finalizing a completely blank entry)
+            if (!contactType && !value && !invitationBool && !emergencyBool && !moneyBool) {
+                return;
             }
 
-            // If there's no summary table yet, create it
+            // Create the summary table if it doesn't exist
             if ($("#contactsSummary").length === 0) {
-                var tableHtml = 
+                var tableHtml =
                     '<table id="contactsSummary" style="margin-top:20px;">' +
                         '<thead>' +
                             '<tr>' +
@@ -155,21 +141,21 @@
                         '</thead>' +
                         '<tbody></tbody>' +
                     '</table>';
-                // Place the table below the #contacts container
                 $("#contacts").after(tableHtml);
             }
 
-            // Build the summary row with hidden fields for each property
-            // so the server can still receive them on form submit.
-            // We store the booleans as "true"/"false" in the hidden inputs.
-            var summaryRow = '' +
+            var invitationText = invitationBool ? "Yes" : "No";
+            var emergencyText  = emergencyBool ? "Yes" : "No";
+            var moneyText      = moneyBool ? "Yes" : "No";
+
+            // Build a summary row that includes hidden inputs (so the data posts to the server)
+            var summaryRow =
                 '<tr class="contact-summary">' +
                     '<td>' + typeText + '</td>' +
                     '<td>' + value + '</td>' +
                     '<td>' + invitationText + '</td>' +
                     '<td>' + emergencyText + '</td>' +
                     '<td>' + moneyText + '</td>' +
-                    // Hidden fields (same name as the server expects: Contacts[X].PropName)
                     '<td style="display:none;">' +
                         '<input type="hidden" name="Contacts[' + index + '].Type" value="' + contactType + '"/>' +
                         '<input type="hidden" name="Contacts[' + index + '].Value" value="' + value + '"/>' +
@@ -179,45 +165,39 @@
                     '</td>' +
                 '</tr>';
 
-            // Append the new row to the summary table
             $("#contactsSummary tbody").append(summaryRow);
-
-            // Remove the contact-entry block from the form
-            // (We no longer need those visible inputs, because
-            //  the hidden fields in the summary row will be posted.)
+            // Remove the input form since its values are now stored in the summary row.
             currentEntry.remove();
         }
 
         $(document).ready(function() {
 
-            // 1) "Add Another Contact" button
-            $("#addContact").click(function() {
-                // First, finalize the last contact (if any)
+            // When the user clicks the Add Another Contact button:
+            $("#addContact").click(function(e) {
+                // Stop propagation so the document click handler won't immediately finalize the new entry.
+                e.stopPropagation();
+
+                // Finalize the current entry (if any) before adding a new one.
                 finalizeLastContact();
 
-                // Then create a fresh contact entry with the next index
+                // Create a new contact entry from the hidden template.
                 var templateHtml = $("#contactTemplate").html();
                 templateHtml = templateHtml.replace(/INDEX/g, contactCount);
-
-                // Convert the HTML string to a jQuery element so we can set data-index
                 var $newEntry = $(templateHtml);
                 $newEntry.attr("data-index", contactCount);
-
-                // Add to the DOM
                 $("#contacts").append($newEntry);
 
-                // Increment the contactCount for the next contact
                 contactCount++;
             });
 
-            // 2) Clicking anywhere outside the last contact entry finalizes it
+            // When the user clicks anywhere outside the last contact entry,
+            // attempt to finalize that entry.
             $(document).on("click", function(e) {
+                // Do not finalize if the click is on the Add button.
+                if ($(e.target).closest("#addContact").length > 0) return;
                 var $target = $(e.target);
                 var $lastContactEntry = $("#contacts .contact-entry").last();
-                
-                // If there's a last contact entry and the click is outside of it
-                if ($lastContactEntry.length > 0 &&
-                    $target.closest($lastContactEntry).length === 0) {
+                if ($lastContactEntry.length > 0 && $target.closest($lastContactEntry).length === 0) {
                     finalizeLastContact();
                 }
             });
