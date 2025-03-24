@@ -6,6 +6,9 @@
 
 <h2>Create Student</h2>
 
+@* Display validation errors, including the contact validation error *@
+@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
 @using (Html.BeginForm()) 
 {
     @Html.AntiForgeryToken()
@@ -33,8 +36,6 @@
                 @Html.ValidationMessageFor(model => model.MainNotes, "", new { @class = "text-danger" })
             </div>
         </div>
-
-        <!-- Removed CreatedDate manual entry -->
 
         <!-- Source dropdown -->
         <div class="form-group">
@@ -165,7 +166,7 @@
                 $("#modalContactInvitation").prop("checked", false);
                 $("#modalContactEmergency").prop("checked", false);
                 $("#modalContactMoney").prop("checked", false);
-                // Show the modal (with static backdrop so the user must interact with it).
+                // Show the modal.
                 $("#contactModal").modal('show');
             });
 
@@ -194,6 +195,15 @@
             // Cancel button simply closes the modal.
             $("#modalCancel").click(function() {
                 $("#contactModal").modal('hide');
+            });
+
+            // Client-side check: Before form submission, ensure at least one contact is added.
+            $("form").submit(function(e) {
+                if ($("#contactsSummary tbody tr").length === 0) {
+                    alert("Please add at least one contact.");
+                    e.preventDefault();
+                    return false;
+                }
             });
         });
     </script>

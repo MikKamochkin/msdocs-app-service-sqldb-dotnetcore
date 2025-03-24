@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
 using System;
+using System.Linq;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -75,15 +76,22 @@ namespace DotNetCoreSqlDb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,Contacts")] Student student)
         {
+            // Set the CreatedDate automatically to the current time.
+            student.CreatedDate = DateTime.Now;
+
+            // Server-side validation: Ensure at least one contact is added.
+            if (student.Contacts == null || !student.Contacts.Any())
+            {
+                ModelState.AddModelError("", "Please add at least one contact.");
+            }
+
             if (ModelState.IsValid)
             {
-                // Set the CreatedDate automatically to the current time.
-                student.CreatedDate = DateTime.Now;
-
                 _context.Add(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+            
             // Repopulate dropdown lists if model state is invalid.
             ViewBag.ContactTypes = new List<SelectListItem>
             {
@@ -151,7 +159,7 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 try
                 {
-                    // Note: In this case, CreatedDate should remain unchanged.
+                    // Note: In Edit, we do not change CreatedDate.
                     _context.Update(student);
                     await _context.SaveChangesAsync();
                 }
