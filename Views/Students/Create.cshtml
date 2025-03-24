@@ -101,6 +101,8 @@
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <!-- Ensure Bootstrap's JavaScript is loaded -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <script type="text/javascript">
         // Global counter for unique contact indexes
         var contactCount = 0;
@@ -144,6 +146,13 @@
         }
 
         $(document).ready(function() {
+            // Initialize the modal with the static backdrop and disabled keyboard options
+            $("#contactModal").modal({
+                backdrop: 'static',
+                keyboard: false,
+                show: false
+            });
+
             // Open the modal when the "Add Another Contact" button is clicked.
             $("#addContact").click(function(e) {
                 // Clear modal fields for fresh input.
