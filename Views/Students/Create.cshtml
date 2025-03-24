@@ -61,38 +61,38 @@
     </div>
 }
 
-<!-- Modal for adding a new contact -->
+<!-- Modal for adding/editing a contact -->
 <div id="contactModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
   <div class="modal-dialog">
     <div class="modal-content">
        <div class="modal-header">
-           <h5 class="modal-title">Add Contact</h5>
+           <h5 class="modal-title" id="contactModalTitle">Add Contact</h5>
        </div>
        <div class="modal-body">
          <div class="form-group">
             <label class="control-label">Contact Type</label>
-            @Html.DropDownList("modalContactType", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control", id="modalContactType" })
+            @Html.DropDownList("modalContactType", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control", id = "modalContactType" })
          </div>
          <div class="form-group">
             <label class="control-label">Value</label>
-            @Html.TextBox("modalContactValue", null, new { @class = "form-control", id="modalContactValue" })
+            @Html.TextBox("modalContactValue", null, new { @class = "form-control", id = "modalContactValue" })
          </div>
          <div class="form-group">
             <label class="control-label">Invitation</label>
             <div>
-                @Html.CheckBox("modalContactInvitation", false, new { id="modalContactInvitation" })
+                @Html.CheckBox("modalContactInvitation", false, new { id = "modalContactInvitation" })
             </div>
          </div>
          <div class="form-group">
             <label class="control-label">Emergency</label>
             <div>
-                @Html.CheckBox("modalContactEmergency", false, new { id="modalContactEmergency" })
+                @Html.CheckBox("modalContactEmergency", false, new { id = "modalContactEmergency" })
             </div>
          </div>
          <div class="form-group">
             <label class="control-label">Money</label>
             <div>
-                @Html.CheckBox("modalContactMoney", false, new { id="modalContactMoney" })
+                @Html.CheckBox("modalContactMoney", false, new { id = "modalContactMoney" })
             </div>
          </div>
        </div>
@@ -109,12 +109,14 @@
     <!-- Ensure Bootstrap's JavaScript is loaded -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <script type="text/javascript">
-        // Global counter for unique contact indexes
+        // Global counters/variables:
         var contactCount = 0;
+        // Holds the index of the contact currently being edited; null if adding a new contact.
+        var editingContactIndex = null;
 
-        // Function to add a contact summary row (with hidden inputs) so that the data posts to the DB.
+        // Function to add a new contact summary row with data attributes.
         function addContactSummary(index, contactType, typeText, value, invitationBool, emergencyBool, moneyBool) {
-            // Create the summary table if it doesn't exist
+            // Create the summary table if it doesn't exist.
             if ($("#contactsSummary").length === 0) {
                 var tableHtml =
                     '<table id="contactsSummary" style="margin-top:20px;" class="table table-bordered">' +
@@ -133,7 +135,12 @@
             }
             
             var summaryRow =
-                '<tr class="contact-summary">' +
+                '<tr class="contact-summary" data-index="' + index + '" ' +
+                'data-contacttype="' + contactType + '" ' +
+                'data-contactvalue="' + value + '" ' +
+                'data-invitation="' + invitationBool + '" ' +
+                'data-emergency="' + emergencyBool + '" ' +
+                'data-money="' + moneyBool + '">' +
                     '<td>' + typeText + '</td>' +
                     '<td>' + value + '</td>' +
                     '<td>' + (invitationBool ? "Yes" : "No") + '</td>' +
@@ -151,26 +158,40 @@
         }
 
         $(document).ready(function() {
-            // Initialize the modal with the static backdrop and disabled keyboard options
+            // Initialize the modal with a static backdrop and disabled keyboard.
             $("#contactModal").modal({
                 backdrop: 'static',
                 keyboard: false,
                 show: false
             });
 
-            // Open the modal when the "Add Another Contact" button is clicked.
+            // When the "Add Another Contact" button is clicked, clear modal fields and set mode to "add".
             $("#addContact").click(function(e) {
-                // Clear modal fields for fresh input.
+                editingContactIndex = null;
+                $("#contactModalTitle").text("Add Contact");
                 $("#modalContactType").val("");
                 $("#modalContactValue").val("");
                 $("#modalContactInvitation").prop("checked", false);
                 $("#modalContactEmergency").prop("checked", false);
                 $("#modalContactMoney").prop("checked", false);
-                // Show the modal.
                 $("#contactModal").modal('show');
             });
 
-            // When Save is clicked in the modal, add the contact summary.
+            // Delegate click event to the summary rows to enable editing.
+            $(document).on("click", "#contactsSummary tbody tr.contact-summary", function(e) {
+                // Retrieve the current row's data.
+                var $row = $(this);
+                editingContactIndex = $row.data("index");
+                $("#modalContactType").val($row.data("contacttype"));
+                $("#modalContactValue").val($row.data("contactvalue"));
+                $("#modalContactInvitation").prop("checked", $row.data("invitation"));
+                $("#modalContactEmergency").prop("checked", $row.data("emergency"));
+                $("#modalContactMoney").prop("checked", $row.data("money"));
+                $("#contactModalTitle").text("Edit Contact");
+                $("#contactModal").modal("show");
+            });
+
+            // When Save is clicked in the modal.
             $("#modalSave").click(function() {
                 var contactType = $("#modalContactType").val();
                 var typeText = $("#modalContactType option:selected").text();
@@ -179,21 +200,49 @@
                 var emergencyBool  = $("#modalContactEmergency").is(":checked");
                 var moneyBool      = $("#modalContactMoney").is(":checked");
 
-                // Only add the contact if at least one field is filled out.
+                // Validate that at least one field is filled (if necessary).
                 if (!contactType && !value && !invitationBool && !emergencyBool && !moneyBool) {
                     $("#contactModal").modal('hide');
                     return;
                 }
 
-                addContactSummary(contactCount, contactType, typeText, value, invitationBool, emergencyBool, moneyBool);
-                contactCount++;
-
-                // Close the modal after saving.
+                // If editing an existing contact, update that row.
+                if (editingContactIndex !== null) {
+                    var $row = $("#contactsSummary tbody tr.contact-summary[data-index='" + editingContactIndex + "']");
+                    $row.find("td:nth-child(1)").text(typeText);
+                    $row.find("td:nth-child(2)").text(value);
+                    $row.find("td:nth-child(3)").text(invitationBool ? "Yes" : "No");
+                    $row.find("td:nth-child(4)").text(emergencyBool ? "Yes" : "No");
+                    $row.find("td:nth-child(5)").text(moneyBool ? "Yes" : "No");
+                    
+                    var hiddenHtml = 
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Type" value="' + contactType + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Value" value="' + value + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Invitation" value="' + invitationBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Emergency" value="' + emergencyBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Money" value="' + moneyBool + '"/>';
+                    $row.find("td:last").html(hiddenHtml);
+                    
+                    // Update data attributes.
+                    $row.data("contacttype", contactType);
+                    $row.data("contactvalue", value);
+                    $row.data("invitation", invitationBool);
+                    $row.data("emergency", emergencyBool);
+                    $row.data("money", moneyBool);
+                    
+                    editingContactIndex = null;
+                } else {
+                    // Otherwise, add a new contact summary row.
+                    addContactSummary(contactCount, contactType, typeText, value, invitationBool, emergencyBool, moneyBool);
+                    contactCount++;
+                }
+                
                 $("#contactModal").modal('hide');
             });
 
             // Cancel button simply closes the modal.
             $("#modalCancel").click(function() {
+                editingContactIndex = null;
                 $("#contactModal").modal('hide');
             });
 
