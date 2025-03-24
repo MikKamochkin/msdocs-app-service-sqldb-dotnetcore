@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
+using System;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -39,7 +40,7 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: Students/Create
         public IActionResult Create()
         {
-            // Prepare a dropdown list for contact types
+            // Prepare dropdown list for contact types
             ViewBag.ContactTypes = new List<SelectListItem>
             {
                 new SelectListItem { Text = "Email", Value = "Email" },
@@ -72,15 +73,18 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,CreatedDate,Source,Contacts")] Student student)
+        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,Contacts")] Student student)
         {
             if (ModelState.IsValid)
             {
+                // Set the CreatedDate automatically to the current time.
+                student.CreatedDate = DateTime.Now;
+
                 _context.Add(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            // Repopulate dropdown lists if the model state is invalid.
+            // Repopulate dropdown lists if model state is invalid.
             ViewBag.ContactTypes = new List<SelectListItem>
             {
                 new SelectListItem { Text = "Email", Value = "Email" },
@@ -138,7 +142,7 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ID,Name,ParentOrEmployer,MainNotes,CreatedDate,Contacts")] Student student)
+        public async Task<IActionResult> Edit(int id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,Contacts")] Student student)
         {
             if (id != student.ID)
                 return NotFound();
@@ -147,6 +151,7 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 try
                 {
+                    // Note: In this case, CreatedDate should remain unchanged.
                     _context.Update(student);
                     await _context.SaveChangesAsync();
                 }
