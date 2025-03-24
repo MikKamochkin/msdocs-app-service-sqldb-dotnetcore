@@ -100,6 +100,9 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Property<string>("ParentOrEmployer")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Source")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("ID");
 
                     b.ToTable("Student");

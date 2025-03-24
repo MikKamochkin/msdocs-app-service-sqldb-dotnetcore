@@ -49,13 +49,30 @@ namespace DotNetCoreSqlDb.Controllers
                 new SelectListItem { Text = "Telegram", Value = "Telegram" },
                 new SelectListItem { Text = "Twitter", Value = "Twitter" }
             };
+
+            ViewBag.SourceTypes = new List<SelectListItem>
+            {
+                new SelectListItem { Text = "Google Khinich School", Value = "Google Khinich School"},
+                new SelectListItem { Text = "Google Toronto French", Value = "Google Toronto French"},
+                new SelectListItem { Text = "Facebok Khinich School", Value = "Facebok Khinich School"},
+                new SelectListItem { Text = "Facebook Toronto French", Value = "Facebook Toronto French"},
+                new SelectListItem { Text = "Instagram Khinich School", Value = "Instagram Khinich School"},
+                new SelectListItem { Text = "Instagram Toronto French", Value = "Instagram Toronto French"},
+                new SelectListItem { Text = "Referall from Toronto French", Value = "Referall from Toronto French"},
+                new SelectListItem { Text = "Referall from Khinich School", Value = "Referall from Khinich School"},
+                new SelectListItem { Text = "DM in Whatsapp Toronto French", Value = "DM in Whatsapp Toronto French"},
+                new SelectListItem { Text = "DM in Whatsapp Khinich School", Value = "DM in Whatsapp Khinich School"},
+                new SelectListItem { Text = "Phone Call from Toronto French Site", Value = "Phone Call from Toronto French Site"},
+                new SelectListItem { Text = "Phone Call from Toronto French by Location", Value = "Phone Call from Toronto French by Location"}
+            };
+
             return View();
         }
 
         // POST: Students/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,CreatedDate,Contacts")] Student student)
+        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,CreatedDate,Source,Contacts")] Student student)
         {
             if (ModelState.IsValid)
             {
@@ -63,7 +80,7 @@ namespace DotNetCoreSqlDb.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            // If model state is invalid, repopulate the contact types
+            // Repopulate dropdown lists if the model state is invalid.
             ViewBag.ContactTypes = new List<SelectListItem>
             {
                 new SelectListItem { Text = "Email", Value = "Email" },
@@ -73,6 +90,23 @@ namespace DotNetCoreSqlDb.Controllers
                 new SelectListItem { Text = "Telegram", Value = "Telegram" },
                 new SelectListItem { Text = "Twitter", Value = "Twitter" }
             };
+
+            ViewBag.SourceTypes = new List<SelectListItem>
+            {
+                new SelectListItem { Text = "Google Khinich School", Value = "Google Khinich School"},
+                new SelectListItem { Text = "Google Toronto French", Value = "Google Toronto French"},
+                new SelectListItem { Text = "Facebok Khinich School", Value = "Facebok Khinich School"},
+                new SelectListItem { Text = "Facebook Toronto French", Value = "Facebook Toronto French"},
+                new SelectListItem { Text = "Instagram Khinich School", Value = "Instagram Khinich School"},
+                new SelectListItem { Text = "Instagram Toronto French", Value = "Instagram Toronto French"},
+                new SelectListItem { Text = "Referall from Toronto French", Value = "Referall from Toronto French"},
+                new SelectListItem { Text = "Referall from Khinich School", Value = "Referall from Khinich School"},
+                new SelectListItem { Text = "DM in Whatsapp Toronto French", Value = "DM in Whatsapp Toronto French"},
+                new SelectListItem { Text = "DM in Whatsapp Khinich School", Value = "DM in Whatsapp Khinich School"},
+                new SelectListItem { Text = "Phone Call from Toronto French Site", Value = "Phone Call from Toronto French Site"},
+                new SelectListItem { Text = "Phone Call from Toronto French by Location", Value = "Phone Call from Toronto French by Location"}
+            };
+
             return View(student);
         }
 

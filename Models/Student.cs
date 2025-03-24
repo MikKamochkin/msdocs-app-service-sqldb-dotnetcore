@@ -22,6 +22,9 @@ namespace DotNetCoreSqlDb.Models
         public string? OngoingNotes { get; set; }
         */
 
+        [DisplayName("Source")]
+        public string? Source { get; set;}
+
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]

@@ -41,6 +41,15 @@
             </div>
         </div>
 
+        <!-- New Source dropdown -->
+        <div class="form-group">
+            @Html.LabelFor(model => model.Source, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.DropDownListFor(model => model.Source, (IEnumerable<SelectListItem>)ViewBag.SourceTypes, "Select Source", new { @class = "form-control" })
+                @Html.ValidationMessageFor(model => model.Source, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
         <h4>Contact Information</h4>
         <!-- The contact summary (with hidden inputs) will be rendered here -->
         <div id="contacts"></div>
