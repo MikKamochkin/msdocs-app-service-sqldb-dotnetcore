@@ -25,6 +25,9 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Source")]
         public string? Source { get; set;}
 
+        [DisplayName("TimeZone")]
+        public string? TimeZoneId { get; set;}
+
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]

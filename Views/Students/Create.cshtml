@@ -6,7 +6,6 @@
 
 <h2>Create Student</h2>
 
-@* Display validation errors, including the contact validation error *@
 @Html.ValidationSummary(true, "", new { @class = "text-danger" })
 
 @using (Html.BeginForm()) 
@@ -46,6 +45,15 @@
             </div>
         </div>
 
+        <!-- Timezone dropdown -->
+        <div class="form-group">
+            @Html.LabelFor(model => model.TimeZoneId, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.DropDownListFor(model => model.TimeZoneId, (IEnumerable<SelectListItem>)ViewBag.TimeZones, "Select Time Zone", new { @class = "form-control" })
+                @Html.ValidationMessageFor(model => model.TimeZoneId, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
         <h4>Contact Information</h4>
         <!-- The contact summary (with hidden inputs) will be rendered here -->
         <div id="contacts"></div>
@@ -61,38 +69,38 @@
     </div>
 }
 
-<!-- Modal for adding/editing a contact -->
+<!-- Modal for adding a new contact (existing modal code remains unchanged) -->
 <div id="contactModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
   <div class="modal-dialog">
     <div class="modal-content">
        <div class="modal-header">
-           <h5 class="modal-title" id="contactModalTitle">Add Contact</h5>
+           <h5 class="modal-title">Add Contact</h5>
        </div>
        <div class="modal-body">
          <div class="form-group">
             <label class="control-label">Contact Type</label>
-            @Html.DropDownList("modalContactType", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control", id = "modalContactType" })
+            @Html.DropDownList("modalContactType", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control", id="modalContactType" })
          </div>
          <div class="form-group">
             <label class="control-label">Value</label>
-            @Html.TextBox("modalContactValue", null, new { @class = "form-control", id = "modalContactValue" })
+            @Html.TextBox("modalContactValue", null, new { @class = "form-control", id="modalContactValue" })
          </div>
          <div class="form-group">
             <label class="control-label">Invitation</label>
             <div>
-                @Html.CheckBox("modalContactInvitation", false, new { id = "modalContactInvitation" })
+                @Html.CheckBox("modalContactInvitation", false, new { id="modalContactInvitation" })
             </div>
          </div>
          <div class="form-group">
             <label class="control-label">Emergency</label>
             <div>
-                @Html.CheckBox("modalContactEmergency", false, new { id = "modalContactEmergency" })
+                @Html.CheckBox("modalContactEmergency", false, new { id="modalContactEmergency" })
             </div>
          </div>
          <div class="form-group">
             <label class="control-label">Money</label>
             <div>
-                @Html.CheckBox("modalContactMoney", false, new { id = "modalContactMoney" })
+                @Html.CheckBox("modalContactMoney", false, new { id="modalContactMoney" })
             </div>
          </div>
        </div>

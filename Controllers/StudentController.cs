@@ -68,13 +68,17 @@ namespace DotNetCoreSqlDb.Controllers
                 new SelectListItem { Text = "Phone Call from Toronto French by Location", Value = "Phone Call from Toronto French by Location"}
             };
 
+            ViewBag.Timezones = TimeZoneInfo.GetSystemTimeZones()
+                .Select(tz => new SelectListItem {Value = tz.Id, Text = tz.DisplayName })
+                .ToList();
+
             return View();
         }
 
         // POST: Students/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,Contacts")] Student student)
+        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,Contacts")] Student student)
         {
             // Set the CreatedDate automatically to the current time.
             student.CreatedDate = DateTime.Now;
@@ -118,6 +122,10 @@ namespace DotNetCoreSqlDb.Controllers
                 new SelectListItem { Text = "Phone Call from Toronto French Site", Value = "Phone Call from Toronto French Site"},
                 new SelectListItem { Text = "Phone Call from Toronto French by Location", Value = "Phone Call from Toronto French by Location"}
             };
+
+            ViewBag.TimeZones = TimeZoneInfo.GetSystemTimeZones()
+                .Select(tz => new SelectListItem { Value = tz.Id, Text = tz.DisplayName })
+                .ToList();
 
             return View(student);
         }
