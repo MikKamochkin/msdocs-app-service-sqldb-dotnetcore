@@ -134,6 +134,28 @@ namespace DotNetCoreSqlDb.Migrations
                     b.ToTable("Todo");
                 });
 
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.User", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Password")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ID");
+
+                    b.ToTable("User");
+                });
+
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Contact", b =>
                 {
                     b.HasOne("DotNetCoreSqlDb.Models.Student", "Student")
