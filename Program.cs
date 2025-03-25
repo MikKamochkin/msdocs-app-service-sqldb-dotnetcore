@@ -32,7 +32,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/Login/Index";       // Redirect here if not authenticated.
         options.LogoutPath = "/Login/Logout";       // Path to logout.
         options.AccessDeniedPath = "/Home/AccessDenied"; // Optional: path for denied access.
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(1); // Cookie expiration time.
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Cookie expiration time.
     });
 
 // Add App Service logging
