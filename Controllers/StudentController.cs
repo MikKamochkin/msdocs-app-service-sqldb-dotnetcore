@@ -5,9 +5,11 @@ using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
 using System;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DotNetCoreSqlDb.Controllers
 {
+    [Authorize]
     public class StudentsController : Controller
     {
         private readonly MyDatabaseContext _context;

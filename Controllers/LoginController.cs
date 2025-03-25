@@ -24,6 +24,7 @@ namespace DotNetCoreSqlDb.Controllers
 
         // POST: /Login
         [HttpPost]
+        [RequireHttps]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(string name, string password)
         {
