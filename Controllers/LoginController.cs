@@ -35,7 +35,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             // Look up the user in the database (for testing, passwords are in plain text)
-            var user = _context.User.FirstOrDefault(u => u.Name == name && u.Password == password);
+            var user = _context.Users.FirstOrDefault(u => u.Name == name && u.Password == password);
             if (user != null)
             {
                 // Create a list of claims. In a later step, you can add additional claims for permissions.
@@ -56,13 +56,14 @@ namespace DotNetCoreSqlDb.Controllers
                     // IsPersistent = true
                 };
 
-                // Sign in the user
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
-                                              new ClaimsPrincipal(claimsIdentity),
-                                              authProperties);
+                // Sign in the user (this creates an encrypted cookie)
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(claimsIdentity),
+                    authProperties);
 
-                // Redirect to the Todos page after a successful login
-                return RedirectToAction("Index", "Todos");
+                // Redirect to /Teachers/Index on successful login
+                return RedirectToAction("Index", "Teachers");
             }
             else
             {
