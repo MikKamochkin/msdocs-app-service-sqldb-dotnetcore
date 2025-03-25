@@ -35,7 +35,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             // Look up the user in the database (for testing, passwords are in plain text)
-            var user = _context.Users.FirstOrDefault(u => u.Name == name && u.Password == password);
+            var user = _context.User.FirstOrDefault(u => u.Name == name && u.Password == password);
             if (user != null)
             {
                 // Create a list of claims. In a later step, you can add additional claims for permissions.
