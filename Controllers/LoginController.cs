@@ -43,7 +43,7 @@ namespace DotNetCoreSqlDb.Controllers
                 {
                     new Claim(ClaimTypes.Name, user.Name),
                     new Claim("UserID", user.ID.ToString()),
-                    new Claim(ClaimTypes.Role, user.Role) // this will allow role-based checks later
+                    new Claim(ClaimTypes.Role, user.Role)
                 };
 
                 // Create a claims identity specifying the authentication scheme
