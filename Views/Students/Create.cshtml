@@ -54,6 +54,18 @@
             </div>
         </div>
 
+        <!-- Accounting Group field: only visible to admin users -->
+        @if (User.IsInRole("admin"))
+        {
+            <div class="form-group">
+                @Html.LabelFor(model => model.AccountingGroup, new { @class = "control-label col-md-2" })
+                <div class="col-md-10">
+                    @Html.EditorFor(model => model.AccountingGroup, new { htmlAttributes = new { @class = "form-control" } })
+                    @Html.ValidationMessageFor(model => model.AccountingGroup, "", new { @class = "text-danger" })
+                </div>
+            </div>
+        }
+
         <h4>Contact Information</h4>
         <!-- The contact summary (with hidden inputs) will be rendered here -->
         <div id="contacts"></div>

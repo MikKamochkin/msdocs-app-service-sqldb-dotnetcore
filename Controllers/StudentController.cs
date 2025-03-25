@@ -69,7 +69,7 @@ namespace DotNetCoreSqlDb.Controllers
             };
 
             ViewBag.Timezones = TimeZoneInfo.GetSystemTimeZones()
-                .Select(tz => new SelectListItem {Value = tz.Id, Text = tz.DisplayName })
+                .Select(tz => new SelectListItem { Value = tz.Id, Text = tz.DisplayName })
                 .ToList();
 
             return View();
@@ -78,10 +78,16 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,Contacts")] Student student)
+        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
         {
             // Set the CreatedDate automatically to the current time.
             student.CreatedDate = DateTime.Now;
+
+            // If the current user is not an admin, ignore any submitted AccountingGroup value.
+            if (!User.IsInRole("admin"))
+            {
+                student.AccountingGroup = null;
+            }
 
             // Server-side validation: Ensure at least one contact is added.
             if (student.Contacts == null || !student.Contacts.Any())
@@ -95,33 +101,33 @@ namespace DotNetCoreSqlDb.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            
+
             // Repopulate dropdown lists if model state is invalid.
             ViewBag.ContactTypes = new List<SelectListItem>
-            {
-                new SelectListItem { Text = "Email", Value = "Email" },
-                new SelectListItem { Text = "Phone", Value = "Phone" },
-                new SelectListItem { Text = "Facebook", Value = "Facebook" },
-                new SelectListItem { Text = "Instagram", Value = "Instagram" },
-                new SelectListItem { Text = "Telegram", Value = "Telegram" },
-                new SelectListItem { Text = "Twitter", Value = "Twitter" }
-            };
+    {
+        new SelectListItem { Text = "Email", Value = "Email" },
+        new SelectListItem { Text = "Phone", Value = "Phone" },
+        new SelectListItem { Text = "Facebook", Value = "Facebook" },
+        new SelectListItem { Text = "Instagram", Value = "Instagram" },
+        new SelectListItem { Text = "Telegram", Value = "Telegram" },
+        new SelectListItem { Text = "Twitter", Value = "Twitter" }
+    };
 
             ViewBag.SourceTypes = new List<SelectListItem>
-            {
-                new SelectListItem { Text = "Google Khinich School", Value = "Google Khinich School"},
-                new SelectListItem { Text = "Google Toronto French", Value = "Google Toronto French"},
-                new SelectListItem { Text = "Facebok Khinich School", Value = "Facebok Khinich School"},
-                new SelectListItem { Text = "Facebook Toronto French", Value = "Facebook Toronto French"},
-                new SelectListItem { Text = "Instagram Khinich School", Value = "Instagram Khinich School"},
-                new SelectListItem { Text = "Instagram Toronto French", Value = "Instagram Toronto French"},
-                new SelectListItem { Text = "Referall from Toronto French", Value = "Referall from Toronto French"},
-                new SelectListItem { Text = "Referall from Khinich School", Value = "Referall from Khinich School"},
-                new SelectListItem { Text = "DM in Whatsapp Toronto French", Value = "DM in Whatsapp Toronto French"},
-                new SelectListItem { Text = "DM in Whatsapp Khinich School", Value = "DM in Whatsapp Khinich School"},
-                new SelectListItem { Text = "Phone Call from Toronto French Site", Value = "Phone Call from Toronto French Site"},
-                new SelectListItem { Text = "Phone Call from Toronto French by Location", Value = "Phone Call from Toronto French by Location"}
-            };
+    {
+        new SelectListItem { Text = "Google Khinich School", Value = "Google Khinich School"},
+        new SelectListItem { Text = "Google Toronto French", Value = "Google Toronto French"},
+        new SelectListItem { Text = "Facebok Khinich School", Value = "Facebok Khinich School"},
+        new SelectListItem { Text = "Facebook Toronto French", Value = "Facebook Toronto French"},
+        new SelectListItem { Text = "Instagram Khinich School", Value = "Instagram Khinich School"},
+        new SelectListItem { Text = "Instagram Toronto French", Value = "Instagram Toronto French"},
+        new SelectListItem { Text = "Referall from Toronto French", Value = "Referall from Toronto French"},
+        new SelectListItem { Text = "Referall from Khinich School", Value = "Referall from Khinich School"},
+        new SelectListItem { Text = "DM in Whatsapp Toronto French", Value = "DM in Whatsapp Toronto French"},
+        new SelectListItem { Text = "DM in Whatsapp Khinich School", Value = "DM in Whatsapp Khinich School"},
+        new SelectListItem { Text = "Phone Call from Toronto French Site", Value = "Phone Call from Toronto French Site"},
+        new SelectListItem { Text = "Phone Call from Toronto French by Location", Value = "Phone Call from Toronto French by Location"}
+    };
 
             ViewBag.TimeZones = TimeZoneInfo.GetSystemTimeZones()
                 .Select(tz => new SelectListItem { Value = tz.Id, Text = tz.DisplayName })
