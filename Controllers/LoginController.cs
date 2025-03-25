@@ -53,7 +53,7 @@ namespace DotNetCoreSqlDb.Controllers
                 // Set up authentication properties if needed (e.g., IsPersistent for "Remember Me")
                 var authProperties = new AuthenticationProperties
                 {
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1),
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30),
                     // IsPersistent = true
                 };
 
