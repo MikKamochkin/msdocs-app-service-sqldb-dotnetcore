@@ -7,11 +7,11 @@ namespace DotNetCoreSqlDb.Models
     public class Notes
     {
         [Key]
-        public int ID { get; set; } // Primary Key for the contact record
+        public Guid ID { get; set; } // Primary Key for the contact record
 
         // Foreign key to associate the contact with a student
         [ForeignKey("Student")]
-        public int StudentID { get; set; }
+        public Guid StudentID { get; set; }
 
         [DisplayName("Value")]
         public string? Value { get; set; }

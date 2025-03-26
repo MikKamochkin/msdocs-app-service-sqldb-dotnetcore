@@ -7,7 +7,7 @@ namespace DotNetCoreSqlDb.Models
     public class User
     {
         [Key]
-        public int ID { get; set; } // Primary Key for the contact record
+        public Guid ID { get; set; } // Primary Key for the contact record
 
         [DisplayName("Name")]
         public string? Name { get; set; }

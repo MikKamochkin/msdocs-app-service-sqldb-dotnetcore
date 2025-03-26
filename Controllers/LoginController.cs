@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace DotNetCoreSqlDb.Controllers
 {
+    [RequireHttps]
     public class LoginController : Controller
     {
         private readonly MyDatabaseContext _context;
@@ -24,7 +25,6 @@ namespace DotNetCoreSqlDb.Controllers
 
         // POST: /Login
         [HttpPost]
-        [RequireHttps]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(string name, string password)
         {

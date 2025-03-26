@@ -6,7 +6,7 @@ namespace DotNetCoreSqlDb.Models
 {
     public class Student
     {
-        public int ID { get; set; } // Primary Key
+        public Guid ID { get; set; } // Primary Key
 
         [DisplayName("Name")]
         [Required]

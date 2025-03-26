@@ -25,8 +25,8 @@ namespace DotNetCoreSqlDb.Controllers
             return View(await _context.Student.ToListAsync());
         }
 
-        // GET: Students/Details/5
-        public async Task<IActionResult> Details(int? id)
+        // GET: Students/Details/{id}
+        public async Task<IActionResult> Details(Guid? id)
         {
             if (id == null)
                 return NotFound();
@@ -99,6 +99,9 @@ namespace DotNetCoreSqlDb.Controllers
 
             if (ModelState.IsValid)
             {
+                // Generate a new GUID for the student's ID.
+                student.ID = Guid.NewGuid();
+                
                 _context.Add(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
@@ -106,30 +109,30 @@ namespace DotNetCoreSqlDb.Controllers
 
             // Repopulate dropdown lists if model state is invalid.
             ViewBag.ContactTypes = new List<SelectListItem>
-    {
-        new SelectListItem { Text = "Email", Value = "Email" },
-        new SelectListItem { Text = "Phone", Value = "Phone" },
-        new SelectListItem { Text = "Facebook", Value = "Facebook" },
-        new SelectListItem { Text = "Instagram", Value = "Instagram" },
-        new SelectListItem { Text = "Telegram", Value = "Telegram" },
-        new SelectListItem { Text = "Twitter", Value = "Twitter" }
-    };
+            {
+                new SelectListItem { Text = "Email", Value = "Email" },
+                new SelectListItem { Text = "Phone", Value = "Phone" },
+                new SelectListItem { Text = "Facebook", Value = "Facebook" },
+                new SelectListItem { Text = "Instagram", Value = "Instagram" },
+                new SelectListItem { Text = "Telegram", Value = "Telegram" },
+                new SelectListItem { Text = "Twitter", Value = "Twitter" }
+            };
 
             ViewBag.SourceTypes = new List<SelectListItem>
-    {
-        new SelectListItem { Text = "Google Khinich School", Value = "Google Khinich School"},
-        new SelectListItem { Text = "Google Toronto French", Value = "Google Toronto French"},
-        new SelectListItem { Text = "Facebok Khinich School", Value = "Facebok Khinich School"},
-        new SelectListItem { Text = "Facebook Toronto French", Value = "Facebook Toronto French"},
-        new SelectListItem { Text = "Instagram Khinich School", Value = "Instagram Khinich School"},
-        new SelectListItem { Text = "Instagram Toronto French", Value = "Instagram Toronto French"},
-        new SelectListItem { Text = "Referall from Toronto French", Value = "Referall from Toronto French"},
-        new SelectListItem { Text = "Referall from Khinich School", Value = "Referall from Khinich School"},
-        new SelectListItem { Text = "DM in Whatsapp Toronto French", Value = "DM in Whatsapp Toronto French"},
-        new SelectListItem { Text = "DM in Whatsapp Khinich School", Value = "DM in Whatsapp Khinich School"},
-        new SelectListItem { Text = "Phone Call from Toronto French Site", Value = "Phone Call from Toronto French Site"},
-        new SelectListItem { Text = "Phone Call from Toronto French by Location", Value = "Phone Call from Toronto French by Location"}
-    };
+            {
+                new SelectListItem { Text = "Google Khinich School", Value = "Google Khinich School"},
+                new SelectListItem { Text = "Google Toronto French", Value = "Google Toronto French"},
+                new SelectListItem { Text = "Facebok Khinich School", Value = "Facebok Khinich School"},
+                new SelectListItem { Text = "Facebook Toronto French", Value = "Facebook Toronto French"},
+                new SelectListItem { Text = "Instagram Khinich School", Value = "Instagram Khinich School"},
+                new SelectListItem { Text = "Instagram Toronto French", Value = "Instagram Toronto French"},
+                new SelectListItem { Text = "Referall from Toronto French", Value = "Referall from Toronto French"},
+                new SelectListItem { Text = "Referall from Khinich School", Value = "Referall from Khinich School"},
+                new SelectListItem { Text = "DM in Whatsapp Toronto French", Value = "DM in Whatsapp Toronto French"},
+                new SelectListItem { Text = "DM in Whatsapp Khinich School", Value = "DM in Whatsapp Khinich School"},
+                new SelectListItem { Text = "Phone Call from Toronto French Site", Value = "Phone Call from Toronto French Site"},
+                new SelectListItem { Text = "Phone Call from Toronto French by Location", Value = "Phone Call from Toronto French by Location"}
+            };
 
             ViewBag.TimeZones = TimeZoneInfo.GetSystemTimeZones()
                 .Select(tz => new SelectListItem { Value = tz.Id, Text = tz.DisplayName })
@@ -138,8 +141,8 @@ namespace DotNetCoreSqlDb.Controllers
             return View(student);
         }
 
-        // GET: Students/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+        // GET: Students/Edit/{id}
+        public async Task<IActionResult> Edit(Guid? id)
         {
             if (id == null)
                 return NotFound();
@@ -163,10 +166,10 @@ namespace DotNetCoreSqlDb.Controllers
             return View(student);
         }
 
-        // POST: Students/Edit/5
+        // POST: Students/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,Contacts")] Student student)
+        public async Task<IActionResult> Edit(Guid id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,Contacts")] Student student)
         {
             if (id != student.ID)
                 return NotFound();
@@ -201,12 +204,9 @@ namespace DotNetCoreSqlDb.Controllers
             return View(student);
         }
 
-        // GET: Students/Delete/5
-        public async Task<IActionResult> Delete(int? id)
+        // GET: Students/Delete/{id}
+        public async Task<IActionResult> Delete(Guid id)
         {
-            if (id == null)
-                return NotFound();
-
             var student = await _context.Student
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
@@ -215,10 +215,10 @@ namespace DotNetCoreSqlDb.Controllers
             return View(student);
         }
 
-        // POST: Students/Delete/5
+        // POST: Students/Delete/{id}
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
             var student = await _context.Student.FindAsync(id);
             if (student != null)

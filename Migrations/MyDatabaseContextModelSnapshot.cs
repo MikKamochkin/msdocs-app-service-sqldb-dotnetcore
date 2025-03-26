@@ -24,11 +24,9 @@ namespace DotNetCoreSqlDb.Migrations
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Contact", b =>
                 {
-                    b.Property<int>("ID")
+                    b.Property<Guid>("ID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool?>("Emergency")
                         .HasColumnType("bit");
@@ -39,8 +37,8 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Property<bool?>("Money")
                         .HasColumnType("bit");
 
-                    b.Property<int>("StudentID")
-                        .HasColumnType("int");
+                    b.Property<Guid>("StudentID")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Type")
                         .HasColumnType("nvarchar(max)");
@@ -57,17 +55,15 @@ namespace DotNetCoreSqlDb.Migrations
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Notes", b =>
                 {
-                    b.Property<int>("ID")
+                    b.Property<Guid>("ID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("StudentID")
-                        .HasColumnType("int");
+                    b.Property<Guid>("StudentID")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Value")
                         .HasColumnType("nvarchar(max)");
@@ -81,11 +77,9 @@ namespace DotNetCoreSqlDb.Migrations
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Student", b =>
                 {
-                    b.Property<int>("ID")
+                    b.Property<Guid>("ID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AccountingGroup")
                         .HasColumnType("nvarchar(max)");
@@ -139,11 +133,9 @@ namespace DotNetCoreSqlDb.Migrations
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.User", b =>
                 {
-                    b.Property<int>("ID")
+                    b.Property<Guid>("ID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
