@@ -9,6 +9,10 @@ namespace DotNetCoreSqlDb.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Since data loss is acceptable, clear out data from dependent tables first.
+            migrationBuilder.Sql("DELETE FROM [Contact]");
+            migrationBuilder.Sql("DELETE FROM [Note]");
+
             // Conditionally drop foreign keys for the Note and Contact tables.
             migrationBuilder.Sql(@"
 IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Note_Student_StudentID')
@@ -69,7 +73,7 @@ END");
                 name: "PK_Note",
                 table: "Note");
 
-            // Drop the index that depends on StudentID
+            // Drop the index on StudentID that depends on the column.
             migrationBuilder.DropIndex(
                 name: "IX_Note_StudentID",
                 table: "Note");
@@ -85,7 +89,7 @@ END");
                 nullable: false,
                 defaultValueSql: "NEWID()");
 
-            // Drop the old StudentID column (index already dropped)
+            // Drop the old StudentID column.
             migrationBuilder.DropColumn(
                 name: "StudentID",
                 table: "Note");
@@ -101,7 +105,6 @@ END");
                 table: "Note",
                 column: "ID");
 
-            // Recreate the index on StudentID and add the foreign key constraint
             migrationBuilder.CreateIndex(
                 name: "IX_Note_StudentID",
                 table: "Note",
@@ -120,7 +123,7 @@ END");
                 name: "PK_Contact",
                 table: "Contact");
 
-            // Drop the index that depends on StudentID
+            // Drop the index on StudentID.
             migrationBuilder.DropIndex(
                 name: "IX_Contact_StudentID",
                 table: "Contact");
@@ -136,7 +139,7 @@ END");
                 nullable: false,
                 defaultValueSql: "NEWID()");
 
-            // Drop the old StudentID column (index already dropped)
+            // Drop the old StudentID column.
             migrationBuilder.DropColumn(
                 name: "StudentID",
                 table: "Contact");
@@ -152,7 +155,6 @@ END");
                 table: "Contact",
                 column: "ID");
 
-            // Recreate the index on StudentID and add the foreign key constraint
             migrationBuilder.CreateIndex(
                 name: "IX_Contact_StudentID",
                 table: "Contact",
@@ -169,7 +171,10 @@ END");
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Conditionally drop foreign keys in Down as well.
+            // Clear data from affected tables in the Down migration as well.
+            migrationBuilder.Sql("DELETE FROM [Contact]");
+            migrationBuilder.Sql("DELETE FROM [Note]");
+
             migrationBuilder.Sql(@"
 IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Note_Student_StudentID')
 BEGIN
