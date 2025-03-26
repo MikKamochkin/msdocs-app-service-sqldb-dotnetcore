@@ -44,7 +44,6 @@ END");
                 column: "ID");
 
             // ----- STUDENT TABLE -----
-            // (FKs from Contact/Note to Student were conditionally dropped above.)
             migrationBuilder.DropPrimaryKey(
                 name: "PK_Student",
                 table: "Student");
@@ -70,6 +69,11 @@ END");
                 name: "PK_Note",
                 table: "Note");
 
+            // Drop the index that depends on StudentID
+            migrationBuilder.DropIndex(
+                name: "IX_Note_StudentID",
+                table: "Note");
+
             migrationBuilder.DropColumn(
                 name: "ID",
                 table: "Note");
@@ -81,6 +85,7 @@ END");
                 nullable: false,
                 defaultValueSql: "NEWID()");
 
+            // Drop the old StudentID column (index already dropped)
             migrationBuilder.DropColumn(
                 name: "StudentID",
                 table: "Note");
@@ -96,6 +101,12 @@ END");
                 table: "Note",
                 column: "ID");
 
+            // Recreate the index on StudentID and add the foreign key constraint
+            migrationBuilder.CreateIndex(
+                name: "IX_Note_StudentID",
+                table: "Note",
+                column: "StudentID");
+
             migrationBuilder.AddForeignKey(
                 name: "FK_Note_Student_StudentID",
                 table: "Note",
@@ -109,6 +120,11 @@ END");
                 name: "PK_Contact",
                 table: "Contact");
 
+            // Drop the index that depends on StudentID
+            migrationBuilder.DropIndex(
+                name: "IX_Contact_StudentID",
+                table: "Contact");
+
             migrationBuilder.DropColumn(
                 name: "ID",
                 table: "Contact");
@@ -120,6 +136,7 @@ END");
                 nullable: false,
                 defaultValueSql: "NEWID()");
 
+            // Drop the old StudentID column (index already dropped)
             migrationBuilder.DropColumn(
                 name: "StudentID",
                 table: "Contact");
@@ -134,6 +151,12 @@ END");
                 name: "PK_Contact",
                 table: "Contact",
                 column: "ID");
+
+            // Recreate the index on StudentID and add the foreign key constraint
+            migrationBuilder.CreateIndex(
+                name: "IX_Contact_StudentID",
+                table: "Contact",
+                column: "StudentID");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Contact_Student_StudentID",
@@ -160,8 +183,16 @@ BEGIN
 END");
 
             // ----- CONTACT TABLE (Down) -----
+            migrationBuilder.DropForeignKey(
+                name: "FK_Contact_Student_StudentID",
+                table: "Contact");
+
             migrationBuilder.DropPrimaryKey(
                 name: "PK_Contact",
+                table: "Contact");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Contact_StudentID",
                 table: "Contact");
 
             migrationBuilder.DropColumn(
@@ -189,6 +220,11 @@ END");
                 name: "PK_Contact",
                 table: "Contact",
                 column: "ID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Contact_StudentID",
+                table: "Contact",
+                column: "StudentID");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Contact_Student_StudentID",
@@ -199,8 +235,16 @@ END");
                 onDelete: ReferentialAction.Cascade);
 
             // ----- NOTE TABLE (Down) -----
+            migrationBuilder.DropForeignKey(
+                name: "FK_Note_Student_StudentID",
+                table: "Note");
+
             migrationBuilder.DropPrimaryKey(
                 name: "PK_Note",
+                table: "Note");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Note_StudentID",
                 table: "Note");
 
             migrationBuilder.DropColumn(
@@ -228,6 +272,11 @@ END");
                 name: "PK_Note",
                 table: "Note",
                 column: "ID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Note_StudentID",
+                table: "Note",
+                column: "StudentID");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Note_Student_StudentID",
