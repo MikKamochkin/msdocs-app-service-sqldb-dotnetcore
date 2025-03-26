@@ -15,7 +15,6 @@ namespace DotNetCoreSqlDb.Migrations
     [Migration("20250326044832_ChangedIdsToGuid")]
     partial class ChangedIdsToGuid
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
