@@ -9,8 +9,20 @@ namespace DotNetCoreSqlDb.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Conditionally drop foreign keys for the Note and Contact tables.
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Note_Student_StudentID')
+BEGIN
+    ALTER TABLE [Note] DROP CONSTRAINT [FK_Note_Student_StudentID];
+END");
+
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Contact_Student_StudentID')
+BEGIN
+    ALTER TABLE [Contact] DROP CONSTRAINT [FK_Contact_Student_StudentID];
+END");
+
             // ----- USER TABLE -----
-            // Drop primary key and the old int ID column, then re-add as Guid.
             migrationBuilder.DropPrimaryKey(
                 name: "PK_User",
                 table: "User");
@@ -32,15 +44,7 @@ namespace DotNetCoreSqlDb.Migrations
                 column: "ID");
 
             // ----- STUDENT TABLE -----
-            // Drop foreign keys that reference Student.ID.
-            migrationBuilder.DropForeignKey(
-                name: "FK_Contact_Student_StudentID",
-                table: "Contact");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_Note_Student_StudentID",
-                table: "Note");
-
+            // (FKs from Contact/Note to Student were conditionally dropped above.)
             migrationBuilder.DropPrimaryKey(
                 name: "PK_Student",
                 table: "Student");
@@ -62,11 +66,6 @@ namespace DotNetCoreSqlDb.Migrations
                 column: "ID");
 
             // ----- NOTE TABLE -----
-            // Note has two columns to change: the PK (ID) and its foreign key (StudentID).
-            migrationBuilder.DropForeignKey(
-                name: "FK_Note_Student_StudentID",
-                table: "Note");
-
             migrationBuilder.DropPrimaryKey(
                 name: "PK_Note",
                 table: "Note");
@@ -106,11 +105,6 @@ namespace DotNetCoreSqlDb.Migrations
                 onDelete: ReferentialAction.Cascade);
 
             // ----- CONTACT TABLE -----
-            // Contact: change the PK (ID) and the foreign key (StudentID).
-            migrationBuilder.DropForeignKey(
-                name: "FK_Contact_Student_StudentID",
-                table: "Contact");
-
             migrationBuilder.DropPrimaryKey(
                 name: "PK_Contact",
                 table: "Contact");
@@ -152,11 +146,20 @@ namespace DotNetCoreSqlDb.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // ----- CONTACT TABLE (Down) -----
-            migrationBuilder.DropForeignKey(
-                name: "FK_Contact_Student_StudentID",
-                table: "Contact");
+            // Conditionally drop foreign keys in Down as well.
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Note_Student_StudentID')
+BEGIN
+    ALTER TABLE [Note] DROP CONSTRAINT [FK_Note_Student_StudentID];
+END");
 
+            migrationBuilder.Sql(@"
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Contact_Student_StudentID')
+BEGIN
+    ALTER TABLE [Contact] DROP CONSTRAINT [FK_Contact_Student_StudentID];
+END");
+
+            // ----- CONTACT TABLE (Down) -----
             migrationBuilder.DropPrimaryKey(
                 name: "PK_Contact",
                 table: "Contact");
@@ -196,10 +199,6 @@ namespace DotNetCoreSqlDb.Migrations
                 onDelete: ReferentialAction.Cascade);
 
             // ----- NOTE TABLE (Down) -----
-            migrationBuilder.DropForeignKey(
-                name: "FK_Note_Student_StudentID",
-                table: "Note");
-
             migrationBuilder.DropPrimaryKey(
                 name: "PK_Note",
                 table: "Note");
