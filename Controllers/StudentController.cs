@@ -45,7 +45,7 @@ namespace DotNetCoreSqlDb.Controllers
         {
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
-
+            //for future use: var tz = TimeZoneInfo.FindSystemTimeZoneById(yourRecord.TimeZoneId);
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
 
             return View();
@@ -102,15 +102,7 @@ namespace DotNetCoreSqlDb.Controllers
             if (student == null)
                 return NotFound();
 
-            ViewBag.ContactTypes = new List<SelectListItem>
-            {
-                new SelectListItem { Text = "Email", Value = "Email" },
-                new SelectListItem { Text = "Phone", Value = "Phone" },
-                new SelectListItem { Text = "Facebook", Value = "Facebook" },
-                new SelectListItem { Text = "Instagram", Value = "Instagram" },
-                new SelectListItem { Text = "Telegram", Value = "Telegram" },
-                new SelectListItem { Text = "Twitter", Value = "Twitter" }
-            };
+            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
 
             return View(student);
         }
@@ -140,16 +132,7 @@ namespace DotNetCoreSqlDb.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.ContactTypes = new List<SelectListItem>
-            {
-                new SelectListItem { Text = "Email", Value = "Email" },
-                new SelectListItem { Text = "Phone", Value = "Phone" },
-                new SelectListItem { Text = "Facebook", Value = "Facebook" },
-                new SelectListItem { Text = "Instagram", Value = "Instagram" },
-                new SelectListItem { Text = "Telegram", Value = "Telegram" },
-                new SelectListItem { Text = "Twitter", Value = "Twitter" }
-            };
-
+            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             return View(student);
         }
 

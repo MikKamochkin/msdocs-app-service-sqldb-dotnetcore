@@ -14,13 +14,13 @@ public static class TimeZoneMapping
         { -8,  "Pacific Standard Time" },
         { -7,  "US Mountain Standard Time" },
         { -6,  "Central Standard Time" },
-        { -5,  "Eastern Standard Time" },
+        { -5,  "Eastern Standard Time (Toronto)" },
         { -4,  "Atlantic Standard Time" },
         // For non-integer offsets, adjust or add additional mappings as needed.
         {  0,  "GMT Standard Time" },
-        {  1,  "Central Europe Standard Time" },
+        {  1,  "Central Europe Standard Time (Paris)" },
         {  2,  "E. Europe Standard Time" },
-        {  3,  "Turkey Standard Time" },
+        {  3,  "Russian Standard Time (Moscow, St. Petersburg)" },
         {  4,  "Azerbaijan Standard Time" },
         {  5,  "Pakistan Standard Time" },
         {  6,  "Central Asia Standard Time" },
@@ -32,6 +32,7 @@ public static class TimeZoneMapping
         { 12,  "New Zealand Standard Time" },
         { 13,  "Tonga Standard Time" }
     };
+
 
     public static List<SelectListItem> GetTimeZones()
     {
