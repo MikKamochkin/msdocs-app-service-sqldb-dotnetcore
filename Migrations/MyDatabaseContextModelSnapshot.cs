@@ -28,13 +28,13 @@ namespace DotNetCoreSqlDb.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool?>("Emergency")
+                    b.Property<bool>("Emergency")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("Invitation")
+                    b.Property<bool>("Invitation")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("Money")
+                    b.Property<bool>("Money")
                         .HasColumnType("bit");
 
                     b.Property<Guid>("StudentID")
