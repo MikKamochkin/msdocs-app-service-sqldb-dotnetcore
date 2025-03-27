@@ -120,7 +120,7 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,Contacts")] Student student)
+        public async Task<IActionResult> Edit(Guid id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
         {
             if (id != student.ID)
                 return NotFound();

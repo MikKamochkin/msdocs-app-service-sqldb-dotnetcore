@@ -62,7 +62,7 @@
             <div class="form-group">
                 @Html.LabelFor(model => model.AccountingGroup, new { @class = "control-label col-md-2" })
                 <div class="col-md-10">
-                    @Html.DropDownListFor(model => model.AccountingGroup, (IEnumerable<SelectListItem>)ViewBag.AccountingGroupTypes, "Select Time Zone", new { @class = "form-control" })
+                    @Html.DropDownListFor(model => model.AccountingGroup, (IEnumerable<SelectListItem>)ViewBag.AccountingGroupTypes, "Select Accounting Group", new { @class = "form-control" })
                     @Html.ValidationMessageFor(model => model.AccountingGroup, "", new { @class = "text-danger" })
                 </div>
             </div>
@@ -89,14 +89,14 @@
                             <tr class="contact-summary" data-index="@i"
                                 data-contacttype="@contact.Type"
                                 data-contactvalue="@contact.Value"
-                                data-invitation="@contact.Invitation"
-                                data-emergency="@contact.Emergency"
-                                data-money="@contact.Money">
+                                data-invitation="@contact.Invitation.ToString().ToLower()"
+                                data-emergency="@contact.Emergency.ToString().ToLower()"
+                                data-money="@contact.Money.ToString().ToLower()">
                                 <td>@(DropdownOptions.ContactTypes.FirstOrDefault(x => x.Value == contact.Type)?.Text)</td>
                                 <td>@contact.Value</td>
-                                <td>@(contact.Invitation == true ? "✔" : "")</td>
-                                <td>@(contact.Emergency == true ? "✔" : "")</td>
-                                <td>@(contact.Money == true ? "✔" : "")</td>
+                                <td>@(contact.Invitation ? "✔" : "")</td>
+                                <td>@(contact.Emergency ? "✔" : "")</td>
+                                <td>@(contact.Money ? "✔" : "")</td>
                                 <td style="display:none;">
                                     <input type="hidden" name="Contacts[@i].Type" value="@contact.Type" />
                                     <input type="hidden" name="Contacts[@i].Value" value="@contact.Value" />
@@ -197,9 +197,9 @@
                 '<tr class="contact-summary" data-index="' + index + '" ' +
                 'data-contacttype="' + contactType + '" ' +
                 'data-contactvalue="' + value + '" ' +
-                'data-invitation="' + invitationBool + '" ' +
-                'data-emergency="' + emergencyBool + '" ' +
-                'data-money="' + moneyBool + '">' +
+                'data-invitation="' + invitationBool.toString().toLowerCase() + '" ' +
+                'data-emergency="' + emergencyBool.toString().toLowerCase() + '" ' +
+                'data-money="' + moneyBool.toString().toLowerCase() + '">' +
                     '<td>' + typeText + '</td>' +
                     '<td>' + value + '</td>' +
                     '<td>' + (invitationBool ? "✔" : "") + '</td>' +
