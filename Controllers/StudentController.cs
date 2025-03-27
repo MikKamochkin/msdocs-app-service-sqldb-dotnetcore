@@ -109,6 +109,8 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
 
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
 
             return View(student);
         }
@@ -139,6 +141,8 @@ namespace DotNetCoreSqlDb.Controllers
                 return RedirectToAction(nameof(Index));
             }
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
             return View(student);
         }
 
