@@ -20,13 +20,13 @@ namespace DotNetCoreSqlDb.Models
         public string? Value { get; set; }
 
         [DisplayName("Invitation")]
-        public bool? Invitation { get; set; }
+        public bool Invitation { get; set; } = false;
 
         [DisplayName("Emergency")]
-        public bool? Emergency { get; set; }
+        public bool Emergency { get; set; } = false;
 
         [DisplayName("Money")]
-        public bool? Money { get; set; }
+        public bool Money { get; set; } = false;
 
         // Navigation property to the related Student
         public virtual Student? Student { get; set; }
