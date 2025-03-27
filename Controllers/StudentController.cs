@@ -45,6 +45,7 @@ namespace DotNetCoreSqlDb.Controllers
         {
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             //for future use: var tz = TimeZoneInfo.FindSystemTimeZoneById(yourRecord.TimeZoneId);
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
             /*
@@ -90,7 +91,7 @@ namespace DotNetCoreSqlDb.Controllers
             // Repopulate dropdown lists if model state is invalid.
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
-
+            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
 
             return View(student);
@@ -110,6 +111,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
 
             return View(student);
@@ -142,6 +144,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
             return View(student);
         }
