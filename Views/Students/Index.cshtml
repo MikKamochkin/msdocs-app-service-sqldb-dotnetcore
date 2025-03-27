@@ -15,6 +15,7 @@
         <tr>
             <th>Name</th>
             <th>Parent/Employer</th>
+            <th>Time Zone</th>
             <th>Created Date</th>
             <th></th>
         </tr>
@@ -25,6 +26,7 @@
             <tr>
                 <td>@Html.DisplayFor(modelItem => item.Name)</td>
                 <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
+                <td>@Html.DisplayFor(modelItem => item.TimeZoneId)</td>
                 <td>@Html.DisplayFor(modelItem => item.CreatedDate)</td>
                 <td>
                     <a href="@Url.Action("Details", new { id = item.ID })">Details</a> |

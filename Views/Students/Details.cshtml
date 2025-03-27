@@ -18,6 +18,15 @@
         <dd>@Html.DisplayFor(model => model.MainNotes)</dd>
         <dt>Created Date</dt>
         <dd>@Html.DisplayFor(model => model.CreatedDate)</dd>
+        <dt>Source</dt>
+        <dd>@Html.DisplayFor(model => model.Source)</dd>
+        <dt>Time Zone</dt>
+        <dd>@Html.DisplayFor(model => model.TimeZoneId)</dd>
+        @if(User.IsInRole("admin"))
+        {
+            <dt>Accounting Group</dt>
+            <dd>@Html.DisplayFor(model => model.AccountingGroup)</dd>
+        }
     </dl>
 </div>
 
@@ -38,11 +47,11 @@
             @foreach(var contact in Model.Contacts)
             {
                 <tr>
-                    <td>@contact.Type</td>
-                    <td>@contact.Value</td>
-                    <td>@contact.Invitation</td>
-                    <td>@contact.Emergency</td>
-                    <td>@contact.Money</td>
+                    <td>@Html.DisplayFor(m => contact.Type)</td>
+                    <td>@Html.DisplayFor(m => contact.Value)</td>
+                    <td>@(contact.Invitation == true ? "✔" : "")</td>
+                    <td>@(contact.Emergency == true ? "✔" : "")</td>
+                    <td>@(contact.Money == true ? "✔" : "")</td>
                 </tr>
             }
         </tbody>

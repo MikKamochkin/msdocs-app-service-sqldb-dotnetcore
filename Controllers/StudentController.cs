@@ -47,6 +47,12 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             //for future use: var tz = TimeZoneInfo.FindSystemTimeZoneById(yourRecord.TimeZoneId);
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
+            /*
+            depricated version of time zones:
+             ViewBag.TimeZones = TimeZoneInfo.GetSystemTimeZones()
+                .Select(tz => new SelectListItem { Value = tz.Id, Text = tz.DisplayName })
+                .ToList();
+            */
 
             return View();
         }

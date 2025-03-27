@@ -6,10 +6,13 @@
 
 <h2>Edit Student</h2>
 
-@using (Html.BeginForm()) 
+@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+@using (Html.BeginForm())
 {
     @Html.AntiForgeryToken()
     @Html.HiddenFor(model => model.ID)
+
     <div class="form-horizontal">
         <h4>Student</h4>
         <hr />
@@ -34,95 +37,80 @@
                 @Html.ValidationMessageFor(model => model.MainNotes, "", new { @class = "text-danger" })
             </div>
         </div>
+
+        <!-- Source dropdown -->
         <div class="form-group">
-            @Html.LabelFor(model => model.CreatedDate, new { @class = "control-label col-md-2" })
+            @Html.LabelFor(model => model.Source, new { @class = "control-label col-md-2" })
             <div class="col-md-10">
-                @Html.EditorFor(model => model.CreatedDate, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(model => model.CreatedDate, "", new { @class = "text-danger" })
+                @Html.DropDownListFor(model => model.Source, (IEnumerable<SelectListItem>)ViewBag.SourceTypes, "Select Source", new { @class = "form-control" })
+                @Html.ValidationMessageFor(model => model.Source, "", new { @class = "text-danger" })
             </div>
         </div>
 
+        <!-- Timezone dropdown -->
+        <div class="form-group">
+            @Html.LabelFor(model => model.TimeZoneId, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.DropDownListFor(model => model.TimeZoneId, (IEnumerable<SelectListItem>)ViewBag.Timezones, "Select Time Zone", new { @class = "form-control" })
+                @Html.ValidationMessageFor(model => model.TimeZoneId, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <!-- Accounting Group field: only visible to admin users -->
+        @if (User.IsInRole("admin"))
+        {
+            <div class="form-group">
+                @Html.LabelFor(model => model.AccountingGroup, new { @class = "control-label col-md-2" })
+                <div class="col-md-10">
+                    @Html.EditorFor(model => model.AccountingGroup, new { htmlAttributes = new { @class = "form-control" } })
+                    @Html.ValidationMessageFor(model => model.AccountingGroup, "", new { @class = "text-danger" })
+                </div>
+            </div>
+        }
+
         <h4>Contact Information</h4>
         <div id="contacts">
-            @if(Model.Contacts != null && Model.Contacts.Any())
+            @if (Model.Contacts != null && Model.Contacts.Any())
             {
-                for(int i = 0; i < Model.Contacts.Count; i++)
-                {
-                    <div class="contact-entry">
-                        <div class="form-group">
-                            <label class="control-label col-md-2">Contact Type</label>
-                            <div class="col-md-10">
-                                @Html.DropDownList("Contacts[" + i + "].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text", Model.Contacts.ElementAt(i).Type), "Select Contact Type", new { @class = "form-control contact-type" })
-                            </div>
-                        </div>
-                        <div class="contact-fields" style="@(string.IsNullOrEmpty(Model.Contacts.ElementAt(i).Type) ? "display:none;" : "display:block;")">
-                            <div class="form-group">
-                                <label class="control-label col-md-2">Value</label>
-                                <div class="col-md-10">
-                                    @Html.TextBox("Contacts[" + i + "].Value", Model.Contacts.ElementAt(i).Value, new { @class = "form-control" })
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label col-md-2">Invitation</label>
-                                <div class="col-md-10">
-                                    @Html.CheckBox("Contacts[" + i + "].Invitation", Model.Contacts.ElementAt(i).Invitation)
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label col-md-2">Emergency</label>
-                                <div class="col-md-10">
-                                    @Html.CheckBox("Contacts[" + i + "].Emergency", Model.Contacts.ElementAt(i).Emergency)
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label col-md-2">Money</label>
-                                <div class="col-md-10">
-                                    @Html.CheckBox("Contacts[" + i + "].Money", Model.Contacts.ElementAt(i).Money)
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="contact-entry">
-                    <div class="form-group">
-                        <label class="control-label col-md-2">Contact Type</label>
-                        <div class="col-md-10">
-                            @Html.DropDownList("Contacts[0].Type", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control contact-type" })
-                        </div>
-                    </div>
-                    <div class="contact-fields" style="display:none;">
-                        <div class="form-group">
-                            <label class="control-label col-md-2">Value</label>
-                            <div class="col-md-10">
-                                @Html.TextBox("Contacts[0].Value", null, new { @class = "form-control" })
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label col-md-2">Invitation</label>
-                            <div class="col-md-10">
-                                @Html.CheckBox("Contacts[0].Invitation", false)
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label col-md-2">Emergency</label>
-                            <div class="col-md-10">
-                                @Html.CheckBox("Contacts[0].Emergency", false)
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label col-md-2">Money</label>
-                            <div class="col-md-10">
-                                @Html.CheckBox("Contacts[0].Money", false)
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <table id="contactsSummary" style="margin-top:20px;" class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Invitation</th>
+                            <th>Emergency</th>
+                            <th>Money</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Contacts.Count; i++)
+                        {
+                            var contact = Model.Contacts.ElementAt(i);
+                            <tr class="contact-summary" data-index="@i"
+                                data-contacttype="@contact.Type"
+                                data-contactvalue="@contact.Value"
+                                data-invitation="@contact.Invitation"
+                                data-emergency="@contact.Emergency"
+                                data-money="@contact.Money">
+                                <td>@(DropdownOptions.ContactTypes.FirstOrDefault(x => x.Value == contact.Type)?.Text)</td>
+                                <td>@contact.Value</td>
+                                <td>@(contact.Invitation == true ? "✔" : "")</td>
+                                <td>@(contact.Emergency == true ? "✔" : "")</td>
+                                <td>@(contact.Money == true ? "✔" : "")</td>
+                                <td style="display:none;">
+                                    <input type="hidden" name="Contacts[@i].Type" value="@contact.Type" />
+                                    <input type="hidden" name="Contacts[@i].Value" value="@contact.Value" />
+                                    <input type="hidden" name="Contacts[@i].Invitation" value="@contact.Invitation" />
+                                    <input type="hidden" name="Contacts[@i].Emergency" value="@contact.Emergency" />
+                                    <input type="hidden" name="Contacts[@i].Money" value="@contact.Money" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             }
         </div>
-        <button type="button" id="addContact" class="btn btn-secondary">Add Another Contact</button>
+        <button type="button" id="addContact" class="btn btn-secondary">Add Contact Information</button>
         <br /><br />
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
@@ -132,30 +120,198 @@
     </div>
 }
 
+<!-- Modal for adding a new contact -->
+<div id="contactModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+  <div class="modal-dialog">
+    <div class="modal-content">
+       <div class="modal-header">
+           <h5 class="modal-title" id="contactModalTitle">Add Contact Information</h5>
+       </div>
+       <div class="modal-body">
+         <div class="form-group">
+            <label class="control-label">Contact Type</label>
+            @Html.DropDownList("modalContactType", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control", id="modalContactType" })
+         </div>
+         <div class="form-group">
+            <label class="control-label">Value</label>
+            @Html.TextBox("modalContactValue", null, new { @class = "form-control", id="modalContactValue" })
+         </div>
+         <div class="form-group">
+            <label class="control-label">Invitation</label>
+            <div>
+                @Html.CheckBox("modalContactInvitation", false, new { id="modalContactInvitation" })
+            </div>
+         </div>
+         <div class="form-group">
+            <label class="control-label">Emergency</label>
+            <div>
+                @Html.CheckBox("modalContactEmergency", false, new { id="modalContactEmergency" })
+            </div>
+         </div>
+         <div class="form-group">
+            <label class="control-label">Money</label>
+            <div>
+                @Html.CheckBox("modalContactMoney", false, new { id="modalContactMoney" })
+            </div>
+         </div>
+       </div>
+       <div class="modal-footer">
+         <button type="button" id="modalCancel" class="btn btn-secondary">Cancel</button>
+         <button type="button" id="modalSave" class="btn btn-primary">Save</button>
+       </div>
+    </div>
+  </div>
+</div>
+
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <!-- Ensure Bootstrap's JavaScript is loaded -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <script type="text/javascript">
-        $(document).ready(function(){
-            // When any contact type dropdown changes, hide all contact-fields first
-            $(".contact-type").change(function(){
-                $(".contact-fields").hide();
-                var selectedVal = $(this).val();
-                if(selectedVal) {
-                    $(this).closest(".contact-entry").find(".contact-fields").show();
-                }
+        // Global counters/variables:
+        var contactCount = @((Model.Contacts != null && Model.Contacts.Any()) ? Model.Contacts.Count() : 0);
+        // Holds the index of the contact currently being edited; null if adding a new contact.
+        var editingContactIndex = null;
+
+        // Function to add a new contact summary row with data attributes.
+        function addContactSummary(index, contactType, typeText, value, invitationBool, emergencyBool, moneyBool) {
+            // Create the summary table if it doesn't exist.
+            if ($("#contactsSummary").length === 0) {
+                var tableHtml =
+                    '<table id="contactsSummary" style="margin-top:20px;" class="table table-bordered">' +
+                        '<thead>' +
+                            '<tr>' +
+                                '<th>Type</th>' +
+                                '<th>Value</th>' +
+                                '<th>Invitation</th>' +
+                                '<th>Emergency</th>' +
+                                '<th>Money</th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody></tbody>' +
+                    '</table>';
+                $("#contacts").append(tableHtml);
+            }
+            
+            var summaryRow =
+                '<tr class="contact-summary" data-index="' + index + '" ' +
+                'data-contacttype="' + contactType + '" ' +
+                'data-contactvalue="' + value + '" ' +
+                'data-invitation="' + invitationBool + '" ' +
+                'data-emergency="' + emergencyBool + '" ' +
+                'data-money="' + moneyBool + '">' +
+                    '<td>' + typeText + '</td>' +
+                    '<td>' + value + '</td>' +
+                    '<td>' + (invitationBool ? "✔" : "") + '</td>' +
+                    '<td>' + (emergencyBool ? "✔" : "") + '</td>' +
+                    '<td>' + (moneyBool ? "✔" : "") + '</td>' +
+                    '<td style="display:none;">' +
+                        '<input type="hidden" name="Contacts[' + index + '].Type" value="' + contactType + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Value" value="' + value + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Invitation" value="' + invitationBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Emergency" value="' + emergencyBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Money" value="' + moneyBool + '"/>' +
+                    '</td>' +
+                '</tr>';
+            $("#contactsSummary tbody").append(summaryRow);
+        }
+
+        $(document).ready(function() {
+            // Initialize the modal with a static backdrop and disabled keyboard.
+            $("#contactModal").modal({
+                backdrop: 'static',
+                keyboard: false,
+                show: false
             });
 
-            $("#addContact").click(function(){
-                var index = $("#contacts .contact-entry").length;
-                var newEntry = $("#contacts .contact-entry:first").clone();
+            // When the "Add Contact Information" button is clicked, clear modal fields and set mode to "add".
+            $("#addContact").click(function(e) {
+                editingContactIndex = null;
+                $("#contactModalTitle").text("Add Contact");
+                $("#modalContactType").val("");
+                $("#modalContactValue").val("");
+                $("#modalContactInvitation").prop("checked", false);
+                $("#modalContactEmergency").prop("checked", false);
+                $("#modalContactMoney").prop("checked", false);
+                $("#contactModal").modal('show');
+            });
 
-                newEntry.find("select.contact-type").attr("name", "Contacts[" + index + "].Type").val("");
-                newEntry.find("input[name$='.Value']").attr("name", "Contacts[" + index + "].Value").val("");
-                newEntry.find("input[name$='.Invitation']").attr("name", "Contacts[" + index + "].Invitation").prop("checked", false);
-                newEntry.find("input[name$='.Emergency']").attr("name", "Contacts[" + index + "].Emergency").prop("checked", false);
-                newEntry.find("input[name$='.Money']").attr("name", "Contacts[" + index + "].Money").prop("checked", false);
-                newEntry.find(".contact-fields").hide();
+            // Delegate click event to the summary rows to enable editing.
+            $(document).on("click", "#contactsSummary tbody tr.contact-summary", function(e) {
+                // Retrieve the current row's data.
+                var $row = $(this);
+                editingContactIndex = $row.data("index");
+                $("#modalContactType").val($row.data("contacttype"));
+                $("#modalContactValue").val($row.data("contactvalue"));
+                $("#modalContactInvitation").prop("checked", $row.data("invitation"));
+                $("#modalContactEmergency").prop("checked", $row.data("emergency"));
+                $("#modalContactMoney").prop("checked", $row.data("money"));
+                $("#contactModalTitle").text("Edit Contact");
+                $("#contactModal").modal("show");
+            });
 
-                $("#contacts").append(newEntry);
+            // When Save is clicked in the modal.
+            $("#modalSave").click(function() {
+                var contactType = $("#modalContactType").val();
+                var typeText = $("#modalContactType option:selected").text();
+                var value = $("#modalContactValue").val();
+                var invitationBool = $("#modalContactInvitation").is(":checked");
+                var emergencyBool  = $("#modalContactEmergency").is(":checked");
+                var moneyBool      = $("#modalContactMoney").is(":checked");
+
+                // Validate that at least one field is filled (if necessary).
+                if (!contactType && !value && !invitationBool && !emergencyBool && !moneyBool) {
+                    $("#contactModal").modal('hide');
+                    return;
+                }
+
+                // If editing an existing contact, update that row.
+                if (editingContactIndex !== null) {
+                    var $row = $("#contactsSummary tbody tr.contact-summary[data-index='" + editingContactIndex + "']");
+                    $row.find("td:nth-child(1)").text(typeText);
+                    $row.find("td:nth-child(2)").text(value);
+                    $row.find("td:nth-child(3)").text(invitationBool ? "✔" : "");
+                    $row.find("td:nth-child(4)").text(emergencyBool ? "✔" : "");
+                    $row.find("td:nth-child(5)").text(moneyBool ? "✔" : "");
+                    
+                    var hiddenHtml = 
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Type" value="' + contactType + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Value" value="' + value + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Invitation" value="' + invitationBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Emergency" value="' + emergencyBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Money" value="' + moneyBool + '"/>';
+                    $row.find("td:last").html(hiddenHtml);
+                    
+                    // Update data attributes.
+                    $row.data("contacttype", contactType);
+                    $row.data("contactvalue", value);
+                    $row.data("invitation", invitationBool);
+                    $row.data("emergency", emergencyBool);
+                    $row.data("money", moneyBool);
+                    
+                    editingContactIndex = null;
+                } else {
+                    // Otherwise, add a new contact summary row.
+                    addContactSummary(contactCount, contactType, typeText, value, invitationBool, emergencyBool, moneyBool);
+                    contactCount++;
+                }
+                
+                $("#contactModal").modal('hide');
+            });
+
+            // Cancel button simply closes the modal.
+            $("#modalCancel").click(function() {
+                editingContactIndex = null;
+                $("#contactModal").modal('hide');
+            });
+
+            // Client-side check: Before form submission, ensure at least one contact is added.
+            $("form").submit(function(e) {
+                if ($("#contactsSummary tbody tr").length === 0) {
+                    alert("Please add at least one contact.");
+                    e.preventDefault();
+                    return false;
+                }
             });
         });
     </script>
