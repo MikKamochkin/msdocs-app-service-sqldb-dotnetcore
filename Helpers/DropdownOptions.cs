@@ -28,4 +28,10 @@ public static class DropdownOptions
         new SelectListItem { Text = "Phone Call from Toronto French Site", Value = "Phone Call from Toronto French Site" },
         new SelectListItem { Text = "Phone Call from Toronto French by Location", Value = "Phone Call from Toronto French by Location" }
     };
+
+    public static List<SelectListItem> AccountingGroupTypes => new List<SelectListItem>
+    {
+        new SelectListItem { Text = "A", Value = "A" },
+        new SelectListItem { Text = "S", Value = "S" }
+    };
 }

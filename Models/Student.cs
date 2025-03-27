@@ -29,7 +29,7 @@ namespace DotNetCoreSqlDb.Models
         public string? TimeZoneId { get; set;}
 
         [DisplayName("AccountingGroup")]
-        public string? AccountingGroup { get; set;}
+        public string AccountingGroup { get; set;} = "";
 
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
