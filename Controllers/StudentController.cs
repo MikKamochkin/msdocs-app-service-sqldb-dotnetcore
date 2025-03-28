@@ -120,34 +120,74 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
+        public async Task<IActionResult> Edit(Guid id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student updatedStudent)
         {
-            if (id != student.ID)
+            if (id != updatedStudent.ID)
                 return NotFound();
 
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                try
-                {
-                    // Note: In Edit, we do not change CreatedDate.
-                    _context.Update(student);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!_context.Student.Any(e => e.ID == student.ID))
-                        return NotFound();
-                    else
-                        throw;
-                }
-                return RedirectToAction(nameof(Index));
+                // Repopulate dropdowns if necessary.
+                return View(updatedStudent);
             }
-            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
-            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
-            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-            return View(student);
+
+            // Load the existing student with its contacts from the database.
+            var existingStudent = await _context.Student
+                .Include(s => s.Contacts)
+                .FirstOrDefaultAsync(s => s.ID == id);
+
+            if (existingStudent == null)
+                return NotFound();
+
+            // Update the scalar properties.
+            existingStudent.Name = updatedStudent.Name;
+            existingStudent.ParentOrEmployer = updatedStudent.ParentOrEmployer;
+            existingStudent.MainNotes = updatedStudent.MainNotes;
+            existingStudent.Source = updatedStudent.Source;
+            existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
+            existingStudent.AccountingGroup = updatedStudent.AccountingGroup;
+
+            // Update the contacts collection.
+            foreach (var updatedContact in updatedStudent.Contacts)
+            {
+                // Find the existing contact by ID.
+                var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == updatedContact.ID);
+
+                if (existingContact != null)
+                {
+                    // Update the existing contact's properties.
+                    existingContact.Type = updatedContact.Type;
+                    existingContact.Value = updatedContact.Value;
+                    existingContact.Invitation = updatedContact.Invitation;
+                    existingContact.Emergency = updatedContact.Emergency;
+                    existingContact.Money = updatedContact.Money;
+                }
+                else
+                {
+                    // If the contact does not exist, it may be a new contact.
+                    // You can add it if that's expected.
+                    existingStudent.Contacts.Add(updatedContact);
+                }
+            }
+
+            // Optionally, if you want to remove contacts that were deleted in the form,
+            // compare existingStudent.Contacts with updatedStudent.Contacts and remove missing ones.
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Student.Any(e => e.ID == updatedStudent.ID))
+                    return NotFound();
+                else
+                    throw;
+            }
+
+            return RedirectToAction(nameof(Index));
         }
+
 
         // GET: Students/Delete/{id}
         public async Task<IActionResult> Delete(Guid id)
