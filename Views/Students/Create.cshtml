@@ -245,10 +245,20 @@
                     
                     // Update data attributes.
                     $row.data("contacttype", contactType);
+                    $row.attr("data-contacttype", contactType);
+
                     $row.data("contactvalue", value);
+                    $row.attr("data-contactvalue", value);
+
                     $row.data("invitation", invitationBool);
+                    $row.attr("data-invitation", invitationBool.toString().toLowerCase());
+
                     $row.data("emergency", emergencyBool);
+                    $row.attr("data-emergency", emergencyBool.toString().toLowerCase());
+
                     $row.data("money", moneyBool);
+                    $row.attr("data-money", moneyBool.toString().toLowerCase());
+
                     
                     editingContactIndex = null;
                 } else {
