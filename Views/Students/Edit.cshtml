@@ -191,6 +191,7 @@
                         '</thead>' +
                         '<tbody></tbody>' +
                     '</table>';
+                // Using .append() to keep the table inside the form.
                 $("#contacts").append(tableHtml);
             }
             
@@ -250,7 +251,6 @@
                 $("#contactModal").modal("show");
             });
 
-
             // When Save is clicked in the modal.
             $("#modalSave").click(function() {
                 var contactType = $("#modalContactType").val();
@@ -305,7 +305,6 @@
 
                 $("#contactModal").modal('hide');
             });
-
 
             // Cancel button simply closes the modal.
             $("#modalCancel").click(function() {
