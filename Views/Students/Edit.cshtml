@@ -266,39 +266,47 @@
                     return;
                 }
 
-                // If editing an existing contact, update that row.
                 if (editingContactIndex !== null) {
                     var $row = $("#contactsSummary tbody tr.contact-summary[data-index='" + editingContactIndex + "']");
+                    // Retrieve the existing contact ID, if any.
+                    var existingId = $row.find("input[name='Contacts[" + editingContactIndex + "].ID']").val();
+
                     $row.find("td:nth-child(1)").text(typeText);
                     $row.find("td:nth-child(2)").text(value);
                     $row.find("td:nth-child(3)").text(invitationBool ? "✔" : "");
                     $row.find("td:nth-child(4)").text(emergencyBool ? "✔" : "");
                     $row.find("td:nth-child(5)").text(moneyBool ? "✔" : "");
-                    
-                    var hiddenHtml = 
+
+                    // Rebuild hidden fields, including the ID if it exists.
+                    var hiddenHtml = "";
+                    if (existingId) {
+                        hiddenHtml += '<input type="hidden" name="Contacts[' + editingContactIndex + '].ID" value="' + existingId + '" />';
+                    }
+                    hiddenHtml +=
                         '<input type="hidden" name="Contacts[' + editingContactIndex + '].Type" value="' + contactType + '"/>' +
                         '<input type="hidden" name="Contacts[' + editingContactIndex + '].Value" value="' + value + '"/>' +
                         '<input type="hidden" name="Contacts[' + editingContactIndex + '].Invitation" value="' + invitationBool + '"/>' +
                         '<input type="hidden" name="Contacts[' + editingContactIndex + '].Emergency" value="' + emergencyBool + '"/>' +
                         '<input type="hidden" name="Contacts[' + editingContactIndex + '].Money" value="' + moneyBool + '"/>';
                     $row.find("td:last").html(hiddenHtml);
-                    
+
                     // Update data attributes.
                     $row.data("contacttype", contactType);
                     $row.data("contactvalue", value);
                     $row.data("invitation", invitationBool);
                     $row.data("emergency", emergencyBool);
                     $row.data("money", moneyBool);
-                    
+
                     editingContactIndex = null;
                 } else {
                     // Otherwise, add a new contact summary row.
                     addContactSummary(contactCount, contactType, typeText, value, invitationBool, emergencyBool, moneyBool);
                     contactCount++;
                 }
-                
+
                 $("#contactModal").modal('hide');
             });
+
 
             // Cancel button simply closes the modal.
             $("#modalCancel").click(function() {
