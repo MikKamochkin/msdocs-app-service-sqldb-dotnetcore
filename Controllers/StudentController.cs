@@ -69,7 +69,7 @@ namespace DotNetCoreSqlDb.Controllers
             // If the current user is not an admin, ignore any submitted AccountingGroup value.
             if (!User.IsInRole("admin"))
             {
-                student.AccountingGroup = "S";
+                student.AccountingGroup = null;
             }
 
             // Server-side validation: Ensure at least one contact is added.
@@ -120,84 +120,34 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student postedStudent)
+        public async Task<IActionResult> Edit(Guid id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
         {
-            if (id != postedStudent.ID)
+            if (id != student.ID)
                 return NotFound();
 
             if (ModelState.IsValid)
             {
-                // Fetch the existing student from the database, including its contacts.
-                var existingStudent = await _context.Student
-                    .Include(s => s.Contacts)
-                    .FirstOrDefaultAsync(s => s.ID == postedStudent.ID);
-
-                if (existingStudent == null)
-                    return NotFound();
-
-                // Update the scalar properties.
-                existingStudent.Name = postedStudent.Name;
-                existingStudent.ParentOrEmployer = postedStudent.ParentOrEmployer;
-                existingStudent.MainNotes = postedStudent.MainNotes;
-                existingStudent.Source = postedStudent.Source;
-                existingStudent.TimeZoneId = postedStudent.TimeZoneId;
-                existingStudent.AccountingGroup = postedStudent.AccountingGroup;
-
-                // Process the contacts.
-                // For each posted contact, either update the existing one or add a new one.
-                foreach (var postedContact in postedStudent.Contacts)
-                {
-                    // Try to find an existing contact with the same ID.
-                    var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == postedContact.ID);
-                    if (existingContact != null)
-                    {
-                        // Update the existing contact's fields.
-                        existingContact.Type = postedContact.Type;
-                        existingContact.Value = postedContact.Value;
-                        existingContact.Invitation = postedContact.Invitation;
-                        existingContact.Emergency = postedContact.Emergency;
-                        existingContact.Money = postedContact.Money;
-                    }
-                    else
-                    {
-                        // If the posted contact is new (ID is empty), generate a new ID.
-                        if (postedContact.ID == Guid.Empty)
-                            postedContact.ID = Guid.NewGuid();
-                        // Associate the new contact with the existing student.
-                        existingStudent.Contacts.Add(postedContact);
-                    }
-                }
-
-                // Optionally, remove contacts that were deleted in the form.
-                var postedContactIDs = postedStudent.Contacts.Select(c => c.ID).ToList();
-                var contactsToRemove = existingStudent.Contacts.Where(c => !postedContactIDs.Contains(c.ID)).ToList();
-                foreach (var contact in contactsToRemove)
-                {
-                    _context.Remove(contact);
-                }
-
                 try
                 {
+                    // Note: In Edit, we do not change CreatedDate.
+                    _context.Update(student);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!_context.Student.Any(e => e.ID == postedStudent.ID))
+                    if (!_context.Student.Any(e => e.ID == student.ID))
                         return NotFound();
                     else
                         throw;
                 }
                 return RedirectToAction(nameof(Index));
             }
-
-            // If we got this far, something failed; repopulate dropdown lists.
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-            return View(postedStudent);
+            return View(student);
         }
-
 
         // GET: Students/Delete/{id}
         public async Task<IActionResult> Delete(Guid id)
