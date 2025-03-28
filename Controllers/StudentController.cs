@@ -69,7 +69,7 @@ namespace DotNetCoreSqlDb.Controllers
             // If the current user is not an admin, ignore any submitted AccountingGroup value.
             if (!User.IsInRole("admin"))
             {
-                student.AccountingGroup = "S";
+                student.AccountingGroup = null;
             }
 
             // Server-side validation: Ensure at least one contact is added.
@@ -127,15 +127,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             if (!ModelState.IsValid)
             {
-                ModelState.Remove("Source");
-                ModelState.Remove("TimeZoneId");
-                ModelState.Remove("AccountingGroup");
-                
-                ViewBag.ContactTypes = DropdownOptions.ContactTypes;
-                ViewBag.SourceTypes = DropdownOptions.SourceTypes;
-                ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-                ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-
+                // Repopulate dropdowns if necessary.
                 return View(updatedStudent);
             }
 
