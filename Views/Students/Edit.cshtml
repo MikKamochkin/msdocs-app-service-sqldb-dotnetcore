@@ -239,17 +239,17 @@
 
             // Delegate click event to the summary rows to enable editing.
             $(document).on("click", "#contactsSummary tbody tr.contact-summary", function(e) {
-                // Retrieve the current row's data.
                 var $row = $(this);
-                editingContactIndex = $row.data("index");
-                $("#modalContactType").val($row.data("contacttype"));
-                $("#modalContactValue").val($row.data("contactvalue"));
-                $("#modalContactInvitation").prop("checked", $row.data("invitation"));
-                $("#modalContactEmergency").prop("checked", $row.data("emergency"));
-                $("#modalContactMoney").prop("checked", $row.data("money"));
+                editingContactIndex = $row.attr("data-index");
+                $("#modalContactType").val($row.attr("data-contacttype"));
+                $("#modalContactValue").val($row.attr("data-contactvalue"));
+                $("#modalContactInvitation").prop("checked", $row.attr("data-invitation") === "true");
+                $("#modalContactEmergency").prop("checked", $row.attr("data-emergency") === "true");
+                $("#modalContactMoney").prop("checked", $row.attr("data-money") === "true");
                 $("#contactModalTitle").text("Edit Contact");
                 $("#contactModal").modal("show");
             });
+
 
             // When Save is clicked in the modal.
             $("#modalSave").click(function() {
@@ -277,7 +277,6 @@
                     $row.find("td:nth-child(4)").text(emergencyBool ? "✔" : "");
                     $row.find("td:nth-child(5)").text(moneyBool ? "✔" : "");
 
-                    // Rebuild hidden fields, including the ID if it exists.
                     var hiddenHtml = "";
                     if (existingId) {
                         hiddenHtml += '<input type="hidden" name="Contacts[' + editingContactIndex + '].ID" value="' + existingId + '" />';
@@ -290,22 +289,12 @@
                         '<input type="hidden" name="Contacts[' + editingContactIndex + '].Money" value="' + moneyBool + '"/>';
                     $row.find("td:last").html(hiddenHtml);
 
-                    // Update data attributes.
-                    $row.data("contacttype", contactType);
+                    // Update the row’s custom data attributes using .attr()
                     $row.attr("data-contacttype", contactType);
-
-                    $row.data("contactvalue", value);
                     $row.attr("data-contactvalue", value);
-
-                    $row.data("invitation", invitationBool);
                     $row.attr("data-invitation", invitationBool.toString().toLowerCase());
-
-                    $row.data("emergency", emergencyBool);
                     $row.attr("data-emergency", emergencyBool.toString().toLowerCase());
-
-                    $row.data("money", moneyBool);
                     $row.attr("data-money", moneyBool.toString().toLowerCase());
-
 
                     editingContactIndex = null;
                 } else {
