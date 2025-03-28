@@ -127,7 +127,15 @@ namespace DotNetCoreSqlDb.Controllers
 
             if (!ModelState.IsValid)
             {
-                // Repopulate dropdowns if necessary.
+                ModelState.Remove("Source");
+                ModelState.Remove("TimeZoneId");
+                ModelState.Remove("AccountingGroup");
+                
+                ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+                ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+                ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
+                ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
+
                 return View(updatedStudent);
             }
 
