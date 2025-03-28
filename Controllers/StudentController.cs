@@ -69,7 +69,7 @@ namespace DotNetCoreSqlDb.Controllers
             // If the current user is not an admin, ignore any submitted AccountingGroup value.
             if (!User.IsInRole("admin"))
             {
-                student.AccountingGroup = null;
+                student.AccountingGroup = "S";
             }
 
             // Server-side validation: Ensure at least one contact is added.
