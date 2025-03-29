@@ -19,6 +19,27 @@ namespace DotNetCoreSqlDb.Controllers
             _context = context;
         }
 
+        // GET: Students
+        public async Task<IActionResult> Index()
+        {
+            return View(await _context.Student.ToListAsync());
+        }
+
+        // GET: Students/Details/{id}
+        public async Task<IActionResult> Details(Guid? id)
+        {
+            if (id == null)
+                return NotFound();
+
+            var student = await _context.Student
+                .Include(s => s.Contacts)
+                .FirstOrDefaultAsync(m => m.ID == id);
+            if (student == null)
+                return NotFound();
+
+            return View(student);
+        }
+
         // GET: Students/Edit/{id}
         public async Task<IActionResult> Edit(Guid? id)
         {
@@ -140,5 +161,64 @@ namespace DotNetCoreSqlDb.Controllers
             }
             return RedirectToAction(nameof(Index));
         }
+
+        // GET: Students/Create
+        public IActionResult Create()
+        {
+            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
+            //for future use: var tz = TimeZoneInfo.FindSystemTimeZoneById(yourRecord.TimeZoneId);
+            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
+            /*
+            depricated version of time zones:
+             ViewBag.TimeZones = TimeZoneInfo.GetSystemTimeZones()
+                .Select(tz => new SelectListItem { Value = tz.Id, Text = tz.DisplayName })
+                .ToList();
+            */
+
+            return View();
+        }
+
+        // POST: Students/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
+        {
+            // Set the CreatedDate automatically to the current time.
+            student.CreatedDate = DateTime.Now;
+
+            // If the current user is not an admin, ignore any submitted AccountingGroup value.
+            if (!User.IsInRole("admin"))
+            {
+                student.AccountingGroup = "S";
+            }
+
+            // Server-side validation: Ensure at least one contact is added.
+            if (student.Contacts == null || !student.Contacts.Any())
+            {
+                ModelState.AddModelError("", "Please add at least one contact.");
+            }
+
+            if (ModelState.IsValid)
+            {
+                // Generate a new GUID for the student's ID.
+                student.ID = Guid.NewGuid();
+                
+                _context.Add(student);
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Repopulate dropdown lists if model state is invalid.
+            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
+            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
+
+            return View(student);
+        }
+
+        
     }
 }
