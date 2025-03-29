@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 
 namespace DotNetCoreSqlDb.Controllers
@@ -17,84 +17,6 @@ namespace DotNetCoreSqlDb.Controllers
         public StudentsController(MyDatabaseContext context)
         {
             _context = context;
-        }
-
-        // GET: Students
-        public async Task<IActionResult> Index()
-        {
-            return View(await _context.Student.ToListAsync());
-        }
-
-        // GET: Students/Details/{id}
-        public async Task<IActionResult> Details(Guid? id)
-        {
-            if (id == null)
-                return NotFound();
-
-            var student = await _context.Student
-                .Include(s => s.Contacts)
-                .FirstOrDefaultAsync(m => m.ID == id);
-            if (student == null)
-                return NotFound();
-
-            return View(student);
-        }
-
-        // GET: Students/Create
-        public IActionResult Create()
-        {
-            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
-            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
-            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-            //for future use: var tz = TimeZoneInfo.FindSystemTimeZoneById(yourRecord.TimeZoneId);
-            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-            /*
-            depricated version of time zones:
-             ViewBag.TimeZones = TimeZoneInfo.GetSystemTimeZones()
-                .Select(tz => new SelectListItem { Value = tz.Id, Text = tz.DisplayName })
-                .ToList();
-            */
-
-            return View();
-        }
-
-        // POST: Students/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
-        {
-            // Set the CreatedDate automatically to the current time.
-            student.CreatedDate = DateTime.Now;
-
-            // If the current user is not an admin, ignore any submitted AccountingGroup value.
-            if (!User.IsInRole("admin"))
-            {
-                student.AccountingGroup = "S";
-            }
-
-            // Server-side validation: Ensure at least one contact is added.
-            if (student.Contacts == null || !student.Contacts.Any())
-            {
-                ModelState.AddModelError("", "Please add at least one contact.");
-            }
-
-            if (ModelState.IsValid)
-            {
-                // Generate a new GUID for the student's ID.
-                student.ID = Guid.NewGuid();
-                
-                _context.Add(student);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Repopulate dropdown lists if model state is invalid.
-            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
-            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
-            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-
-            return View(student);
         }
 
         // GET: Students/Edit/{id}
@@ -120,17 +42,14 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student updatedStudent)
+        public async Task<IActionResult> Edit(Guid id, Student updatedStudent)
         {
             if (id != updatedStudent.ID)
                 return NotFound();
 
             if (!ModelState.IsValid)
             {
-                ModelState.Remove("Source");
-                ModelState.Remove("TimeZoneId");
-                ModelState.Remove("AccountingGroup");
-                
+                // Repopulate dropdowns if invalid.
                 ViewBag.ContactTypes = DropdownOptions.ContactTypes;
                 ViewBag.SourceTypes = DropdownOptions.SourceTypes;
                 ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
@@ -139,7 +58,7 @@ namespace DotNetCoreSqlDb.Controllers
                 return View(updatedStudent);
             }
 
-            // Load the existing student with its contacts from the database.
+            // Load existing student (with contacts) from DB.
             var existingStudent = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == id);
@@ -147,7 +66,7 @@ namespace DotNetCoreSqlDb.Controllers
             if (existingStudent == null)
                 return NotFound();
 
-            // Update the scalar properties.
+            // Update scalar properties.
             existingStudent.Name = updatedStudent.Name;
             existingStudent.ParentOrEmployer = updatedStudent.ParentOrEmployer;
             existingStudent.MainNotes = updatedStudent.MainNotes;
@@ -155,31 +74,31 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
             existingStudent.AccountingGroup = updatedStudent.AccountingGroup;
 
-            // Update the contacts collection.
-            foreach (var updatedContact in updatedStudent.Contacts)
+            // Update contacts.
+            foreach (var contact in updatedStudent.Contacts)
             {
-                // Find the existing contact by ID.
-                var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == updatedContact.ID);
-
-                if (existingContact != null)
+                // If ID is the default GUID, it is a new contact.
+                if (contact.ID == Guid.Empty)
                 {
-                    // Update the existing contact's properties.
-                    existingContact.Type = updatedContact.Type;
-                    existingContact.Value = updatedContact.Value;
-                    existingContact.Invitation = updatedContact.Invitation;
-                    existingContact.Emergency = updatedContact.Emergency;
-                    existingContact.Money = updatedContact.Money;
+                    contact.ID = Guid.NewGuid();
+                    contact.StudentID = existingStudent.ID;
+                    existingStudent.Contacts.Add(contact);
                 }
                 else
                 {
-                    // If the contact does not exist, it may be a new contact.
-                    // You can add it if that's expected.
-                    existingStudent.Contacts.Add(updatedContact);
+                    var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == contact.ID);
+                    if (existingContact != null)
+                    {
+                        existingContact.Type = contact.Type;
+                        existingContact.Value = contact.Value;
+                        existingContact.Invitation = contact.Invitation;
+                        existingContact.Emergency = contact.Emergency;
+                        existingContact.Money = contact.Money;
+                    }
                 }
             }
 
-            // Optionally, if you want to remove contacts that were deleted in the form,
-            // compare existingStudent.Contacts with updatedStudent.Contacts and remove missing ones.
+            // (Optional: If deletion is desired, remove contacts that are missing from updatedStudent.Contacts)
 
             try
             {
