@@ -77,7 +77,6 @@
                     <th>Invitation</th>
                     <th>Emergency</th>
                     <th>Money</th>
-                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -86,37 +85,31 @@
                     for (int i = 0; i < Model.Contacts.Count; i++)
                     {
                         var contact = Model.Contacts.ElementAt(i);
-                        <tr class="contact-summary" data-index="@i">
+                        <tr class="contact-summary" data-index="@i" style="cursor:pointer;"
+                            data-contacttype="@contact.Type"
+                            data-contactvalue="@contact.Value"
+                            data-invitation="@contact.Invitation.ToString().ToLower()"
+                            data-emergency="@contact.Emergency.ToString().ToLower()"
+                            data-money="@contact.Money.ToString().ToLower()">
                             <td>
-                                <span class="contact-type">
-                                    @(DropdownOptions.ContactTypes.FirstOrDefault(x => x.Value == contact.Type)?.Text)
-                                </span>
+                                @(DropdownOptions.ContactTypes.FirstOrDefault(x => x.Value == contact.Type)?.Text)
                                 @Html.Hidden("Contacts[" + i + "].Type", contact.Type)
                             </td>
                             <td>
-                                <span class="contact-value">@contact.Value</span>
+                                @contact.Value
                                 @Html.Hidden("Contacts[" + i + "].Value", contact.Value)
                             </td>
                             <td>
-                                <span class="contact-invitation">
-                                    @(contact.Invitation ? "✔" : "")
-                                </span>
+                                @(contact.Invitation ? "✔" : "")
                                 @Html.Hidden("Contacts[" + i + "].Invitation", contact.Invitation.ToString().ToLower())
                             </td>
                             <td>
-                                <span class="contact-emergency">
-                                    @(contact.Emergency ? "✔" : "")
-                                </span>
+                                @(contact.Emergency ? "✔" : "")
                                 @Html.Hidden("Contacts[" + i + "].Emergency", contact.Emergency.ToString().ToLower())
                             </td>
                             <td>
-                                <span class="contact-money">
-                                    @(contact.Money ? "✔" : "")
-                                </span>
+                                @(contact.Money ? "✔" : "")
                                 @Html.Hidden("Contacts[" + i + "].Money", contact.Money.ToString().ToLower())
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="@i">Edit</button>
                             </td>
                             @* Hidden field for the contact ID *@
                             @Html.Hidden("Contacts[" + i + "].ID", contact.ID)
@@ -197,21 +190,16 @@
             $('#contactModal').modal('show');
         });
 
-        // Open modal for editing an existing contact.
-        $(document).on('click', '.editContactBtn', function () {
+        // Open modal for editing an existing contact by clicking the row.
+        $(document).on('click', '#contactsTable tbody tr.contact-summary', function () {
             editingContactIndex = parseInt($(this).attr('data-index'));
             $('#contactModalLabel').text('Edit Contact');
-            var row = $('tr[data-index="' + editingContactIndex + '"]');
-            var currentType = row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val();
-            var currentValue = row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val();
-            var currentInvitation = row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val() === 'true';
-            var currentEmergency = row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val() === 'true';
-            var currentMoney = row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val() === 'true';
-            $('#modalContactType').val(currentType);
-            $('#modalContactValue').val(currentValue);
-            $('#modalContactInvitation').prop('checked', currentInvitation);
-            $('#modalContactEmergency').prop('checked', currentEmergency);
-            $('#modalContactMoney').prop('checked', currentMoney);
+            var $row = $(this);
+            $('#modalContactType').val($row.data('contacttype'));
+            $('#modalContactValue').val($row.data('contactvalue'));
+            $('#modalContactInvitation').prop('checked', $row.data('invitation') === 'true');
+            $('#modalContactEmergency').prop('checked', $row.data('emergency') === 'true');
+            $('#modalContactMoney').prop('checked', $row.data('money') === 'true');
             $('#contactModal').modal('show');
         });
 
@@ -224,6 +212,7 @@
             var emergency = $('#modalContactEmergency').is(':checked');
             var money = $('#modalContactMoney').is(':checked');
 
+            // Validate that at least one field is filled (if necessary).
             if (!contactType && !value && !invitation && !emergency && !money) {
                 $('#contactModal').modal('hide');
                 return;
@@ -231,7 +220,12 @@
 
             if (editingContactIndex === -1) {
                 // Add new contact row.
-                var newRow = '<tr class="contact-summary" data-index="' + contactCount + '">' +
+                var newRow = '<tr class="contact-summary" data-index="' + contactCount + '" style="cursor:pointer;" ' +
+                    'data-contacttype="' + contactType + '" ' +
+                    'data-contactvalue="' + value + '" ' +
+                    'data-invitation="' + (invitation ? "true" : "false") + '" ' +
+                    'data-emergency="' + (emergency ? "true" : "false") + '" ' +
+                    'data-money="' + (money ? "true" : "false") + '">' +
                     '<td><span class="contact-type">' + typeText + '</span>' +
                         '<input type="hidden" name="Contacts[' + contactCount + '].Type" value="' + contactType + '" />' +
                     '</td>' +
@@ -247,17 +241,13 @@
                     '<td><span class="contact-money">' + (money ? "✔" : "") + '</span>' +
                         '<input type="hidden" name="Contacts[' + contactCount + '].Money" value="' + money + '" />' +
                     '</td>' +
-                    '<td>' +
-                        '<button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="' + contactCount + '">Edit</button>' +
-                    '</td>' +
                     // For new contacts, set the ID to Guid.Empty (all zeroes)
                     '<input type="hidden" name="Contacts[' + contactCount + '].ID" value="00000000-0000-0000-0000-000000000000" />' +
                     '<input type="hidden" name="Contacts.Index" value="' + contactCount + '" />' +
                     '</tr>';
                 if ($('#contactsTable tbody').length > 0) {
                     $('#contactsTable tbody').append(newRow);
-                }
-                else {
+                } else {
                     var tableHtml =
                         '<table class="table table-bordered" id="contactsTable">' +
                             '<thead><tr>' +
@@ -266,7 +256,6 @@
                                 '<th>Invitation</th>' +
                                 '<th>Emergency</th>' +
                                 '<th>Money</th>' +
-                                '<th>Actions</th>' +
                             '</tr></thead>' +
                             '<tbody>' + newRow + '</tbody>' +
                         '</table>';
@@ -276,17 +265,23 @@
             }
             else {
                 // Editing an existing contact.
-                var row = $('tr[data-index="' + editingContactIndex + '"]');
-                row.find('span.contact-type').text(typeText);
-                row.find('span.contact-value').text(value);
-                row.find('span.contact-invitation').text(invitation ? "✔" : "");
-                row.find('span.contact-emergency').text(emergency ? "✔" : "");
-                row.find('span.contact-money').text(money ? "✔" : "");
-                row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val(contactType);
-                row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val(value);
-                row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val(invitation);
-                row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val(emergency);
-                row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val(money);
+                var $row = $('tr[data-index="' + editingContactIndex + '"]');
+                $row.find('span.contact-type').text(typeText);
+                $row.find('span.contact-value').text(value);
+                $row.find('span.contact-invitation').text(invitation ? "✔" : "");
+                $row.find('span.contact-emergency').text(emergency ? "✔" : "");
+                $row.find('span.contact-money').text(money ? "✔" : "");
+                $row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val(contactType);
+                $row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val(value);
+                $row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val(invitation);
+                $row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val(emergency);
+                $row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val(money);
+                // Also update the row's data attributes.
+                $row.attr("data-contacttype", contactType);
+                $row.attr("data-contactvalue", value);
+                $row.attr("data-invitation", invitation ? "true" : "false");
+                $row.attr("data-emergency", emergency ? "true" : "false");
+                $row.attr("data-money", money ? "true" : "false");
             }
             $('#contactModal').modal('hide');
         });
