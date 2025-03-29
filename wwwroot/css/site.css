@@ -1,26 +1,39 @@
+/* Base font size */
 html {
   font-size: 14px;
+  position: relative;
+  min-height: 100%;
 }
 
+/* Media query for larger devices */
 @media (min-width: 768px) {
   html {
     font-size: 16px;
   }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+/* Focus styles for interactive elements */
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
   box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
-html {
-  position: relative;
-  min-height: 100%;
+/* Ensure full height layout and reset margins/padding */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
+/* Remove extra margin from body (was previously set to 60px) */
 body {
-  margin-bottom: 60px;
+  margin-bottom: 0;
 }
 
+/* Hover effect for contact summary */
 .contact-summary:hover {
   background-color: #f0f0f0;
   color: #007bff;
@@ -33,11 +46,11 @@ body {
   margin: 80px auto;
   padding: 20px;
   background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-radius: 5px;
 }
 
-/* Style the title */
+/* Style the title in the login form */
 .login-container h2 {
   text-align: center;
   margin-bottom: 20px;
@@ -48,7 +61,7 @@ body {
   margin-bottom: 15px;
 }
 
-/* Label styling */
+/* Label styling for form groups */
 .form-group label {
   display: block;
   margin-bottom: 5px;
@@ -72,6 +85,7 @@ body {
   cursor: pointer;
 }
 
+/* Primary button styling */
 .btn-primary {
   background-color: #258cfb;
   color: #fff;
@@ -85,4 +99,24 @@ body {
   border: 1px solid #f5c6cb;
   border-radius: 3px;
   margin-top: 15px;
+}
+
+/* Sticky footer styles using Flexbox */
+/* Wrapper to hold the page content and footer */
+.page-wrapper {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main content area should take up available space */
+.container.body-content {
+  flex: 1;
+}
+
+/* Footer styling */
+footer {
+  background-color: #f8f9fa;
+  text-align: center;
+  padding: 15px;
 }
