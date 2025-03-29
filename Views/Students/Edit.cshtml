@@ -77,7 +77,7 @@
                     <th>Invitation</th>
                     <th>Emergency</th>
                     <th>Money</th>
-                    <th></th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -86,7 +86,7 @@
                     for (int i = 0; i < Model.Contacts.Count; i++)
                     {
                         var contact = Model.Contacts.ElementAt(i);
-                        <tr data-index="@i">
+                        <tr class="contact-summary" data-index="@i">
                             <td>
                                 <span class="contact-type">
                                     @(DropdownOptions.ContactTypes.FirstOrDefault(x => x.Value == contact.Type)?.Text)
@@ -118,7 +118,7 @@
                             <td>
                                 <button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="@i">Edit</button>
                             </td>
-                            @* Hidden for binding existing contacts *@
+                            @* Hidden field for the contact ID *@
                             @Html.Hidden("Contacts[" + i + "].ID", contact.ID)
                             <input type="hidden" name="Contacts.Index" value="@i" />
                         </tr>
@@ -126,7 +126,6 @@
                 }
             </tbody>
         </table>
-
         <button type="button" id="addContactBtn" class="btn btn-sm btn-primary">Add Contact</button>
         <br /><br />
 
@@ -151,7 +150,6 @@
       <div class="modal-body">
         <div class="form-group">
           <label for="modalContactType">Contact Type</label>
-          @* Use a dropdown based on ViewBag.ContactTypes *@
           @Html.DropDownList("modalContactType", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control", id = "modalContactType" })
         </div>
         <div class="form-group">
@@ -180,147 +178,139 @@
 </div>
 
 @section Scripts {
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
-<script type="text/javascript">
-    // Initialize contactCount from existing contacts count.
-    var contactCount = @((Model.Contacts != null && Model.Contacts.Any()) ? Model.Contacts.Count() : 0);
-    var editingContactIndex = -1; // -1 indicates adding a new contact
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+        // Initialize contactCount to the number of existing contacts.
+        var contactCount = @((Model.Contacts != null && Model.Contacts.Any()) ? Model.Contacts.Count() : 0);
+        var editingContactIndex = -1; // -1 indicates a new contact
 
-    // Open modal for adding a new contact.
-    $('#addContactBtn').click(function () {
-        editingContactIndex = -1;
-        $('#contactModalLabel').text('Add Contact');
-        // Clear modal fields.
-        $('#modalContactType').val('');
-        $('#modalContactValue').val('');
-        $('#modalContactInvitation').prop('checked', false);
-        $('#modalContactEmergency').prop('checked', false);
-        $('#modalContactMoney').prop('checked', false);
-        $('#contactModal').modal('show');
-    });
+        // Open modal for adding a new contact.
+        $('#addContactBtn').click(function () {
+            editingContactIndex = -1;
+            $('#contactModalLabel').text('Add Contact');
+            $('#modalContactType').val('');
+            $('#modalContactValue').val('');
+            $('#modalContactInvitation').prop('checked', false);
+            $('#modalContactEmergency').prop('checked', false);
+            $('#modalContactMoney').prop('checked', false);
+            $('#contactModal').modal('show');
+        });
 
-    // Open modal for editing an existing contact.
-    $(document).on('click', '.editContactBtn', function () {
-        editingContactIndex = parseInt($(this).attr('data-index'));
-        $('#contactModalLabel').text('Edit Contact');
-        var row = $('tr[data-index="' + editingContactIndex + '"]');
-        // Load current values from the hidden fields.
-        var currentType = row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val();
-        var currentValue = row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val();
-        var currentInvitation = row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val() === 'true';
-        var currentEmergency = row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val() === 'true';
-        var currentMoney = row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val() === 'true';
-        $('#modalContactType').val(currentType);
-        $('#modalContactValue').val(currentValue);
-        $('#modalContactInvitation').prop('checked', currentInvitation);
-        $('#modalContactEmergency').prop('checked', currentEmergency);
-        $('#modalContactMoney').prop('checked', currentMoney);
-        $('#contactModal').modal('show');
-    });
+        // Open modal for editing an existing contact.
+        $(document).on('click', '.editContactBtn', function () {
+            editingContactIndex = parseInt($(this).attr('data-index'));
+            $('#contactModalLabel').text('Edit Contact');
+            var row = $('tr[data-index="' + editingContactIndex + '"]');
+            var currentType = row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val();
+            var currentValue = row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val();
+            var currentInvitation = row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val() === 'true';
+            var currentEmergency = row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val() === 'true';
+            var currentMoney = row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val() === 'true';
+            $('#modalContactType').val(currentType);
+            $('#modalContactValue').val(currentValue);
+            $('#modalContactInvitation').prop('checked', currentInvitation);
+            $('#modalContactEmergency').prop('checked', currentEmergency);
+            $('#modalContactMoney').prop('checked', currentMoney);
+            $('#contactModal').modal('show');
+        });
 
-    // Save contact from modal.
-    $('#modalSave').click(function () {
-        var contactType = $('#modalContactType').val();
-        var typeText = $('#modalContactType option:selected').text();
-        var value = $('#modalContactValue').val();
-        var invitation = $('#modalContactInvitation').is(':checked');
-        var emergency = $('#modalContactEmergency').is(':checked');
-        var money = $('#modalContactMoney').is(':checked');
+        // Save the contact from the modal.
+        $('#modalSave').click(function () {
+            var contactType = $('#modalContactType').val();
+            var typeText = $('#modalContactType option:selected').text();
+            var value = $('#modalContactValue').val();
+            var invitation = $('#modalContactInvitation').is(':checked');
+            var emergency = $('#modalContactEmergency').is(':checked');
+            var money = $('#modalContactMoney').is(':checked');
 
-        // Validate at least one field is provided.
-        if (!contactType && !value && !invitation && !emergency && !money) {
-            $('#contactModal').modal('hide');
-            return;
-        }
+            if (!contactType && !value && !invitation && !emergency && !money) {
+                $('#contactModal').modal('hide');
+                return;
+            }
 
-        if (editingContactIndex === -1) {
-            // Add new contact row.
-            var newRow = '<tr class="contact-summary" data-index="' + contactCount + '">' +
-                '<td><span class="contact-type">' + typeText + '</span>' +
-                    '<input type="hidden" name="Contacts[' + contactCount + '].Type" value="' + contactType + '" />' +
-                '</td>' +
-                '<td><span class="contact-value">' + value + '</span>' +
-                    '<input type="hidden" name="Contacts[' + contactCount + '].Value" value="' + value + '" />' +
-                '</td>' +
-                '<td><span class="contact-invitation">' + (invitation ? "✔" : "") + '</span>' +
-                    '<input type="hidden" name="Contacts[' + contactCount + '].Invitation" value="' + invitation + '" />' +
-                '</td>' +
-                '<td><span class="contact-emergency">' + (emergency ? "✔" : "") + '</span>' +
-                    '<input type="hidden" name="Contacts[' + contactCount + '].Emergency" value="' + emergency + '" />' +
-                '</td>' +
-                '<td><span class="contact-money">' + (money ? "✔" : "") + '</span>' +
-                    '<input type="hidden" name="Contacts[' + contactCount + '].Money" value="' + money + '" />' +
-                '</td>' +
-                '<td>' +
-                    '<button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="' + contactCount + '">Edit</button>' +
-                '</td>' +
-                // For new contacts, set ID to 0.
-                '<input type="hidden" name="Contacts[' + contactCount + '].ID" value="00000000-0000-0000-0000-000000000000" />' +
-                '<input type="hidden" name="Contacts.Index" value="' + contactCount + '" />' +
-                '</tr>';
-            if ($('#contactsTable tbody').length > 0)
-                $('#contactsTable tbody').append(newRow);
-            else {
-                // If no contacts exist, create the table.
-                var tableHtml =
-                    '<table class="table table-bordered" id="contactsTable">' +
-                        '<thead>' +
-                            '<tr>' +
+            if (editingContactIndex === -1) {
+                // Add new contact row.
+                var newRow = '<tr class="contact-summary" data-index="' + contactCount + '">' +
+                    '<td><span class="contact-type">' + typeText + '</span>' +
+                        '<input type="hidden" name="Contacts[' + contactCount + '].Type" value="' + contactType + '" />' +
+                    '</td>' +
+                    '<td><span class="contact-value">' + value + '</span>' +
+                        '<input type="hidden" name="Contacts[' + contactCount + '].Value" value="' + value + '" />' +
+                    '</td>' +
+                    '<td><span class="contact-invitation">' + (invitation ? "✔" : "") + '</span>' +
+                        '<input type="hidden" name="Contacts[' + contactCount + '].Invitation" value="' + invitation + '" />' +
+                    '</td>' +
+                    '<td><span class="contact-emergency">' + (emergency ? "✔" : "") + '</span>' +
+                        '<input type="hidden" name="Contacts[' + contactCount + '].Emergency" value="' + emergency + '" />' +
+                    '</td>' +
+                    '<td><span class="contact-money">' + (money ? "✔" : "") + '</span>' +
+                        '<input type="hidden" name="Contacts[' + contactCount + '].Money" value="' + money + '" />' +
+                    '</td>' +
+                    '<td>' +
+                        '<button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="' + contactCount + '">Edit</button>' +
+                    '</td>' +
+                    // For new contacts, set the ID to Guid.Empty
+                    '<input type="hidden" name="Contacts[' + contactCount + '].ID" value="00000000-0000-0000-0000-000000000000" />' +
+                    '<input type="hidden" name="Contacts.Index" value="' + contactCount + '" />' +
+                    '</tr>';
+                if ($('#contactsTable tbody').length > 0) {
+                    $('#contactsTable tbody').append(newRow);
+                } else {
+                    var tableHtml =
+                        '<table class="table table-bordered" id="contactsTable">' +
+                            '<thead><tr>' +
                                 '<th>Type</th>' +
                                 '<th>Contact</th>' +
                                 '<th>Invitation</th>' +
                                 '<th>Emergency</th>' +
                                 '<th>Money</th>' +
-                                '<th></th>' +
-                            '</tr>' +
-                        '</thead>' +
-                        '<tbody>' + newRow + '</tbody>' +
-                    '</table>';
-                $('#contacts').html(tableHtml);
+                                '<th>Actions</th>' +
+                            '</tr></thead>' +
+                            '<tbody>' + newRow + '</tbody>' +
+                        '</table>';
+                    $('#contacts').html(tableHtml);
+                }
+                contactCount++;
             }
-            contactCount++;
-        }
-        else {
-            // Edit existing contact row.
-            var row = $('tr[data-index="' + editingContactIndex + '"]');
-            row.find('span.contact-type').text(typeText);
-            row.find('span.contact-value').text(value);
-            row.find('span.contact-invitation').text(invitation ? "✔" : "");
-            row.find('span.contact-emergency').text(emergency ? "✔" : "");
-            row.find('span.contact-money').text(money ? "✔" : "");
-            row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val(contactType);
-            row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val(value);
-            row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val(invitation);
-            row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val(emergency);
-            row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val(money);
-        }
-        $('#contactModal').modal('hide');
-    });
-
-    // Cancel button in modal
-    $('#modalCancel').click(function () {
-        editingContactIndex = -1;
-        $('#contactModal').modal('hide');
-    });
-
-    // Before form submission, ensure each row's index is present.
-    $('form').submit(function (e) {
-        $("input[name='Contacts.Index']").remove();
-        $('#contactsTable tbody tr.contact-summary').each(function () {
-            var idx = $(this).data('index');
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'Contacts.Index',
-                value: idx
-            }).appendTo('form');
+            else {
+                // Editing an existing contact row.
+                var row = $('tr[data-index="' + editingContactIndex + '"]');
+                row.find('span.contact-type').text(typeText);
+                row.find('span.contact-value').text(value);
+                row.find('span.contact-invitation').text(invitation ? "✔" : "");
+                row.find('span.contact-emergency').text(emergency ? "✔" : "");
+                row.find('span.contact-money').text(money ? "✔" : "");
+                row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val(contactType);
+                row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val(value);
+                row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val(invitation);
+                row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val(emergency);
+                row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val(money);
+            }
+            $('#contactModal').modal('hide');
         });
-        if ($('#contactsTable tbody tr').length === 0) {
-            alert("Please add at least one contact.");
-            e.preventDefault();
-            return false;
-        }
-    });
-});
-</script>
+
+        $('#modalCancel').click(function () {
+            editingContactIndex = -1;
+            $('#contactModal').modal('hide');
+        });
+
+        // Before form submission, ensure each row's index is included.
+        $('form').submit(function (e) {
+            $("input[name='Contacts.Index']").remove();
+            $('#contactsTable tbody tr.contact-summary').each(function () {
+                var idx = $(this).data('index');
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'Contacts.Index',
+                    value: idx
+                }).appendTo('form');
+            });
+            if ($('#contactsTable tbody tr').length === 0) {
+                alert("Please add at least one contact.");
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
 }
