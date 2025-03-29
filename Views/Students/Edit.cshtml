@@ -102,9 +102,9 @@
                                     <input type="hidden" name="Contacts[@i].ID" value="@contact.ID" />
                                     <input type="hidden" name="Contacts[@i].Type" value="@contact.Type" />
                                     <input type="hidden" name="Contacts[@i].Value" value="@contact.Value" />
-                                    <input type="hidden" name="Contacts[@i].Invitation" value="@contact.Invitation" />
-                                    <input type="hidden" name="Contacts[@i].Emergency" value="@contact.Emergency" />
-                                    <input type="hidden" name="Contacts[@i].Money" value="@contact.Money" />
+                                    <input type="hidden" name="Contacts[@i].Invitation" value="@contact.Invitation.ToString().ToLower()" />
+                                    <input type="hidden" name="Contacts[@i].Emergency" value="@contact.Emergency.ToString().ToLower()" />
+                                    <input type="hidden" name="Contacts[@i].Money" value="@contact.Money.ToString().ToLower()" />
                                 </td>
                             </tr>
                         }
@@ -199,9 +199,9 @@
                 '<tr class="contact-summary" data-index="' + index + '" ' +
                 'data-contacttype="' + contactType + '" ' +
                 'data-contactvalue="' + value + '" ' +
-                'data-invitation="' + invitationBool.toString().toLowerCase() + '" ' +
-                'data-emergency="' + emergencyBool.toString().toLowerCase() + '" ' +
-                'data-money="' + moneyBool.toString().toLowerCase() + '">' +
+                'data-invitation="' + (invitationBool ? "true" : "false") + '" ' +
+                'data-emergency="' + (emergencyBool ? "true" : "false") + '" ' +
+                'data-money="' + (moneyBool ? "true" : "false") + '">' +
                     '<td>' + typeText + '</td>' +
                     '<td>' + value + '</td>' +
                     '<td>' + (invitationBool ? "✔" : "") + '</td>' +
@@ -211,9 +211,9 @@
                         '<input type="hidden" name="Contacts.index" value="' + index + '"/>' +
                         '<input type="hidden" name="Contacts[' + index + '].Type" value="' + contactType + '"/>' +
                         '<input type="hidden" name="Contacts[' + index + '].Value" value="' + value + '"/>' +
-                        '<input type="hidden" name="Contacts[' + index + '].Invitation" value="' + invitationBool + '"/>' +
-                        '<input type="hidden" name="Contacts[' + index + '].Emergency" value="' + emergencyBool + '"/>' +
-                        '<input type="hidden" name="Contacts[' + index + '].Money" value="' + moneyBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Invitation" value="' + (invitationBool ? "true" : "false") + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Emergency" value="' + (emergencyBool ? "true" : "false") + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Money" value="' + (moneyBool ? "true" : "false") + '"/>' +
                     '</td>' +
                 '</tr>';
             $("#contactsSummary tbody").append(summaryRow);
@@ -245,9 +245,9 @@
                 editingContactIndex = $row.data("index");
                 $("#modalContactType").val($row.data("contacttype"));
                 $("#modalContactValue").val($row.data("contactvalue"));
-                $("#modalContactInvitation").prop("checked", $row.data("invitation"));
-                $("#modalContactEmergency").prop("checked", $row.data("emergency"));
-                $("#modalContactMoney").prop("checked", $row.data("money"));
+                $("#modalContactInvitation").prop("checked", $row.data("invitation") === "true");
+                $("#modalContactEmergency").prop("checked", $row.data("emergency") === "true");
+                $("#modalContactMoney").prop("checked", $row.data("money") === "true");
                 $("#contactModalTitle").text("Edit Contact");
                 $("#contactModal").modal("show");
             });
@@ -282,16 +282,16 @@
                     hiddenHtml += '<input type="hidden" name="Contacts.index" value="' + editingContactIndex + '"/>' +
                                   '<input type="hidden" name="Contacts[' + editingContactIndex + '].Type" value="' + contactType + '"/>' +
                                   '<input type="hidden" name="Contacts[' + editingContactIndex + '].Value" value="' + value + '"/>' +
-                                  '<input type="hidden" name="Contacts[' + editingContactIndex + '].Invitation" value="' + invitationBool + '"/>' +
-                                  '<input type="hidden" name="Contacts[' + editingContactIndex + '].Emergency" value="' + emergencyBool + '"/>' +
-                                  '<input type="hidden" name="Contacts[' + editingContactIndex + '].Money" value="' + moneyBool + '"/>';
+                                  '<input type="hidden" name="Contacts[' + editingContactIndex + '].Invitation" value="' + (invitationBool ? "true" : "false") + '"/>' +
+                                  '<input type="hidden" name="Contacts[' + editingContactIndex + '].Emergency" value="' + (emergencyBool ? "true" : "false") + '"/>' +
+                                  '<input type="hidden" name="Contacts[' + editingContactIndex + '].Money" value="' + (moneyBool ? "true" : "false") + '"/>';
                     $row.find("td:last").html(hiddenHtml);
 
                     $row.data("contacttype", contactType);
                     $row.data("contactvalue", value);
-                    $row.data("invitation", invitationBool);
-                    $row.data("emergency", emergencyBool);
-                    $row.data("money", moneyBool);
+                    $row.data("invitation", invitationBool ? "true" : "false");
+                    $row.data("emergency", emergencyBool ? "true" : "false");
+                    $row.data("money", moneyBool ? "true" : "false");
 
                     editingContactIndex = null;
                 } else {
