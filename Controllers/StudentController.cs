@@ -22,7 +22,13 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: Students
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Student.ToListAsync());
+            // If the user is not admin, only show students with AccountingGroup == "S"
+            IQueryable<Student> query = _context.Student;
+            if (!User.IsInRole("admin"))
+            {
+                query = query.Where(s => s.AccountingGroup == "S");
+            }
+            return View(await query.ToListAsync());
         }
 
         // GET: Students/Details/{id}
@@ -36,6 +42,10 @@ namespace DotNetCoreSqlDb.Controllers
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
                 return NotFound();
+
+            // Non-admin users can only see students with AccountingGroup "S"
+            if (!User.IsInRole("admin") && student.AccountingGroup != "S")
+                return Forbid();
 
             return View(student);
         }
@@ -51,6 +61,10 @@ namespace DotNetCoreSqlDb.Controllers
                 .FirstOrDefaultAsync(s => s.ID == id);
             if (student == null)
                 return NotFound();
+
+            // Non-admin users can only edit students with AccountingGroup "S"
+            if (!User.IsInRole("admin") && student.AccountingGroup != "S")
+                return Forbid();
 
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
@@ -75,7 +89,6 @@ namespace DotNetCoreSqlDb.Controllers
                 ViewBag.SourceTypes = DropdownOptions.SourceTypes;
                 ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
                 ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-
                 return View(updatedStudent);
             }
 
@@ -83,9 +96,12 @@ namespace DotNetCoreSqlDb.Controllers
             var existingStudent = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == id);
-
             if (existingStudent == null)
                 return NotFound();
+
+            // Non-admin users can only edit students with AccountingGroup "S"
+            if (!User.IsInRole("admin") && existingStudent.AccountingGroup != "S")
+                return Forbid();
 
             // Update scalar properties.
             existingStudent.Name = updatedStudent.Name;
@@ -93,9 +109,12 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.MainNotes = updatedStudent.MainNotes;
             existingStudent.Source = updatedStudent.Source;
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
-            existingStudent.AccountingGroup = updatedStudent.AccountingGroup;
+            // For non-admins, force AccountingGroup to "S"
+            existingStudent.AccountingGroup = User.IsInRole("admin") 
+                                               ? updatedStudent.AccountingGroup 
+                                               : "S";
 
-            // Update contacts only if any contacts were submitted.
+            // Update contacts only if any were submitted.
             if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
             {
                 foreach (var contact in updatedStudent.Contacts)
@@ -121,7 +140,7 @@ namespace DotNetCoreSqlDb.Controllers
                     }
                 }
             }
-            // If no contacts were submitted (i.e. updatedStudent.Contacts is null or empty), leave the existing contacts unchanged.
+            // If no contacts were submitted, leave the existing contacts unchanged.
 
             try
             {
@@ -141,10 +160,13 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: Students/Delete/{id}
         public async Task<IActionResult> Delete(Guid id)
         {
-            var student = await _context.Student
-                .FirstOrDefaultAsync(m => m.ID == id);
+            var student = await _context.Student.FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
                 return NotFound();
+
+            // Non-admin users can only delete students with AccountingGroup "S"
+            if (!User.IsInRole("admin") && student.AccountingGroup != "S")
+                return Forbid();
 
             return View(student);
         }
@@ -157,6 +179,10 @@ namespace DotNetCoreSqlDb.Controllers
             var student = await _context.Student.FindAsync(id);
             if (student != null)
             {
+                // Non-admin users can only delete students with AccountingGroup "S"
+                if (!User.IsInRole("admin") && student.AccountingGroup != "S")
+                    return Forbid();
+
                 _context.Student.Remove(student);
                 await _context.SaveChangesAsync();
             }
@@ -169,7 +195,6 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-            //for future use: var tz = TimeZoneInfo.FindSystemTimeZoneById(yourRecord.TimeZoneId);
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
             /*
             depricated version of time zones:
@@ -177,7 +202,6 @@ namespace DotNetCoreSqlDb.Controllers
                 .Select(tz => new SelectListItem { Value = tz.Id, Text = tz.DisplayName })
                 .ToList();
             */
-
             return View();
         }
 
@@ -189,7 +213,7 @@ namespace DotNetCoreSqlDb.Controllers
             // Set the CreatedDate automatically to the current time.
             student.CreatedDate = DateTime.Now;
 
-            // If the current user is not an admin, ignore any submitted AccountingGroup value.
+            // If the current user is not an admin, force AccountingGroup to "S".
             if (!User.IsInRole("admin"))
             {
                 student.AccountingGroup = "S";
