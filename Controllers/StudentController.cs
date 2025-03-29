@@ -22,7 +22,7 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: Students
         public async Task<IActionResult> Index()
         {
-            // If the user is not admin, only show students with AccountingGroup == "S"
+            // Non-admin users can only see students with AccountingGroup "S"
             IQueryable<Student> query = _context.Student;
             if (!User.IsInRole("admin"))
             {
@@ -89,6 +89,7 @@ namespace DotNetCoreSqlDb.Controllers
                 ViewBag.SourceTypes = DropdownOptions.SourceTypes;
                 ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
                 ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
+
                 return View(updatedStudent);
             }
 
@@ -96,6 +97,7 @@ namespace DotNetCoreSqlDb.Controllers
             var existingStudent = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == id);
+
             if (existingStudent == null)
                 return NotFound();
 
@@ -109,12 +111,10 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.MainNotes = updatedStudent.MainNotes;
             existingStudent.Source = updatedStudent.Source;
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
-            // For non-admins, force AccountingGroup to "S"
-            existingStudent.AccountingGroup = User.IsInRole("admin") 
-                                               ? updatedStudent.AccountingGroup 
-                                               : "S";
+            // Force non-admin users to keep AccountingGroup "S"
+            existingStudent.AccountingGroup = User.IsInRole("admin") ? updatedStudent.AccountingGroup : "S";
 
-            // Update contacts only if any were submitted.
+            // Update contacts only if any contacts were submitted.
             if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
             {
                 foreach (var contact in updatedStudent.Contacts)
@@ -189,21 +189,24 @@ namespace DotNetCoreSqlDb.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Students/Create
+       // GET: Students/Create
         public IActionResult Create()
         {
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-            /*
-            depricated version of time zones:
-             ViewBag.TimeZones = TimeZoneInfo.GetSystemTimeZones()
-                .Select(tz => new SelectListItem { Value = tz.Id, Text = tz.DisplayName })
-                .ToList();
-            */
-            return View();
+
+            // For admin users, default the AccountingGroup to "A".
+            // Also, initialize the required property 'Name' to an empty string.
+            Student student = new Student { Name = string.Empty };
+            if (User.IsInRole("admin"))
+            {
+                student.AccountingGroup = "A";
+            }
+            return View(student);
         }
+
 
         // POST: Students/Create
         [HttpPost]
