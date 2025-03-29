@@ -98,6 +98,7 @@
                                 <td>@(contact.Emergency ? "✔" : "")</td>
                                 <td>@(contact.Money ? "✔" : "")</td>
                                 <td style="display:none;">
+                                    @Html.Hidden("Contacts.index", i)
                                     <input type="hidden" name="Contacts[@i].ID" value="@contact.ID" />
                                     <input type="hidden" name="Contacts[@i].Type" value="@contact.Type" />
                                     <input type="hidden" name="Contacts[@i].Value" value="@contact.Value" />
@@ -207,6 +208,7 @@
                     '<td>' + (emergencyBool ? "✔" : "") + '</td>' +
                     '<td>' + (moneyBool ? "✔" : "") + '</td>' +
                     '<td style="display:none;">' +
+                        '<input type="hidden" name="Contacts.index" value="' + index + '"/>' +
                         '<input type="hidden" name="Contacts[' + index + '].Type" value="' + contactType + '"/>' +
                         '<input type="hidden" name="Contacts[' + index + '].Value" value="' + value + '"/>' +
                         '<input type="hidden" name="Contacts[' + index + '].Invitation" value="' + invitationBool + '"/>' +
@@ -281,6 +283,7 @@
                     if (existingId) {
                         hiddenHtml += '<input type="hidden" name="Contacts[' + editingContactIndex + '].ID" value="' + existingId + '"/>';
                     }
+                    hiddenHtml += '<input type="hidden" name="Contacts.index" value="' + editingContactIndex + '"/>';
                     hiddenHtml += '<input type="hidden" name="Contacts[' + editingContactIndex + '].Type" value="' + contactType + '"/>' +
                                   '<input type="hidden" name="Contacts[' + editingContactIndex + '].Value" value="' + value + '"/>' +
                                   '<input type="hidden" name="Contacts[' + editingContactIndex + '].Invitation" value="' + invitationBool + '"/>' +
