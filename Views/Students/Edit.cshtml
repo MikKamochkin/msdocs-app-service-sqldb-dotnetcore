@@ -183,7 +183,7 @@
     <script type="text/javascript">
         // Initialize contactCount to the number of existing contacts.
         var contactCount = @((Model.Contacts != null && Model.Contacts.Any()) ? Model.Contacts.Count() : 0);
-        var editingContactIndex = -1; // -1 indicates a new contact
+        var editingContactIndex = -1; // -1 indicates adding a new contact
 
         // Open modal for adding a new contact.
         $('#addContactBtn').click(function () {
@@ -215,7 +215,7 @@
             $('#contactModal').modal('show');
         });
 
-        // Save the contact from the modal.
+        // Save contact from modal.
         $('#modalSave').click(function () {
             var contactType = $('#modalContactType').val();
             var typeText = $('#modalContactType option:selected').text();
@@ -250,13 +250,14 @@
                     '<td>' +
                         '<button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="' + contactCount + '">Edit</button>' +
                     '</td>' +
-                    // For new contacts, set the ID to Guid.Empty
+                    // For new contacts, set the ID to Guid.Empty (all zeroes)
                     '<input type="hidden" name="Contacts[' + contactCount + '].ID" value="00000000-0000-0000-0000-000000000000" />' +
                     '<input type="hidden" name="Contacts.Index" value="' + contactCount + '" />' +
                     '</tr>';
                 if ($('#contactsTable tbody').length > 0) {
                     $('#contactsTable tbody').append(newRow);
-                } else {
+                }
+                else {
                     var tableHtml =
                         '<table class="table table-bordered" id="contactsTable">' +
                             '<thead><tr>' +
@@ -274,7 +275,7 @@
                 contactCount++;
             }
             else {
-                // Editing an existing contact row.
+                // Editing an existing contact.
                 var row = $('tr[data-index="' + editingContactIndex + '"]');
                 row.find('span.contact-type').text(typeText);
                 row.find('span.contact-value').text(value);

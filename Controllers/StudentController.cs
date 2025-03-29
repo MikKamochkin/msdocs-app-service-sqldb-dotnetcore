@@ -95,31 +95,33 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
             existingStudent.AccountingGroup = updatedStudent.AccountingGroup;
 
-            // Update contacts.
-            foreach (var contact in updatedStudent.Contacts)
+            // Update contacts only if any contacts were submitted.
+            if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
             {
-                // If ID is the default GUID, it is a new contact.
-                if (contact.ID == Guid.Empty)
+                foreach (var contact in updatedStudent.Contacts)
                 {
-                    contact.ID = Guid.NewGuid();
-                    contact.StudentID = existingStudent.ID;
-                    existingStudent.Contacts.Add(contact);
-                }
-                else
-                {
-                    var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == contact.ID);
-                    if (existingContact != null)
+                    // If ID is the default GUID, it is a new contact.
+                    if (contact.ID == Guid.Empty)
                     {
-                        existingContact.Type = contact.Type;
-                        existingContact.Value = contact.Value;
-                        existingContact.Invitation = contact.Invitation;
-                        existingContact.Emergency = contact.Emergency;
-                        existingContact.Money = contact.Money;
+                        contact.ID = Guid.NewGuid();
+                        contact.StudentID = existingStudent.ID;
+                        existingStudent.Contacts.Add(contact);
+                    }
+                    else
+                    {
+                        var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == contact.ID);
+                        if (existingContact != null)
+                        {
+                            existingContact.Type = contact.Type;
+                            existingContact.Value = contact.Value;
+                            existingContact.Invitation = contact.Invitation;
+                            existingContact.Emergency = contact.Emergency;
+                            existingContact.Money = contact.Money;
+                        }
                     }
                 }
             }
-
-            // (Optional: If deletion is desired, remove contacts that are missing from updatedStudent.Contacts)
+            // If no contacts were submitted (i.e. updatedStudent.Contacts is null or empty), leave the existing contacts unchanged.
 
             try
             {
@@ -135,7 +137,6 @@ namespace DotNetCoreSqlDb.Controllers
 
             return RedirectToAction(nameof(Index));
         }
-
 
         // GET: Students/Delete/{id}
         public async Task<IActionResult> Delete(Guid id)
@@ -218,7 +219,5 @@ namespace DotNetCoreSqlDb.Controllers
 
             return View(student);
         }
-
-        
     }
 }
