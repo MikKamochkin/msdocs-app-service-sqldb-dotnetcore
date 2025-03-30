@@ -24,11 +24,11 @@
                     Name
                     @if (currentSort == "Name")
                     {
-                        <span>&#9650;</span> @* up arrow for ascending *@
+                        <span>&#9650;</span>
                     }
                     else if (currentSort == "name_desc")
                     {
-                        <span>&#9660;</span> @* down arrow for descending *@
+                        <span>&#9660;</span>
                     }
                 </a>
             </th>
@@ -53,8 +53,9 @@
     <tbody>
         @foreach (var item in Model)
         {
-            // Look for the first contact with type "email" (case-insensitive)
-            var emailContact = item.Contacts?.FirstOrDefault(c => !string.IsNullOrEmpty(c.Type) && c.Type.ToLower() == "email");
+            // Look for the first contact with type "email" (using case-insensitive comparison)
+            var emailContact = item.Contacts?.FirstOrDefault(c => !string.IsNullOrEmpty(c.Type) &&
+                c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
             <tr>
                 <td>@Html.DisplayFor(modelItem => item.Name)</td>
                 <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>

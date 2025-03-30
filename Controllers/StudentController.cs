@@ -23,7 +23,8 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> Index(string sortOrder)
         {
             ViewBag.CurrentSort = sortOrder;
-            IQueryable<Student> query = _context.Student;
+            // Include Contacts so that we can display email addresses.
+            IQueryable<Student> query = _context.Student.Include(s => s.Contacts);
 
             // If non-admin, filter by AccountingGroup "S"
             if (!User.IsInRole("admin"))
@@ -52,6 +53,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             return View(await query.ToListAsync());
         }
+
 
 
         // GET: Students/Details/{id}
