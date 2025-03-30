@@ -62,11 +62,11 @@
                 <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
                 <td>@(emailContact != null ? emailContact.Value : "")</td>
                 <td>
-                    <span class="localDate" data-utc="@item.CreatedDate.ToString("o")"></span>
+                    <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
+                    <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
                 </td>
                 <td>
-                    <a href="@Url.Action("Details", new { id = item.ID })">ⓘ</a>
-                    @*<a href="@Url.Action("Edit", new { id = item.ID })">Edit</a>*@
+                    <a href="@Url.Action("Details", new { id = item.ID })">🛈</a> |
                 </td>
             </tr>
         }
@@ -76,13 +76,13 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script>
-        // When the document loads, convert each UTC date (in ISO format) to the user's local time.
-        $(document).ready(function() {
+        // When the document loads, convert each UTC date to the user's local time.
+        $(document).ready(function () {
             $('.localDate').each(function () {
                 var utcStr = $(this).data('utc');
                 if (utcStr) {
                     var dateObj = new Date(utcStr);
-                    // Use toLocaleString() for a localized string; adjust options as needed.
+                    // Convert to a locale-specific string (this will adjust for timezone and date changes)
                     $(this).text(dateObj.toLocaleString());
                 }
             });
