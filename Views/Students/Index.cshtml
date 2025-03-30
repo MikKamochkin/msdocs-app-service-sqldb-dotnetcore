@@ -33,7 +33,7 @@
                 </a>
             </th>
             <th>Parent/Employer</th>
-            <th>Time Zone</th>
+            <th>Email</th>
             <th>
                 <a href="@Url.Action("Index", new { sortOrder = dateSortParam })">
                     Created Date
@@ -53,10 +53,12 @@
     <tbody>
         @foreach (var item in Model)
         {
+            // Look for the first contact with type "email" (case-insensitive)
+            var emailContact = item.Contacts?.FirstOrDefault(c => !string.IsNullOrEmpty(c.Type) && c.Type.ToLower() == "email");
             <tr>
                 <td>@Html.DisplayFor(modelItem => item.Name)</td>
                 <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
-                <td>@Html.DisplayFor(modelItem => item.TimeZoneId)</td>
+                <td>@(emailContact != null ? emailContact.Value : "")</td>
                 <td>@Html.DisplayFor(modelItem => item.CreatedDate)</td>
                 <td>
                     <a href="@Url.Action("Details", new { id = item.ID })">Details</a> |
