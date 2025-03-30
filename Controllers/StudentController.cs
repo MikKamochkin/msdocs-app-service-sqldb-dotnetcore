@@ -156,7 +156,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             return RedirectToAction(nameof(Index));
         }
-
+        /*
         // GET: Students/Delete/{id}
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -188,6 +188,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
             return RedirectToAction(nameof(Index));
         }
+        */
 
        // GET: Students/Create
         public IActionResult Create()
