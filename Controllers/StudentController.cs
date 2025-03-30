@@ -20,16 +20,39 @@ namespace DotNetCoreSqlDb.Controllers
         }
 
         // GET: Students
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string sortOrder)
         {
-            // Non-admin users can only see students with AccountingGroup "S"
+            ViewBag.CurrentSort = sortOrder;
             IQueryable<Student> query = _context.Student;
+
+            // If non-admin, filter by AccountingGroup "S"
             if (!User.IsInRole("admin"))
             {
                 query = query.Where(s => s.AccountingGroup == "S");
             }
+
+            switch (sortOrder)
+            {
+                case "Name":
+                    query = query.OrderBy(s => s.Name);
+                    break;
+                case "name_desc":
+                    query = query.OrderByDescending(s => s.Name);
+                    break;
+                case "CreatedDate":
+                    query = query.OrderBy(s => s.CreatedDate);
+                    break;
+                case "createdDate_desc":
+                    query = query.OrderByDescending(s => s.CreatedDate);
+                    break;
+                default:
+                    query = query.OrderBy(s => s.Name);
+                    break;
+            }
+
             return View(await query.ToListAsync());
         }
+
 
         // GET: Students/Details/{id}
         public async Task<IActionResult> Details(Guid? id)

@@ -2,6 +2,12 @@
 
 @{
     ViewData["Title"] = "Students List";
+    
+    // Retrieve the current sort order from ViewBag (set by the controller)
+    string currentSort = ViewBag.CurrentSort as string ?? "";
+    // Toggle sorting: if current sort is ascending for Name, then next is descending, and vice versa.
+    string nameSortParam = currentSort == "Name" ? "name_desc" : "Name";
+    string dateSortParam = currentSort == "CreatedDate" ? "createdDate_desc" : "CreatedDate";
 }
 
 <h2>Students List</h2>
@@ -13,10 +19,34 @@
 <table class="table">
     <thead>
         <tr>
-            <th>Name</th>
+            <th>
+                <a href="@Url.Action("Index", new { sortOrder = nameSortParam })">
+                    Name
+                    @if (currentSort == "Name")
+                    {
+                        <span>&#9650;</span> @* up arrow for ascending *@
+                    }
+                    else if (currentSort == "name_desc")
+                    {
+                        <span>&#9660;</span> @* down arrow for descending *@
+                    }
+                </a>
+            </th>
             <th>Parent/Employer</th>
             <th>Time Zone</th>
-            <th>Created Date</th>
+            <th>
+                <a href="@Url.Action("Index", new { sortOrder = dateSortParam })">
+                    Created Date
+                    @if (currentSort == "CreatedDate")
+                    {
+                        <span>&#9650;</span>
+                    }
+                    else if (currentSort == "createdDate_desc")
+                    {
+                        <span>&#9660;</span>
+                    }
+                </a>
+            </th>
             <th></th>
         </tr>
     </thead>
@@ -30,8 +60,7 @@
                 <td>@Html.DisplayFor(modelItem => item.CreatedDate)</td>
                 <td>
                     <a href="@Url.Action("Details", new { id = item.ID })">Details</a> |
-                    <a href="@Url.Action("Edit", new { id = item.ID })">Edit</a> |
-                    @*<a href="@Url.Action("Delete", new { id = item.ID })">Delete</a>*@
+                    <a href="@Url.Action("Edit", new { id = item.ID })">Edit</a>
                 </td>
             </tr>
         }
