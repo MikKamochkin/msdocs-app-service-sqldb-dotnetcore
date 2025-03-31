@@ -13,7 +13,6 @@ namespace DotNetCoreSqlDb.Controllers
     public class StudentsController : Controller
     {
         private readonly MyDatabaseContext _context;
-
         public StudentsController(MyDatabaseContext context)
         {
             _context = context;
@@ -25,13 +24,10 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.CurrentSort = sortOrder;
             // Include Contacts so that we can display email addresses.
             IQueryable<Student> query = _context.Student.Include(s => s.Contacts);
-
-            // If non-admin, filter by AccountingGroup "S"
             if (!User.IsInRole("admin"))
             {
                 query = query.Where(s => s.AccountingGroup == "S");
             }
-
             switch (sortOrder)
             {
                 case "Name":
@@ -50,28 +46,21 @@ namespace DotNetCoreSqlDb.Controllers
                     query = query.OrderBy(s => s.Name);
                     break;
             }
-
             return View(await query.ToListAsync());
         }
-
-
 
         // GET: Students/Details/{id}
         public async Task<IActionResult> Details(Guid? id)
         {
             if (id == null)
                 return NotFound();
-
             var student = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
                 return NotFound();
-
-            // Non-admin users can only see students with AccountingGroup "S"
             if (!User.IsInRole("admin") && student.AccountingGroup != "S")
                 return Forbid();
-
             return View(student);
         }
 
@@ -80,22 +69,17 @@ namespace DotNetCoreSqlDb.Controllers
         {
             if (id == null)
                 return NotFound();
-
             var student = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == id);
             if (student == null)
                 return NotFound();
-
-            // Non-admin users can only edit students with AccountingGroup "S"
             if (!User.IsInRole("admin") && student.AccountingGroup != "S")
                 return Forbid();
-
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-
             return View(student);
         }
 
@@ -106,27 +90,20 @@ namespace DotNetCoreSqlDb.Controllers
         {
             if (id != updatedStudent.ID)
                 return NotFound();
-
             if (!ModelState.IsValid)
             {
-                // Repopulate dropdowns if invalid.
                 ViewBag.ContactTypes = DropdownOptions.ContactTypes;
                 ViewBag.SourceTypes = DropdownOptions.SourceTypes;
                 ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
                 ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-
                 return View(updatedStudent);
             }
-
             // Load existing student (with contacts) from DB.
             var existingStudent = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == id);
-
             if (existingStudent == null)
                 return NotFound();
-
-            // Non-admin users can only edit students with AccountingGroup "S"
             if (!User.IsInRole("admin") && existingStudent.AccountingGroup != "S")
                 return Forbid();
 
@@ -136,19 +113,21 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.MainNotes = updatedStudent.MainNotes;
             existingStudent.Source = updatedStudent.Source;
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
-            // Force non-admin users to keep AccountingGroup "S"
             existingStudent.AccountingGroup = User.IsInRole("admin") ? updatedStudent.AccountingGroup : "S";
 
-            // Update contacts only if any contacts were submitted.
-            if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
+            // Synchronize the Contacts collection.
+            if (updatedStudent.Contacts != null)
             {
+                // Process each posted contact.
                 foreach (var contact in updatedStudent.Contacts)
                 {
-                    // If ID is the default GUID, it is a new contact.
-                    if (contact.ID == Guid.Empty)
+                    // Treat as new if ID is Guid.Empty or equals the all-zero string.
+                    if (contact.ID == Guid.Empty || contact.ID.ToString() == "00000000-0000-0000-0000-000000000000")
                     {
+                        // Assign new ID and mark as Added.
                         contact.ID = Guid.NewGuid();
                         contact.StudentID = existingStudent.ID;
+                        _context.Entry(contact).State = EntityState.Added;
                         existingStudent.Contacts.Add(contact);
                     }
                     else
@@ -164,8 +143,20 @@ namespace DotNetCoreSqlDb.Controllers
                         }
                     }
                 }
+                // Remove any contacts that were removed on the UI.
+                var postedContactIds = updatedStudent.Contacts
+                                        .Where(c => c.ID != Guid.Empty && c.ID.ToString() != "00000000-0000-0000-0000-000000000000")
+                                        .Select(c => c.ID)
+                                        .ToList();
+                var contactsToRemove = existingStudent.Contacts
+                                        .Where(c => c.ID != Guid.Empty && !postedContactIds.Contains(c.ID))
+                                        .ToList();
+                foreach (var c in contactsToRemove)
+                {
+                    _context.Entry(c).State = EntityState.Deleted;
+                }
             }
-            // If no contacts were submitted, leave the existing contacts unchanged.
+            // If no contacts were submitted, leave existing contacts unchanged.
 
             try
             {
@@ -178,53 +169,16 @@ namespace DotNetCoreSqlDb.Controllers
                 else
                     throw;
             }
-
             return RedirectToAction(nameof(Index));
         }
-        /*
-        // GET: Students/Delete/{id}
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var student = await _context.Student.FirstOrDefaultAsync(m => m.ID == id);
-            if (student == null)
-                return NotFound();
 
-            // Non-admin users can only delete students with AccountingGroup "S"
-            if (!User.IsInRole("admin") && student.AccountingGroup != "S")
-                return Forbid();
-
-            return View(student);
-        }
-
-        // POST: Students/Delete/{id}
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(Guid id)
-        {
-            var student = await _context.Student.FindAsync(id);
-            if (student != null)
-            {
-                // Non-admin users can only delete students with AccountingGroup "S"
-                if (!User.IsInRole("admin") && student.AccountingGroup != "S")
-                    return Forbid();
-
-                _context.Student.Remove(student);
-                await _context.SaveChangesAsync();
-            }
-            return RedirectToAction(nameof(Index));
-        }
-        */
-
-       // GET: Students/Create
+        // GET: Students/Create
         public IActionResult Create()
         {
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-
-            // For admin users, default the AccountingGroup to "A".
-            // Also, initialize the required property 'Name' to an empty string.
             Student student = new Student { Name = string.Empty };
             if (User.IsInRole("admin"))
             {
@@ -233,44 +187,56 @@ namespace DotNetCoreSqlDb.Controllers
             return View(student);
         }
 
-
         // POST: Students/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
         {
-            // Set the CreatedDate automatically to the current time.
             student.CreatedDate = DateTime.Now;
-
-            // If the current user is not an admin, force AccountingGroup to "S".
             if (!User.IsInRole("admin"))
             {
                 student.AccountingGroup = "S";
             }
-
-            // Server-side validation: Ensure at least one contact is added.
             if (student.Contacts == null || !student.Contacts.Any())
             {
                 ModelState.AddModelError("", "Please add at least one contact.");
             }
-
             if (ModelState.IsValid)
             {
-                // Generate a new GUID for the student's ID.
                 student.ID = Guid.NewGuid();
-                
                 _context.Add(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-
-            // Repopulate dropdown lists if model state is invalid.
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-
             return View(student);
+        }
+
+        // Delete actions commented out for Students...
+
+        // DeleteContact action for deleting a single contact.
+        [HttpPost]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> DeleteContact(Guid contactId)
+        {
+            var contact = await _context.Contact.FindAsync(contactId);
+            if (contact == null)
+            {
+                return Json(new { success = false, message = "Contact not found." });
+            }
+            _context.Contact.Remove(contact);
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }
