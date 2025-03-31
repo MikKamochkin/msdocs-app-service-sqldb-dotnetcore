@@ -33,6 +33,7 @@
                 </a>
             </th>
             <th>Parent/Employer</th>
+            <th>Phone Number</th>
             <th>Email</th>
             <th>
                 <a href="@Url.Action("Index", new { sortOrder = dateSortParam })">
@@ -57,10 +58,16 @@
             var emailContact = item.Contacts?.FirstOrDefault(c => 
                 !string.IsNullOrEmpty(c.Type) && 
                 c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
+
+            var phoneContact = item.Contacts?.FirstOrDefault(c =>
+                !string.IsNullOrEmpty(c.Type) &&
+                c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
+
             <tr>
                 <td>@Html.DisplayFor(modelItem => item.Name)</td>
                 <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
                 <td>@(emailContact != null ? emailContact.Value : "")</td>
+                <td>@(phoneContact != null ? phoneContact.Value : "")</td>
                 <td>
                     <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
                     <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
