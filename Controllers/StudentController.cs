@@ -139,24 +139,6 @@ namespace DotNetCoreSqlDb.Controllers
             // Force non-admin users to keep AccountingGroup "S"
             existingStudent.AccountingGroup = User.IsInRole("admin") ? updatedStudent.AccountingGroup : "S";
 
-            // --- New Code: Remove contacts deleted on the client ---
-            // Get IDs of contacts posted (skip new ones with default Guid)
-            var postedContactIds = updatedStudent.Contacts?
-                .Where(c => c.ID != Guid.Empty)
-                .Select(c => c.ID)
-                .ToList() ?? new List<Guid>();
-
-            // Identify any existing contact that is not in the posted list.
-            var contactsToRemove = existingStudent.Contacts
-                .Where(c => !postedContactIds.Contains(c.ID))
-                .ToList();
-
-            foreach (var contact in contactsToRemove)
-            {
-                _context.Contact.Remove(contact);
-            }
-            // --------------------------------------------------------
-
             // Update contacts only if any contacts were submitted.
             if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
             {
@@ -199,7 +181,6 @@ namespace DotNetCoreSqlDb.Controllers
 
             return RedirectToAction(nameof(Index));
         }
-
         /*
         // GET: Students/Delete/{id}
         public async Task<IActionResult> Delete(Guid id)
@@ -291,22 +272,5 @@ namespace DotNetCoreSqlDb.Controllers
 
             return View(student);
         }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteContact(Guid contactId)
-        {
-            // Find the contact by ID.
-            var contact = await _context.Contact.FindAsync(contactId);
-            if (contact == null)
-            {
-                return Json(new { success = false, message = "Contact not found." });
-            }
-            // Remove only the contact.
-            _context.Contact.Remove(contact);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true });
-        }
-
     }
 }
