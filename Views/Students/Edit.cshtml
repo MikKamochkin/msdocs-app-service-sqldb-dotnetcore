@@ -77,7 +77,6 @@
                     <th>Invitation</th>
                     <th>Emergency</th>
                     <th>Money</th>
-                    @*<th>Actions</th>*@
                 </tr>
             </thead>
             <tbody>
@@ -114,9 +113,6 @@
                                     @(contact.Money ? "✔" : "")
                                 </span>
                                 @Html.Hidden("Contacts[" + i + "].Money", contact.Money.ToString().ToLower())
-                            </td>
-                            <td>
-                                @*<button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="@i">Edit</button>*@
                             </td>
                             @* Hidden field for the contact ID *@
                             @Html.Hidden("Contacts[" + i + "].ID", contact.ID)
@@ -280,9 +276,6 @@
                     '<td><span class="contact-money">' + (money ? "✔" : "") + '</span>' +
                         '<input type="hidden" name="Contacts[' + contactCount + '].Money" value="' + money + '" />' +
                     '</td>' +
-                    '<td>' +
-                        '<button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="' + contactCount + '">Edit</button>' +
-                    '</td>' +
                     // For new contacts, set the ID to Guid.Empty (all zeroes)
                     '<input type="hidden" name="Contacts[' + contactCount + '].ID" value="00000000-0000-0000-0000-000000000000" />' +
                     '<input type="hidden" name="Contacts.Index" value="' + contactCount + '" />' +
@@ -299,7 +292,6 @@
                                 '<th>Invitation</th>' +
                                 '<th>Emergency</th>' +
                                 '<th>Money</th>' +
-                                //'<th>Actions</th>' +
                             '</tr></thead>' +
                             '<tbody>' + newRow + '</tbody>' +
                         '</table>';
