@@ -114,7 +114,6 @@ namespace DotNetCoreSqlDb.Controllers
                 ViewBag.SourceTypes = DropdownOptions.SourceTypes;
                 ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
                 ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-
                 return View(updatedStudent);
             }
 
@@ -122,7 +121,6 @@ namespace DotNetCoreSqlDb.Controllers
             var existingStudent = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == id);
-
             if (existingStudent == null)
                 return NotFound();
 
@@ -139,12 +137,13 @@ namespace DotNetCoreSqlDb.Controllers
             // Force non-admin users to keep AccountingGroup "S"
             existingStudent.AccountingGroup = User.IsInRole("admin") ? updatedStudent.AccountingGroup : "S";
 
-            // Update contacts only if any contacts were submitted.
-            if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
+            // If contacts were posted, update and add new ones.
+            if (updatedStudent.Contacts != null)
             {
+                // Process each posted contact.
                 foreach (var contact in updatedStudent.Contacts)
                 {
-                    // If ID is the default GUID, it is a new contact.
+                    // If ID is the default GUID, it's a new contact.
                     if (contact.ID == Guid.Empty)
                     {
                         contact.ID = Guid.NewGuid();
@@ -164,6 +163,21 @@ namespace DotNetCoreSqlDb.Controllers
                         }
                     }
                 }
+
+                // Remove any contacts that exist in the DB but weren't posted.
+                var postedContactIds = updatedStudent.Contacts
+                                            .Where(c => c.ID != Guid.Empty)
+                                            .Select(c => c.ID)
+                                            .ToList();
+
+                // Make a copy of existing contacts that are not new.
+                var contactsToRemove = existingStudent.Contacts
+                                        .Where(c => c.ID != Guid.Empty && !postedContactIds.Contains(c.ID))
+                                        .ToList();
+                foreach (var c in contactsToRemove)
+                {
+                    _context.Entry(c).State = EntityState.Deleted;
+                }
             }
             // If no contacts were submitted, leave the existing contacts unchanged.
 
@@ -181,6 +195,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
         /*
         // GET: Students/Delete/{id}
         public async Task<IActionResult> Delete(Guid id)
