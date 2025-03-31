@@ -24,11 +24,11 @@
                     Name
                     @if (currentSort == "Name")
                     {
-                        <span>&#9650;</span>
+                        <span>&#9650;</span> @* up arrow for ascending *@
                     }
                     else if (currentSort == "name_desc")
                     {
-                        <span>&#9660;</span>
+                        <span>&#9660;</span> @* down arrow for descending *@
                     }
                 </a>
             </th>
@@ -54,20 +54,21 @@
     <tbody>
         @foreach (var item in Model)
         {
-
+            // Retrieve the first contact with type "phone" (case-insensitive) for the Phone Number column
             var phoneContact = item.Contacts?.FirstOrDefault(c =>
                 !string.IsNullOrEmpty(c.Type) &&
                 c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
 
-            // Look for the first contact with type "email" (case-insensitive)
+            // Retrieve the first contact with type "email" (case-insensitive) for the Email column
             var emailContact = item.Contacts?.FirstOrDefault(c => 
                 !string.IsNullOrEmpty(c.Type) && 
                 c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
+
             <tr>
                 <td>@Html.DisplayFor(modelItem => item.Name)</td>
                 <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
-                <td>@(emailContact != null ? emailContact.Value : "")</td>
                 <td>@(phoneContact != null ? phoneContact.Value : "")</td>
+                <td>@(emailContact != null ? emailContact.Value : "")</td>
                 <td>
                     <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
                     <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
