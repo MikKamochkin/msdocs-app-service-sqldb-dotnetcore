@@ -36,6 +36,9 @@ namespace DotNetCoreSqlDb.Models
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime CreatedDate { get; set; }
 
+        [DisplayName("Status")]
+        public string? Status { get; set; }
+
         // Navigation property for one-to-many relationship with Contact
         public virtual ICollection<Contact> Contacts { get; set; } = new List<Contact>();
 
