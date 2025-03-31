@@ -54,15 +54,15 @@
     <tbody>
         @foreach (var item in Model)
         {
-            // Look for the first contact with type "email" (case-insensitive)
-            var emailContact = item.Contacts?.FirstOrDefault(c => 
-                !string.IsNullOrEmpty(c.Type) && 
-                c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
 
             var phoneContact = item.Contacts?.FirstOrDefault(c =>
                 !string.IsNullOrEmpty(c.Type) &&
                 c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
 
+            // Look for the first contact with type "email" (case-insensitive)
+            var emailContact = item.Contacts?.FirstOrDefault(c => 
+                !string.IsNullOrEmpty(c.Type) && 
+                c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
             <tr>
                 <td>@Html.DisplayFor(modelItem => item.Name)</td>
                 <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
