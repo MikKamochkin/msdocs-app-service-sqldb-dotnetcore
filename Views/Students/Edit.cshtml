@@ -121,9 +121,8 @@
                                 @Html.Hidden("Contacts[" + i + "].Money", contact.Money.ToString().ToLower())
                             </td>
                             <td>
-                                <!-- No separate edit button needed; clicking the row opens the modal -->
+                                <!-- No separate Edit button; clicking the row opens the modal -->
                             </td>
-                            @* Hidden field for the contact ID *@
                             @Html.Hidden("Contacts[" + i + "].ID", contact.ID)
                             <input type="hidden" name="Contacts.Index" value="@i" />
                         </tr>
@@ -211,9 +210,10 @@
             var $row = $(this);
             $('#modalContactType').val($row.data('contacttype'));
             $('#modalContactValue').val($row.data('contactvalue'));
-            $('#modalContactInvitation').prop('checked', $row.data('invitation') === 'true');
-            $('#modalContactEmergency').prop('checked', $row.data('emergency') === 'true');
-            $('#modalContactMoney').prop('checked', $row.data('money') === 'true');
+            // Use the data() value directly, which should be a boolean.
+            $('#modalContactInvitation').prop('checked', $row.data('invitation'));
+            $('#modalContactEmergency').prop('checked', $row.data('emergency'));
+            $('#modalContactMoney').prop('checked', $row.data('money'));
             $('#contactModal').modal('show');
         });
 
@@ -291,7 +291,7 @@
                 $row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val(invitation);
                 $row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val(emergency);
                 $row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val(money);
-                // Update the row's data attributes.
+                // Update data attributes on the row.
                 $row.attr("data-contacttype", contactType);
                 $row.attr("data-contactvalue", value);
                 $row.attr("data-invitation", invitation ? "true" : "false");
