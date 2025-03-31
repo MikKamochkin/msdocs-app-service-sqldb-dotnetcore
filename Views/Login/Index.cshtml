@@ -2,9 +2,13 @@
     ViewData["Title"] = "Login";
 }
 
+<div class="loading-overlay">
+    <div class="loading-spinner"></div>
+</div>
+
 <div class="login-container">
     <h2>Login</h2>
-    <form asp-controller="Login" asp-action="Index" method="post">
+    <form asp-controller="Login" asp-action="Index" method="post" id="loginForm">
         @Html.AntiForgeryToken()
         <div class="form-group">
             <label for="name">Name:</label>
@@ -23,3 +27,11 @@
         }
     </form>
 </div>
+
+@section Scripts {
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function() {
+            document.querySelector('.loading-overlay').classList.add('active');
+        });
+    </script>
+}
