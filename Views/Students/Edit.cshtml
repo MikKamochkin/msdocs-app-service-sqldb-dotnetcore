@@ -116,7 +116,7 @@
                                 @Html.Hidden("Contacts[" + i + "].Money", contact.Money.ToString().ToLower())
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="@i">Edit</button>
+                                @*<button type="button" class="btn btn-sm btn-secondary editContactBtn" data-index="@i">Edit</button>*@
                             </td>
                             @* Hidden field for the contact ID *@
                             @Html.Hidden("Contacts[" + i + "].ID", contact.ID)
@@ -200,7 +200,7 @@
         });
 
         // Open modal for editing an existing contact.
-        $(document).on('click', '.editContactBtn', function (e) {
+        /*$(document).on('click', '.editContactBtn', function (e) {
             e.stopPropagation(); // Prevent double-trigger if row is clickable
             editingContactIndex = parseInt($(this).attr('data-index'));
             $('#contactModalLabel').text('Edit Contact');
@@ -217,17 +217,24 @@
             $('#modalContactMoney').prop('checked', currentMoney);
             $('#contactModal').modal('show');
         });
+        */
 
         // Allow clicking on the entire row to edit if not clicking a button.
         $(document).on('click', '.contact-summary', function () {
+            e.stopPropagation(); // Prevent double-trigger if row is clickable
             editingContactIndex = parseInt($(this).attr('data-index'));
             $('#contactModalLabel').text('Edit Contact');
-            var $row = $(this);
-            $('#modalContactType').val($row.data('contacttype'));
-            $('#modalContactValue').val($row.data('contactvalue'));
-            $('#modalContactInvitation').prop('checked', $row.data('invitation') === "true");
-            $('#modalContactEmergency').prop('checked', $row.data('emergency') === "true");
-            $('#modalContactMoney').prop('checked', $row.data('money') === "true");
+            var $row = $('tr[data-index="' + editingContactIndex + '"]');
+            var currentType = $row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val();
+            var currentValue = $row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val();
+            var currentInvitation = $row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val() === 'true';
+            var currentEmergency = $row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val() === 'true';
+            var currentMoney = $row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val() === 'true';
+            $('#modalContactType').val(currentType);
+            $('#modalContactValue').val(currentValue);
+            $('#modalContactInvitation').prop('checked', currentInvitation);
+            $('#modalContactEmergency').prop('checked', currentEmergency);
+            $('#modalContactMoney').prop('checked', currentMoney);
             $('#contactModal').modal('show');
         });
 
