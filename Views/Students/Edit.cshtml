@@ -122,12 +122,13 @@
                 }
             </tbody>
         </table>
-        <button type="button" id="addContactBtn" class="btn btn-sm btn-primary">Add Contact</button>
+        <button type="button" id="addContactBtn" class="btn btn-secondary">Add Contact</button>
         <br /><br />
 
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
-                <input type="submit" value="Save" class="btn btn-default" />
+                <a href="@Url.Action("Index", "Students")" class="btn btn-secondary">Cancel</a>
+                <input type="submit" value="Save Student" class="btn btn-primary" />
             </div>
         </div>
     </div>
