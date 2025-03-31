@@ -272,22 +272,5 @@ namespace DotNetCoreSqlDb.Controllers
 
             return View(student);
         }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteContact(Guid contactId)
-        {
-            // Find the contact by ID.
-            var contact = await _context.Contact.FindAsync(contactId);
-            if (contact == null)
-            {
-                return Json(new { success = false, message = "Contact not found." });
-            }
-            // Remove only the contact.
-            _context.Contact.Remove(contact);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true });
-        }
-
     }
 }
