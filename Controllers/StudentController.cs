@@ -54,6 +54,8 @@ namespace DotNetCoreSqlDb.Controllers
             return View(await query.ToListAsync());
         }
 
+
+
         // GET: Students/Details/{id}
         public async Task<IActionResult> Details(Guid? id)
         {
@@ -135,14 +137,14 @@ namespace DotNetCoreSqlDb.Controllers
             // Force non-admin users to keep AccountingGroup "S"
             existingStudent.AccountingGroup = User.IsInRole("admin") ? updatedStudent.AccountingGroup : "S";
 
-            // Update contacts if any contacts were posted.
+            // If contacts were posted, update and add new ones.
             if (updatedStudent.Contacts != null)
             {
                 // Process each posted contact.
                 foreach (var contact in updatedStudent.Contacts)
                 {
-                    // If the contact's ID is default (or the all-zero string), treat it as new.
-                    if (contact.ID == Guid.Empty || contact.ID.ToString() == "00000000-0000-0000-0000-000000000000")
+                    // If ID is the default GUID, it's a new contact.
+                    if (contact.ID == Guid.Empty)
                     {
                         contact.ID = Guid.NewGuid();
                         contact.StudentID = existingStudent.ID;
@@ -164,13 +166,14 @@ namespace DotNetCoreSqlDb.Controllers
 
                 // Remove any contacts that exist in the DB but weren't posted.
                 var postedContactIds = updatedStudent.Contacts
-                                            .Where(c => c.ID != Guid.Empty && c.ID.ToString() != "00000000-0000-0000-0000-000000000000")
+                                            .Where(c => c.ID != Guid.Empty)
                                             .Select(c => c.ID)
                                             .ToList();
 
+                // Make a copy of existing contacts that are not new.
                 var contactsToRemove = existingStudent.Contacts
-                                            .Where(c => c.ID != Guid.Empty && !postedContactIds.Contains(c.ID))
-                                            .ToList();
+                                        .Where(c => c.ID != Guid.Empty && !postedContactIds.Contains(c.ID))
+                                        .ToList();
                 foreach (var c in contactsToRemove)
                 {
                     _context.Entry(c).State = EntityState.Deleted;
@@ -244,6 +247,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
             return View(student);
         }
+
 
         // POST: Students/Create
         [HttpPost]
