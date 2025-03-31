@@ -319,16 +319,11 @@
                 $('#contactModal').modal('hide');
             }
             else {
-                // Get the anti-forgery token from the form.
-                var token = $('input[name="__RequestVerificationToken"]').val();
                 // Existing contact: call AJAX to delete from the database.
                 $.ajax({
                     url: '@Url.Action("DeleteContact", "Students")',
                     type: 'POST',
-                    data: { 
-                        contactId: contactId, 
-                        __RequestVerificationToken: token 
-                    },
+                    data: { contactId: contactId },
                     success: function (result) {
                         if (result.success) {
                             $row.remove();
@@ -345,7 +340,6 @@
                 });
             }
         });
-
 
         $('#modalCancel').click(function () {
             editingContactIndex = -1;
