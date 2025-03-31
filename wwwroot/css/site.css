@@ -31,6 +31,9 @@ html, body {
 /* Remove extra margin from body (was previously set to 60px) */
 body {
   margin-bottom: 0;
+  background-color: #f5f5f5;
+  color: #333;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* Hover effect for contact summary */
@@ -42,63 +45,77 @@ body {
 
 /* Center the login form and give it a card-like look */
 .login-container {
-  width: 320px;
-  margin: 80px auto;
-  padding: 20px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 5px;
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 30px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Style the title in the login form */
 .login-container h2 {
+  color: #2c3e50;
+  margin-bottom: 30px;
   text-align: center;
-  margin-bottom: 20px;
 }
 
 /* Spacing between form fields */
-.form-group {
-  margin-bottom: 15px;
+.login-container .form-group {
+  margin-bottom: 20px;
 }
 
 /* Label styling for form groups */
-.form-group label {
+.login-container label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: 600;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-weight: 500;
 }
 
 /* Input styling */
-.form-control {
+.login-container .form-control {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.login-container .form-control:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
 /* Button styling */
-.btn {
-  display: inline-block;
-  padding: 10px 15px;
+.login-container .btn-primary {
+  width: 100%;
+  padding: 12px;
+  background-color: #3498db;
   border: none;
-  border-radius: 3px;
+  border-radius: 4px;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
-/* Primary button styling */
-.btn-primary {
-  background-color: #258cfb;
-  color: #fff;
+.login-container .btn-primary:hover {
+  background-color: #2980b9;
 }
 
 /* Error message styling */
-.alert {
-  padding: 10px;
+.login-container .alert {
+  margin-top: 20px;
+  padding: 12px;
   background-color: #f8d7da;
-  color: #721c24;
   border: 1px solid #f5c6cb;
-  border-radius: 3px;
-  margin-top: 15px;
+  border-radius: 4px;
+  color: #721c24;
+  text-align: center;
 }
 
 /* Sticky footer styles using Flexbox */
@@ -127,5 +144,47 @@ footer {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* Home page styles */
+.home-container {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 40px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.home-container h1 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.home-container p {
+  color: #666;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.home-container a {
+  color: #3498db;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.home-container a:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .login-container,
+  .home-container {
+    margin: 20px;
+    padding: 20px;
+  }
 }
 
