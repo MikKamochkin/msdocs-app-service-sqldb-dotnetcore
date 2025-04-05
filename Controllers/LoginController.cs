@@ -26,23 +26,23 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: /Login
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(string name, string password)
+        public async Task<IActionResult> Index(string username, string password)
         {
             // Validate input
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(password))
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             {
-                ViewBag.Error = "Please enter both name and password.";
+                ViewBag.Error = "Please enter both username and password.";
                 return View();
             }
 
             // Look up the user in the database (for testing, passwords are in plain text)
-            var user = _context.User.FirstOrDefault(u => u.Name == name && u.Password == password);
+            var user = _context.User.FirstOrDefault(u => u.Username == username && u.Password == password);
             if (user != null)
             {
                 // Create a list of claims. In a later step, you can add additional claims for permissions.
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, user.Name),
+                    new Claim(ClaimTypes.Name, user.Username),
                     new Claim("UserID", user.ID.ToString()),
                     new Claim(ClaimTypes.Role, user.Role)
                 };

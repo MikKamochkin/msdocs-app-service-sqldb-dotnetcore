@@ -9,13 +9,16 @@ namespace DotNetCoreSqlDb.Models
         [Key]
         public Guid ID { get; set; } // Primary Key for the contact record
 
-        [DisplayName("Name")]
-        public string? Name { get; set; }
+        [DisplayName("Username")]
+        [Required]
+        public required string Username { get; set; }
 
         [DisplayName("Password")]
-        public string? Password { get; set; }
+        [Required]
+        public required string Password { get; set; }
 
         [DisplayName("Role")]
-        public string? Role { get; set; }
+        [Required]
+        public  required string Role { get; set; }
     }
 }
