@@ -19,6 +19,6 @@ namespace DotNetCoreSqlDb.Models
 
         [DisplayName("Role")]
         [Required]
-        public  required string Role { get; set; }
+        public required string Role { get; set; }
     }
 }
