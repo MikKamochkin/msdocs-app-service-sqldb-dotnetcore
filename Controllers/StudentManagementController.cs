@@ -10,10 +10,10 @@ using Microsoft.AspNetCore.Authorization;
 namespace DotNetCoreSqlDb.Controllers
 {
     [Authorize]
-    public class StudentsController : Controller
+    public class StudentManagementController : Controller
     {
         private readonly MyDatabaseContext _context;
-        public StudentsController(MyDatabaseContext context)
+        public StudentManagementController(MyDatabaseContext context)
         {
             _context = context;
         }
