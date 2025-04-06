@@ -1,0 +1,58 @@
+@model DotNetCoreSqlDb.Models.Student
+
+@{
+    ViewData["Title"] = "My Information";
+}
+
+<h2>My Information</h2>
+
+<div>
+    <h4>Student Details</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>Name</dt>
+        <dd>@Html.DisplayFor(model => model.Name)</dd>
+        <dt>Parent/Employer</dt>
+        <dd>@Html.DisplayFor(model => model.ParentOrEmployer)</dd>
+        <dt>Main Notes</dt>
+        <dd>@Html.DisplayFor(model => model.MainNotes)</dd>
+        <dt>Created Date</dt>
+        <dd>@Html.DisplayFor(model => model.CreatedDate)</dd>
+        <dt>Source</dt>
+        <dd>@Html.DisplayFor(model => model.Source)</dd>
+        <dt>Time Zone</dt>
+        <dd>@Html.DisplayFor(model => model.TimeZoneId)</dd>
+    </dl>
+</div>
+
+<h4>Contact Information</h4>
+@if(Model.Contacts != null && Model.Contacts.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Value</th>
+                <th>Invitation</th>
+                <th>Emergency</th>
+                <th>Money</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var contact in Model.Contacts)
+            {
+                <tr>
+                    <td>@Html.DisplayFor(m => contact.Type)</td>
+                    <td>@Html.DisplayFor(m => contact.Value)</td>
+                    <td>@(contact.Invitation == true ? "✔" : "")</td>
+                    <td>@(contact.Emergency == true ? "✔" : "")</td>
+                    <td>@(contact.Money == true ? "✔" : "")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No contact information available.</p>
+}

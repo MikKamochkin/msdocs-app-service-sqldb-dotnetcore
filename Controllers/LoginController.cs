@@ -63,8 +63,15 @@ namespace DotNetCoreSqlDb.Controllers
                     new ClaimsPrincipal(claimsIdentity),
                     authProperties);
 
-                // Redirect to /StudentManagement/Index on successful login
-                return RedirectToAction("Index", "StudentManagement");
+                // Redirect based on role
+                if (user.Role.ToLower() == "student")
+                {
+                    return RedirectToAction("Index", "Students");
+                }
+                else
+                {
+                    return RedirectToAction("Index", "StudentManagement");
+                }
             }
             else
             {
