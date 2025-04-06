@@ -8,7 +8,7 @@
 
 @Html.ValidationSummary(true, "", new { @class = "text-danger" })
 
-@using (Html.BeginForm("Edit", "Students", FormMethod.Post))
+@using (Html.BeginForm("Edit", "StudentManagement", FormMethod.Post))
 {
     @Html.AntiForgeryToken()
     @Html.HiddenFor(m => m.ID)
@@ -127,7 +127,7 @@
 
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
-                <a href="@Url.Action("Index", "Students")" class="btn btn-secondary">Cancel</a>
+                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-secondary">Cancel</a>
                 <input type="submit" value="Save Student" class="btn btn-primary" />
             </div>
         </div>
@@ -343,7 +343,7 @@
             else {
                 // Existing contact: call AJAX to delete from the database.
                 $.ajax({
-                    url: '@Url.Action("DeleteContact", "Students")',
+                    url: '@Url.Action("DeleteContact", "StudentManagement")',
                     type: 'POST',
                     data: { contactId: contactId },
                     success: function (result) {

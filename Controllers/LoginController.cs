@@ -68,9 +68,14 @@ namespace DotNetCoreSqlDb.Controllers
                 {
                     return RedirectToAction("Index", "Students");
                 }
-                else
+                else if (user.Role.ToLower() == "admin" || user.Role.ToLower() == "assistant")  
                 {
                     return RedirectToAction("Index", "StudentManagement");
+                }
+                else
+                {
+                    ViewBag.Error = "Invalid credentials. Please try again.";
+                    return View();
                 }
             }
             else
