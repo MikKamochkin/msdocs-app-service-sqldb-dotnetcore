@@ -221,3 +221,48 @@ footer {
     display: flex;
 }
 
+/* Admin Sidebar Styles */
+.admin-sidebar {
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    padding: 20px 0;
+    min-height: calc(100vh - 150px);
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-header {
+    padding: 0 15px 15px 15px;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 15px;
+}
+
+.sidebar-header h4 {
+    margin: 0;
+    color: #495057;
+    font-weight: 600;
+}
+
+.sidebar-content {
+    padding: 0 15px;
+}
+
+.sidebar-content .btn {
+    margin-bottom: 10px;
+    text-align: left;
+    padding: 10px 15px;
+}
+
+.sidebar-content .btn i {
+    margin-right: 8px;
+}
+
+/* Responsive adjustments for the sidebar */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        min-height: auto;
+        margin-bottom: 20px;
+        border-right: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+}
+

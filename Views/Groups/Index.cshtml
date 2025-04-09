@@ -1,0 +1,53 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.Group>
+
+@{
+    ViewData["Title"] = "Groups List";
+}
+
+<h2>Groups List</h2>
+
+<p>
+    <a href="@Url.Action("Create")" class="btn btn-primary">Create New Group</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Group Name</th>
+            <th>Students</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var group in Model)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => group.Name)</td>
+                <td>
+                    @if (group.StudentGroupCompositions != null && group.StudentGroupCompositions.Any())
+                    {
+                        <ul class="list-unstyled">
+                            @foreach (var composition in group.StudentGroupCompositions)
+                            {
+                                <li>
+                                    @Html.DisplayFor(m => composition.Student.Name)
+                                    @if (composition.UseMyBalance)
+                                    {
+                                        <span class="badge bg-info">Uses Balance</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <span class="text-muted">No students in group</span>
+                    }
+                </td>
+                <td>
+                    <a href="@Url.Action("Edit", new { id = group.Id })" class="btn btn-sm btn-primary">Edit</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

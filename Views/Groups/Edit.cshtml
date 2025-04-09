@@ -1,0 +1,162 @@
+@model DotNetCoreSqlDb.Models.Group
+
+@{
+    ViewData["Title"] = "Edit Group";
+}
+
+<h2>Edit Group</h2>
+
+@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.Id)
+    <div class="form-horizontal">
+        <h4>Group</h4>
+        <hr />
+        <div class="form-group">
+            @Html.LabelFor(model => model.Name, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Name, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <h4>Students in Group</h4>
+        <div id="studentCompositions">
+            @if (Model.StudentGroupCompositions != null)
+            {
+                foreach (var composition in Model.StudentGroupCompositions)
+                {
+                    <div class="student-composition">
+                        @Html.Hidden("StudentGroupCompositions.Id", composition.Id)
+                        @Html.Hidden("StudentGroupCompositions.StudentId", composition.StudentId)
+                        @Html.Hidden("StudentGroupCompositions.UseMyBalance", composition.UseMyBalance)
+                        <div class="row">
+                            <div class="col-md-6">
+                                <span>@composition.Student?.Name</span>
+                            </div>
+                            <div class="col-md-4">
+                                <span>@(composition.UseMyBalance ? "Uses Balance" : "No Balance")</span>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-danger btn-sm remove-student" data-composition-id="@composition.Id">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <button type="button" id="addStudentBtn" class="btn btn-secondary">Add Student</button>
+        <br /><br />
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <a href="@Url.Action("Index")" class="btn btn-secondary">Cancel</a>
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal for Adding a Student -->
+<div class="modal fade" id="addStudentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Student to Group</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="studentSelect">Student</label>
+                    <select id="studentSelect" class="form-control">
+                        <option value="">Select a student...</option>
+                        @foreach (var student in ViewBag.Students)
+                        {
+                            <option value="@student.Value">@student.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="useMyBalance">
+                        <label class="custom-control-label" for="useMyBalance">Use My Balance</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveStudentBtn">Add Student</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            let studentCount = @(Model.StudentGroupCompositions?.Count ?? 0);
+
+            // Show modal when Add Student button is clicked
+            $('#addStudentBtn').click(function () {
+                $('#addStudentModal').modal('show');
+            });
+
+            // Handle adding a student
+            $('#saveStudentBtn').click(function () {
+                const studentId = $('#studentSelect').val();
+                const studentName = $('#studentSelect option:selected').text();
+                const useMyBalance = $('#useMyBalance').is(':checked');
+
+                if (studentId) {
+                    const newStudent = `
+                        <div class="student-composition">
+                            <input type="hidden" name="StudentGroupCompositions.StudentId" value="${studentId}" />
+                            <input type="hidden" name="StudentGroupCompositions.UseMyBalance" value="${useMyBalance}" />
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <span>${studentName}</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <span>${useMyBalance ? 'Uses Balance' : 'No Balance'}</span>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-danger btn-sm remove-student">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $('#studentCompositions').append(newStudent);
+                    studentCount++;
+                    $('#addStudentModal').modal('hide');
+                    $('#studentSelect').val('');
+                    $('#useMyBalance').prop('checked', false);
+                }
+            });
+
+            // Handle removing a student
+            $(document).on('click', '.remove-student', function () {
+                const compositionId = $(this).data('composition-id');
+                if (compositionId) {
+                    // If this is an existing composition, send AJAX request to delete it
+                    $.ajax({
+                        url: '@Url.Action("DeleteStudentGroupComposition")',
+                        type: 'POST',
+                        data: { compositionId: compositionId },
+                        success: function () {
+                            $(this).closest('.student-composition').remove();
+                        }.bind(this)
+                    });
+                } else {
+                    // If this is a new composition, just remove it from the DOM
+                    $(this).closest('.student-composition').remove();
+                }
+            });
+        });
+    </script>
+}

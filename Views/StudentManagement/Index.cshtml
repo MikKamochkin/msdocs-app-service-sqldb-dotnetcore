@@ -10,78 +10,172 @@
     string dateSortParam = currentSort == "CreatedDate" ? "createdDate_desc" : "CreatedDate";
 }
 
-<h2>Students List</h2>
-
-<p>
-    <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
-</p>
-
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                <a href="@Url.Action("Index", new { sortOrder = nameSortParam })">
-                    Name
-                    @if (currentSort == "Name")
-                    {
-                        <span>&#9650;</span> @* up arrow for ascending *@
-                    }
-                    else if (currentSort == "name_desc")
-                    {
-                        <span>&#9660;</span> @* down arrow for descending *@
-                    }
+<div class="row">
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="col-md-3 admin-sidebar">
+            <div class="sidebar-header">
+                <h4>Admin Tools</h4>
+            </div>
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "Groups")" class="btn btn-primary btn-block">
+                    <i class="fas fa-users"></i> Manage Groups
                 </a>
-            </th>
-            <th class="fixedCol">Parent/Employer</th>
-            <th class="fixedCol">Phone Number</th>
-            <th>Email</th>
-            <th>
-                <a href="@Url.Action("Index", new { sortOrder = dateSortParam })">
-                    Created Date
-                    @if (currentSort == "CreatedDate")
-                    {
-                        <span>&#9650;</span>
-                    }
-                    else if (currentSort == "createdDate_desc")
-                    {
-                        <span>&#9660;</span>
-                    }
-                </a>
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            // Retrieve the first contact with type "phone" (case-insensitive) for the Phone Number column
-            var phoneContact = item.Contacts?.FirstOrDefault(c =>
-                !string.IsNullOrEmpty(c.Type) &&
-                c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
+            </div>
+        </div>
+        <div class="col-md-9">
+            <h2>Students List</h2>
 
-            // Retrieve the first contact with type "email" (case-insensitive) for the Email column
-            var emailContact = item.Contacts?.FirstOrDefault(c => 
-                !string.IsNullOrEmpty(c.Type) && 
-                c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
+            <p>
+                <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
+            </p>
 
-            <tr>
-                <td>@Html.DisplayFor(modelItem => item.Name)</td>
-                <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
-                <td class="fixedCol">
-                    @(phoneContact != null ? phoneContact.Value : "")</td>
-                <td class="fixedCol">
-                    @(emailContact != null ? emailContact.Value : "")</td>
-                <td>
-                    <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
-                    <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
-                </td>
-                <td>
-                    <a href="@Url.Action("Details", new { id = item.ID })">🛈</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="@Url.Action("Index", new { sortOrder = nameSortParam })">
+                                Name
+                                @if (currentSort == "Name")
+                                {
+                                    <span>&#9650;</span> @* up arrow for ascending *@
+                                }
+                                else if (currentSort == "name_desc")
+                                {
+                                    <span>&#9660;</span> @* down arrow for descending *@
+                                }
+                            </a>
+                        </th>
+                        <th class="fixedCol">Parent/Employer</th>
+                        <th class="fixedCol">Phone Number</th>
+                        <th>Email</th>
+                        <th>
+                            <a href="@Url.Action("Index", new { sortOrder = dateSortParam })">
+                                Created Date
+                                @if (currentSort == "CreatedDate")
+                                {
+                                    <span>&#9650;</span>
+                                }
+                                else if (currentSort == "createdDate_desc")
+                                {
+                                    <span>&#9660;</span>
+                                }
+                            </a>
+                        </th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        // Retrieve the first contact with type "phone" (case-insensitive) for the Phone Number column
+                        var phoneContact = item.Contacts?.FirstOrDefault(c =>
+                            !string.IsNullOrEmpty(c.Type) &&
+                            c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
+
+                        // Retrieve the first contact with type "email" (case-insensitive) for the Email column
+                        var emailContact = item.Contacts?.FirstOrDefault(c => 
+                            !string.IsNullOrEmpty(c.Type) && 
+                            c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
+
+                        <tr>
+                            <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                            <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
+                            <td class="fixedCol">
+                                @(phoneContact != null ? phoneContact.Value : "")</td>
+                            <td class="fixedCol">
+                                @(emailContact != null ? emailContact.Value : "")</td>
+                            <td>
+                                <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
+                                <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
+                            </td>
+                            <td>
+                                <a href="@Url.Action("Details", new { id = item.ID })">🛈</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="col-md-12">
+            <h2>Students List</h2>
+
+            <p>
+                <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
+            </p>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="@Url.Action("Index", new { sortOrder = nameSortParam })">
+                                Name
+                                @if (currentSort == "Name")
+                                {
+                                    <span>&#9650;</span> @* up arrow for ascending *@
+                                }
+                                else if (currentSort == "name_desc")
+                                {
+                                    <span>&#9660;</span> @* down arrow for descending *@
+                                }
+                            </a>
+                        </th>
+                        <th class="fixedCol">Parent/Employer</th>
+                        <th class="fixedCol">Phone Number</th>
+                        <th>Email</th>
+                        <th>
+                            <a href="@Url.Action("Index", new { sortOrder = dateSortParam })">
+                                Created Date
+                                @if (currentSort == "CreatedDate")
+                                {
+                                    <span>&#9650;</span>
+                                }
+                                else if (currentSort == "createdDate_desc")
+                                {
+                                    <span>&#9660;</span>
+                                }
+                            </a>
+                        </th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        // Retrieve the first contact with type "phone" (case-insensitive) for the Phone Number column
+                        var phoneContact = item.Contacts?.FirstOrDefault(c =>
+                            !string.IsNullOrEmpty(c.Type) &&
+                            c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
+
+                        // Retrieve the first contact with type "email" (case-insensitive) for the Email column
+                        var emailContact = item.Contacts?.FirstOrDefault(c => 
+                            !string.IsNullOrEmpty(c.Type) && 
+                            c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
+
+                        <tr>
+                            <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                            <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
+                            <td class="fixedCol">
+                                @(phoneContact != null ? phoneContact.Value : "")</td>
+                            <td class="fixedCol">
+                                @(emailContact != null ? emailContact.Value : "")</td>
+                            <td>
+                                <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
+                                <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
+                            </td>
+                            <td>
+                                <a href="@Url.Action("Details", new { id = item.ID })">🛈</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
