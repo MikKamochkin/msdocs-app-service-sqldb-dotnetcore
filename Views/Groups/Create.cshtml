@@ -58,9 +58,12 @@
                     <label for="studentSelect">Student</label>
                     <select id="studentSelect" class="form-control">
                         <option value="">Select a student...</option>
-                        @foreach (var student in ViewBag.Students)
+                        @if (ViewBag.Students != null)
                         {
-                            <option value="@student.Value">@student.Text</option>
+                            foreach (var student in ViewBag.Students)
+                            {
+                                <option value="@student.Value">@student.Text</option>
+                            }
                         }
                     </select>
                 </div>

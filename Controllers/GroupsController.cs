@@ -58,9 +58,29 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: Groups/Create
         public IActionResult Create()
         {
-            // Get all students for the dropdown
-            ViewBag.Students = new SelectList(_context.Student, "Id", "Name");
-            return View(new Group { Name = "" });
+            try
+            {
+                // Get all students for the dropdown
+                var students = _context.Student.OrderBy(s => s.Name).ToList();
+                if (students != null && students.Any())
+                {
+                    ViewBag.Students = new SelectList(students, "Id", "Name");
+                }
+                else
+                {
+                    // If no students exist, create an empty list
+                    ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                    _logger.LogWarning("No students found in the database");
+                }
+                
+                return View(new Group { Name = "" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in Create GET action");
+                ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                return View(new Group { Name = "" });
+            }
         }
 
         // POST: Groups/Create
@@ -70,46 +90,71 @@ namespace DotNetCoreSqlDb.Controllers
         {
             if (ModelState.IsValid)
             {
-                // Create the group first
-                group.Id = Guid.NewGuid();
-                _context.Add(group);
-                await _context.SaveChangesAsync();
-                
-                _logger.LogInformation($"Group created with ID: {group.Id}");
-                
-                // Now handle the student associations
-                var studentIds = Request.Form["StudentIds"].ToString().Split(',');
-                var useMyBalanceValues = Request.Form["UseMyBalanceValues"].ToString().Split(',');
-                
-                _logger.LogInformation($"Found {studentIds.Length} student IDs");
-                
-                // Process each student
-                for (int i = 0; i < studentIds.Length; i++)
+                try
                 {
-                    if (Guid.TryParse(studentIds[i], out Guid studentId))
+                    // Create the group first
+                    group.Id = Guid.NewGuid();
+                    _context.Add(group);
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation($"Group created with ID: {group.Id}");
+                    
+                    // Now handle the student associations
+                    var studentIds = Request.Form["StudentIds"].ToString().Split(',');
+                    var useMyBalanceValues = Request.Form["UseMyBalanceValues"].ToString().Split(',');
+                    
+                    _logger.LogInformation($"Found {studentIds.Length} student IDs");
+                    
+                    // Process each student
+                    for (int i = 0; i < studentIds.Length; i++)
                     {
-                        bool useMyBalance = i < useMyBalanceValues.Length && useMyBalanceValues[i].ToLower() == "true";
-                        
-                        _logger.LogInformation($"Processing student {studentId} with UseMyBalance: {useMyBalance}");
-                        
-                        var composition = new StudentGroupComposition
+                        if (Guid.TryParse(studentIds[i], out Guid studentId))
                         {
-                            Id = Guid.NewGuid(),
-                            GroupId = group.Id,
-                            StudentId = studentId,
-                            UseMyBalance = useMyBalance
-                        };
-                        
-                        _context.StudentGroupComposition.Add(composition);
+                            bool useMyBalance = i < useMyBalanceValues.Length && useMyBalanceValues[i].ToLower() == "true";
+                            
+                            _logger.LogInformation($"Processing student {studentId} with UseMyBalance: {useMyBalance}");
+                            
+                            var composition = new StudentGroupComposition
+                            {
+                                Id = Guid.NewGuid(),
+                                GroupId = group.Id,
+                                StudentId = studentId,
+                                UseMyBalance = useMyBalance
+                            };
+                            
+                            _context.StudentGroupComposition.Add(composition);
+                        }
                     }
+                    
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
-                
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in Create POST action");
+                    ModelState.AddModelError("", "An error occurred while creating the group. Please try again.");
+                }
             }
             
             // If we get here, something went wrong
-            ViewBag.Students = new SelectList(_context.Student, "Id", "Name");
+            try
+            {
+                var students = _context.Student.OrderBy(s => s.Name).ToList();
+                if (students != null && students.Any())
+                {
+                    ViewBag.Students = new SelectList(students, "Id", "Name");
+                }
+                else
+                {
+                    ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading students in Create POST action");
+                ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+            }
+            
             return View(group);
         }
 
@@ -131,7 +176,24 @@ namespace DotNetCoreSqlDb.Controllers
             }
             
             // Get all students for the dropdown
-            ViewBag.Students = new SelectList(_context.Student, "Id", "Name");
+            try
+            {
+                var students = _context.Student.OrderBy(s => s.Name).ToList();
+                if (students != null && students.Any())
+                {
+                    ViewBag.Students = new SelectList(students, "Id", "Name");
+                }
+                else
+                {
+                    ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading students in Edit GET action");
+                ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+            }
+            
             return View(group);
         }
 
@@ -199,7 +261,24 @@ namespace DotNetCoreSqlDb.Controllers
             }
             
             // If we get here, something went wrong
-            ViewBag.Students = new SelectList(_context.Student, "Id", "Name");
+            try
+            {
+                var students = _context.Student.OrderBy(s => s.Name).ToList();
+                if (students != null && students.Any())
+                {
+                    ViewBag.Students = new SelectList(students, "Id", "Name");
+                }
+                else
+                {
+                    ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading students in Edit POST action");
+                ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+            }
+            
             return View(group);
         }
 
