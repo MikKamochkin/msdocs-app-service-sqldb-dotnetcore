@@ -2,8 +2,6 @@
 
 @{
     ViewData["Title"] = "Create Group";
-    // Convert ICollection to List for indexing
-    var studentCompositionsList = Model.StudentGroupCompositions?.ToList() ?? new List<DotNetCoreSqlDb.Models.StudentGroupComposition>();
 }
 
 <h2>Create Group</h2>
@@ -26,28 +24,12 @@
 
         <h4>Students in Group</h4>
         <div id="studentCompositions">
-            @if (studentCompositionsList.Any())
-            {
-                for (int i = 0; i < studentCompositionsList.Count; i++)
-                {
-                    <div class="student-composition" data-index="@i">
-                        @Html.Hidden($"StudentGroupCompositions[{i}].StudentId", studentCompositionsList[i].StudentId)
-                        @Html.Hidden($"StudentGroupCompositions[{i}].UseMyBalance", studentCompositionsList[i].UseMyBalance)
-                        <div class="row">
-                            <div class="col-md-6">
-                                <span>@studentCompositionsList[i].Student?.Name</span>
-                            </div>
-                            <div class="col-md-4">
-                                <span>@(studentCompositionsList[i].UseMyBalance ? "Uses Balance" : "No Balance")</span>
-                            </div>
-                            <div class="col-md-2">
-                                <button type="button" class="btn btn-danger btn-sm remove-student">Remove</button>
-                            </div>
-                        </div>
-                    </div>
-                }
-            }
+            <!-- Students will be added here dynamically -->
         </div>
+
+        <!-- Hidden fields to store student data -->
+        <input type="hidden" id="StudentIds" name="StudentIds" value="" />
+        <input type="hidden" id="UseMyBalanceValues" name="UseMyBalanceValues" value="" />
 
         <button type="button" id="addStudentBtn" class="btn btn-secondary">Add Student</button>
         <br /><br />
@@ -100,7 +82,8 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            let studentCount = @(studentCompositionsList.Count);
+            // Array to store student data
+            let students = [];
 
             // Show modal when Add Student button is clicked
             $('#addStudentBtn').click(function () {
@@ -114,25 +97,20 @@
                 const useMyBalance = $('#useMyBalance').is(':checked');
 
                 if (studentId) {
-                    const newStudent = `
-                        <div class="student-composition" data-index="${studentCount}">
-                            <input type="hidden" name="StudentGroupCompositions[${studentCount}].StudentId" value="${studentId}" />
-                            <input type="hidden" name="StudentGroupCompositions[${studentCount}].UseMyBalance" value="${useMyBalance}" />
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <span>${studentName}</span>
-                                </div>
-                                <div class="col-md-4">
-                                    <span>${useMyBalance ? 'Uses Balance' : 'No Balance'}</span>
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="button" class="btn btn-danger btn-sm remove-student">Remove</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    $('#studentCompositions').append(newStudent);
-                    studentCount++;
+                    // Add to our array
+                    students.push({
+                        id: studentId,
+                        name: studentName,
+                        useMyBalance: useMyBalance
+                    });
+
+                    // Update the UI
+                    updateStudentDisplay();
+                    
+                    // Update hidden fields
+                    updateHiddenFields();
+                    
+                    // Reset modal
                     $('#addStudentModal').modal('hide');
                     $('#studentSelect').val('');
                     $('#useMyBalance').prop('checked', false);
@@ -141,37 +119,58 @@
 
             // Handle removing a student
             $(document).on('click', '.remove-student', function () {
-                $(this).closest('.student-composition').remove();
-                // Reindex the remaining students
-                reindexStudents();
+                const index = $(this).data('index');
+                students.splice(index, 1);
+                updateStudentDisplay();
+                updateHiddenFields();
             });
 
-            // Function to reindex students after removal
-            function reindexStudents() {
-                let index = 0;
-                $('.student-composition').each(function() {
-                    $(this).attr('data-index', index);
-                    $(this).find('input[name^="StudentGroupCompositions"]').each(function() {
-                        const name = $(this).attr('name');
-                        const newName = name.replace(/\[\d+\]/, `[${index}]`);
-                        $(this).attr('name', newName);
-                    });
-                    index++;
+            // Function to update the student display
+            function updateStudentDisplay() {
+                $('#studentCompositions').empty();
+                
+                if (students.length === 0) {
+                    $('#studentCompositions').html('<p>No students added yet.</p>');
+                    return;
+                }
+                
+                let html = '<table class="table table-bordered">';
+                html += '<thead><tr><th>Student</th><th>Use My Balance</th><th>Actions</th></tr></thead>';
+                html += '<tbody>';
+                
+                students.forEach((student, index) => {
+                    html += `<tr>
+                        <td>${student.name}</td>
+                        <td>${student.useMyBalance ? 'Yes' : 'No'}</td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm remove-student" data-index="${index}">Remove</button>
+                        </td>
+                    </tr>`;
                 });
-                studentCount = index;
+                
+                html += '</tbody></table>';
+                $('#studentCompositions').html(html);
             }
 
-            // Before form submission, ensure all student data is included
+            // Function to update hidden fields
+            function updateHiddenFields() {
+                const studentIds = students.map(s => s.id).join(',');
+                const useMyBalanceValues = students.map(s => s.useMyBalance).join(',');
+                
+                $('#StudentIds').val(studentIds);
+                $('#UseMyBalanceValues').val(useMyBalanceValues);
+            }
+
+            // Before form submission, ensure at least one student is added
             $('form').submit(function(e) {
-                // Check if there are any students in the group
-                if ($('.student-composition').length === 0) {
+                if (students.length === 0) {
                     alert("Please add at least one student to the group.");
                     e.preventDefault();
                     return false;
                 }
                 
-                // Make sure all indices are sequential
-                reindexStudents();
+                // Make sure hidden fields are updated
+                updateHiddenFields();
             });
         });
     </script>

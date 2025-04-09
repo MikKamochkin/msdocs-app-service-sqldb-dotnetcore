@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Logging;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -15,10 +17,12 @@ namespace DotNetCoreSqlDb.Controllers
     public class GroupsController : Controller
     {
         private readonly MyDatabaseContext _context;
+        private readonly ILogger<GroupsController> _logger;
 
-        public GroupsController(MyDatabaseContext context)
+        public GroupsController(MyDatabaseContext context, ILogger<GroupsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: Groups
@@ -26,100 +30,86 @@ namespace DotNetCoreSqlDb.Controllers
         {
             var groups = await _context.Group
                 .Include(g => g.StudentGroupCompositions)
-                    .ThenInclude(sgc => sgc.Student)
+                .ThenInclude(sgc => sgc.Student)
                 .ToListAsync();
             return View(groups);
+        }
+
+        // GET: Groups/Details/5
+        public async Task<IActionResult> Details(Guid? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var group = await _context.Group
+                .Include(g => g.StudentGroupCompositions)
+                .ThenInclude(sgc => sgc.Student)
+                .FirstOrDefaultAsync(m => m.Id == id);
+            if (group == null)
+            {
+                return NotFound();
+            }
+
+            return View(group);
         }
 
         // GET: Groups/Create
         public IActionResult Create()
         {
-            ViewBag.Students = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(_context.Student.OrderBy(s => s.Name), "ID", "Name");
+            // Get all students for the dropdown
+            ViewBag.Students = new SelectList(_context.Student, "Id", "Name");
             return View(new Group { Name = "" });
         }
 
         // POST: Groups/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Name,StudentGroupCompositions")] Group group)
+        public async Task<IActionResult> Create([Bind("Name")] Group group)
         {
             if (ModelState.IsValid)
             {
-                // Generate a new ID for the group
+                // Create the group first
                 group.Id = Guid.NewGuid();
-                
-                // Add the group to the context
                 _context.Add(group);
+                await _context.SaveChangesAsync();
                 
-                // Process the form data to extract StudentGroupCompositions
-                var form = await HttpContext.Request.ReadFormAsync();
+                _logger.LogInformation($"Group created with ID: {group.Id}");
                 
-                // Find all the student IDs and their corresponding UseMyBalance values
-                var studentIds = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.StudentId")).ToList();
+                // Now handle the student associations
+                var studentIds = Request.Form["StudentIds"].ToString().Split(',');
+                var useMyBalanceValues = Request.Form["UseMyBalanceValues"].ToString().Split(',');
                 
-                // Log the form data for debugging
-                System.Diagnostics.Debug.WriteLine($"Found {studentIds.Count} student IDs in form data");
+                _logger.LogInformation($"Found {studentIds.Length} student IDs");
                 
-                // Process each student ID
-                foreach (var key in studentIds)
+                // Process each student
+                for (int i = 0; i < studentIds.Length; i++)
                 {
-                    var studentId = form[key].ToString();
-                    var useMyBalanceKey = key.Replace("StudentId", "UseMyBalance");
-                    var useMyBalance = form.ContainsKey(useMyBalanceKey) && form[useMyBalanceKey].ToString().ToLower() == "true";
-                    
-                    System.Diagnostics.Debug.WriteLine($"Processing student {studentId} with UseMyBalance={useMyBalance}");
-                    
-                    if (Guid.TryParse(studentId, out Guid id))
+                    if (Guid.TryParse(studentIds[i], out Guid studentId))
                     {
-                        // Create a new StudentGroupComposition
+                        bool useMyBalance = i < useMyBalanceValues.Length && useMyBalanceValues[i].ToLower() == "true";
+                        
+                        _logger.LogInformation($"Processing student {studentId} with UseMyBalance: {useMyBalance}");
+                        
                         var composition = new StudentGroupComposition
                         {
                             Id = Guid.NewGuid(),
                             GroupId = group.Id,
-                            StudentId = id,
+                            StudentId = studentId,
                             UseMyBalance = useMyBalance
                         };
                         
-                        // Add it to the context
                         _context.StudentGroupComposition.Add(composition);
-                        System.Diagnostics.Debug.WriteLine($"Added StudentGroupComposition: Id={composition.Id}, GroupId={composition.GroupId}, StudentId={id}, UseMyBalance={useMyBalance}");
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Failed to parse student ID: {studentId}");
                     }
                 }
                 
-                // Save all changes to the database
                 await _context.SaveChangesAsync();
-                
-                // Verify that the StudentGroupCompositions were saved
-                var savedGroup = await _context.Group
-                    .Include(g => g.StudentGroupCompositions)
-                    .FirstOrDefaultAsync(g => g.Id == group.Id);
-                
-                if (savedGroup != null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Saved group has {savedGroup.StudentGroupCompositions.Count} StudentGroupCompositions");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("Failed to retrieve saved group");
-                }
-                
                 return RedirectToAction(nameof(Index));
             }
             
-            // Log validation errors
-            foreach (var modelState in ModelState.Values)
-            {
-                foreach (var error in modelState.Errors)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Validation error: {error.ErrorMessage}");
-                }
-            }
-            
-            ViewBag.Students = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(_context.Student.OrderBy(s => s.Name), "ID", "Name");
+            // If we get here, something went wrong
+            ViewBag.Students = new SelectList(_context.Student, "Id", "Name");
             return View(group);
         }
 
@@ -127,91 +117,68 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> Edit(Guid? id)
         {
             if (id == null)
+            {
                 return NotFound();
+            }
 
             var group = await _context.Group
                 .Include(g => g.StudentGroupCompositions)
-                .FirstOrDefaultAsync(g => g.Id == id);
-
+                .FirstOrDefaultAsync(m => m.Id == id);
+                
             if (group == null)
+            {
                 return NotFound();
-
-            ViewBag.Students = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(_context.Student.OrderBy(s => s.Name), "ID", "Name");
+            }
+            
+            // Get all students for the dropdown
+            ViewBag.Students = new SelectList(_context.Student, "Id", "Name");
             return View(group);
         }
 
         // POST: Groups/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, Group group)
+        public async Task<IActionResult> Edit(Guid id, [Bind("Id,Name")] Group group)
         {
             if (id != group.Id)
+            {
                 return NotFound();
+            }
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // Get the existing group with its compositions
-                    var existingGroup = await _context.Group
-                        .Include(g => g.StudentGroupCompositions)
-                        .FirstOrDefaultAsync(g => g.Id == id);
-                    
-                    if (existingGroup == null)
-                        return NotFound();
-                    
                     // Update the group name
-                    existingGroup.Name = group.Name;
+                    _context.Update(group);
                     
-                    // Process the form data to extract StudentGroupCompositions
-                    var form = await HttpContext.Request.ReadFormAsync();
-                    var studentIds = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.StudentId")).ToList();
+                    // Handle student associations
+                    var existingCompositions = await _context.StudentGroupComposition
+                        .Where(sgc => sgc.GroupId == id)
+                        .ToListAsync();
                     
-                    // Create a dictionary to match StudentIds with their corresponding UseMyBalance values
-                    var studentCompositions = new Dictionary<string, bool>();
-                    foreach (var key in studentIds)
+                    // Remove existing compositions
+                    _context.StudentGroupComposition.RemoveRange(existingCompositions);
+                    
+                    // Add new compositions
+                    var studentIds = Request.Form["StudentIds"].ToString().Split(',');
+                    var useMyBalanceValues = Request.Form["UseMyBalanceValues"].ToString().Split(',');
+                    
+                    for (int i = 0; i < studentIds.Length; i++)
                     {
-                        var studentId = form[key].ToString();
-                        var useMyBalanceKey = key.Replace("StudentId", "UseMyBalance");
-                        var useMyBalance = form.ContainsKey(useMyBalanceKey) && form[useMyBalanceKey].ToString().ToLower() == "true";
-                        studentCompositions[studentId] = useMyBalance;
-                    }
-                    
-                    // Remove compositions that are no longer in the form
-                    var compositionsToRemove = existingGroup.StudentGroupCompositions
-                        .Where(c => !studentCompositions.ContainsKey(c.StudentId.ToString()))
-                        .ToList();
-                    
-                    foreach (var composition in compositionsToRemove)
-                    {
-                        _context.StudentGroupComposition.Remove(composition);
-                    }
-                    
-                    // Add or update compositions
-                    foreach (var studentId in studentCompositions.Keys)
-                    {
-                        if (Guid.TryParse(studentId, out Guid studentGuid))
+                        if (Guid.TryParse(studentIds[i], out Guid studentId))
                         {
-                            var existingComposition = existingGroup.StudentGroupCompositions
-                                .FirstOrDefault(c => c.StudentId == studentGuid);
+                            bool useMyBalance = i < useMyBalanceValues.Length && useMyBalanceValues[i].ToLower() == "true";
                             
-                            if (existingComposition != null)
+                            var composition = new StudentGroupComposition
                             {
-                                // Update existing composition
-                                existingComposition.UseMyBalance = studentCompositions[studentId];
-                            }
-                            else
-                            {
-                                // Add new composition
-                                var newComposition = new StudentGroupComposition
-                                {
-                                    Id = Guid.NewGuid(),
-                                    GroupId = existingGroup.Id,
-                                    StudentId = studentGuid,
-                                    UseMyBalance = studentCompositions[studentId]
-                                };
-                                _context.StudentGroupComposition.Add(newComposition);
-                            }
+                                Id = Guid.NewGuid(),
+                                GroupId = id,
+                                StudentId = studentId,
+                                UseMyBalance = useMyBalance
+                            };
+                            
+                            _context.StudentGroupComposition.Add(composition);
                         }
                     }
                     
@@ -219,29 +186,69 @@ namespace DotNetCoreSqlDb.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!_context.Group.Any(e => e.Id == id))
+                    if (!GroupExists(group.Id))
+                    {
                         return NotFound();
+                    }
                     else
+                    {
                         throw;
+                    }
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.Students = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(_context.Student.OrderBy(s => s.Name), "ID", "Name");
+            
+            // If we get here, something went wrong
+            ViewBag.Students = new SelectList(_context.Student, "Id", "Name");
             return View(group);
         }
 
-        // POST: Groups/DeleteStudentGroupComposition
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteStudentGroupComposition(Guid compositionId)
+        // GET: Groups/Delete/5
+        public async Task<IActionResult> Delete(Guid? id)
         {
-            var composition = await _context.StudentGroupComposition.FindAsync(compositionId);
-            if (composition != null)
+            if (id == null)
             {
-                _context.StudentGroupComposition.Remove(composition);
+                return NotFound();
+            }
+
+            var group = await _context.Group
+                .Include(g => g.StudentGroupCompositions)
+                .ThenInclude(sgc => sgc.Student)
+                .FirstOrDefaultAsync(m => m.Id == id);
+                
+            if (group == null)
+            {
+                return NotFound();
+            }
+
+            return View(group);
+        }
+
+        // POST: Groups/Delete/5
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(Guid id)
+        {
+            var group = await _context.Group
+                .Include(g => g.StudentGroupCompositions)
+                .FirstOrDefaultAsync(m => m.Id == id);
+                
+            if (group != null)
+            {
+                // Remove all student compositions first
+                _context.StudentGroupComposition.RemoveRange(group.StudentGroupCompositions);
+                
+                // Then remove the group
+                _context.Group.Remove(group);
                 await _context.SaveChangesAsync();
             }
-            return Json(new { success = true });
+            
+            return RedirectToAction(nameof(Index));
+        }
+
+        private bool GroupExists(Guid id)
+        {
+            return _context.Group.Any(e => e.Id == id);
         }
     }
 } 
