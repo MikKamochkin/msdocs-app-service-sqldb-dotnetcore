@@ -23,5 +23,16 @@ namespace DotNetCoreSqlDb.Data
         public DbSet<DotNetCoreSqlDb.Models.Notes> Note { get; set; } = default!;
 
         public DbSet<DotNetCoreSqlDb.Models.User> User { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.Teacher> Teacher { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.Group> Group { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.Assignments> Assignments { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.Schedule> Schedule { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.StudentGroupComposition> StudentGroupComposition { get; set; } = default!;    
+        
     }
 }

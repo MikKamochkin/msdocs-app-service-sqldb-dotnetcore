@@ -22,6 +22,49 @@ namespace DotNetCoreSqlDb.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Assignments", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<float>("StudentUnitBalance")
+                        .HasColumnType("real");
+
+                    b.Property<float>("StudentUnitCost")
+                        .HasColumnType("real");
+
+                    b.Property<float>("StudentUnitDuration")
+                        .HasColumnType("real");
+
+                    b.Property<string>("StudentUnitType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<float>("TeacherPayForUnit")
+                        .HasColumnType("real");
+
+                    b.Property<float>("TeacherPayUnitType")
+                        .HasColumnType("real");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.ToTable("Assignments");
+                });
+
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Contact", b =>
                 {
                     b.Property<Guid>("ID")
@@ -41,9 +84,11 @@ namespace DotNetCoreSqlDb.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Type")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Value")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ID");
@@ -53,11 +98,30 @@ namespace DotNetCoreSqlDb.Migrations
                     b.ToTable("Contact");
                 });
 
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Group", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Group");
+                });
+
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Notes", b =>
                 {
                     b.Property<Guid>("ID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
@@ -65,14 +129,37 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Property<Guid>("StudentID")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("ID");
 
                     b.HasIndex("StudentID");
 
                     b.ToTable("Note");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Schedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DateTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Duration")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.ToTable("Schedule");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Student", b =>
@@ -82,7 +169,6 @@ namespace DotNetCoreSqlDb.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AccountingGroup")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedDate")
@@ -110,6 +196,45 @@ namespace DotNetCoreSqlDb.Migrations
                     b.HasKey("ID");
 
                     b.ToTable("Student");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentGroupComposition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("UseMyBalance")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("StudentGroupComposition");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Teacher", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Teacher");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Todo", b =>
@@ -158,6 +283,25 @@ namespace DotNetCoreSqlDb.Migrations
                     b.ToTable("User");
                 });
 
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Assignments", b =>
+                {
+                    b.HasOne("DotNetCoreSqlDb.Models.Group", "Group")
+                        .WithMany("Assignments")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DotNetCoreSqlDb.Models.Teacher", "Teacher")
+                        .WithMany("Assignments")
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Teacher");
+                });
+
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Contact", b =>
                 {
                     b.HasOne("DotNetCoreSqlDb.Models.Student", "Student")
@@ -180,11 +324,60 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Schedule", b =>
+                {
+                    b.HasOne("DotNetCoreSqlDb.Models.Assignments", "Assignment")
+                        .WithMany("Schedules")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentGroupComposition", b =>
+                {
+                    b.HasOne("DotNetCoreSqlDb.Models.Group", "Group")
+                        .WithMany("StudentGroupCompositions")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DotNetCoreSqlDb.Models.Student", "Student")
+                        .WithMany("StudentGroupCompositions")
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Assignments", b =>
+                {
+                    b.Navigation("Schedules");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Group", b =>
+                {
+                    b.Navigation("Assignments");
+
+                    b.Navigation("StudentGroupCompositions");
+                });
+
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Student", b =>
                 {
                     b.Navigation("Contacts");
 
                     b.Navigation("Notes");
+
+                    b.Navigation("StudentGroupCompositions");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Teacher", b =>
+                {
+                    b.Navigation("Assignments");
                 });
 #pragma warning restore 612, 618
         }

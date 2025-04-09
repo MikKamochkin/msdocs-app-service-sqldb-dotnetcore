@@ -14,10 +14,12 @@ namespace DotNetCoreSqlDb.Models
         public Guid StudentID { get; set; }
 
         [DisplayName("Type")]
-        public string? Type { get; set; }
+        [Required]
+        public required string Type { get; set; }
 
         [DisplayName("Value")]
-        public string? Value { get; set; }
+        [Required]
+        public required string Value { get; set; }
 
         [DisplayName("Invitation")]
         public bool Invitation { get; set; } = false;
@@ -29,6 +31,6 @@ namespace DotNetCoreSqlDb.Models
         public bool Money { get; set; } = false;
 
         // Navigation property to the related Student
-        public virtual Student? Student { get; set; }
+        public virtual Student Student { get; set; }
     }
 }

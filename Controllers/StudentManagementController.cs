@@ -22,8 +22,11 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> Index(string sortOrder)
         {
             ViewBag.CurrentSort = sortOrder;
-            // Include Contacts so that we can display email addresses.
-            IQueryable<Student> query = _context.Student.Include(s => s.Contacts);
+            // Include all related data in one query
+            IQueryable<Student> query = _context.Student
+                .Include(s => s.Contacts)
+                .Include(s => s.Notes);
+            
             if (!User.IsInRole("admin"))
             {
                 query = query.Where(s => s.AccountingGroup == "S");
@@ -56,6 +59,7 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
             var student = await _context.Student
                 .Include(s => s.Contacts)
+                .Include(s => s.Notes)
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
                 return NotFound();
@@ -71,6 +75,7 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
             var student = await _context.Student
                 .Include(s => s.Contacts)
+                .Include(s => s.Notes)
                 .FirstOrDefaultAsync(s => s.ID == id);
             if (student == null)
                 return NotFound();

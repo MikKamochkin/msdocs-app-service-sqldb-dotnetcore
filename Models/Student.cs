@@ -1,18 +1,20 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Collections.Generic;
 
 namespace DotNetCoreSqlDb.Models
 {
     public class Student
     {
+        [Key]
         public Guid ID { get; set; } // Primary Key
 
         [DisplayName("Name")]
         [Required]
         public required string Name { get; set; } 
 
-        [DisplayName("Parents/Employer")]
+        [DisplayName("Parent/Employer")]
         public string? ParentOrEmployer { get; set; }
 
         [DisplayName("Main Notes")]
@@ -25,11 +27,11 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Source")]
         public string? Source { get; set;}
 
-        [DisplayName("TimeZone")]
+        [DisplayName("Time Zone")]
         public string? TimeZoneId { get; set;}
 
-        [DisplayName("AccountingGroup")]
-        public string AccountingGroup { get; set;} = "";
+        [DisplayName("Accounting Group")]
+        public string? AccountingGroup { get; set; }
 
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
@@ -44,5 +46,8 @@ namespace DotNetCoreSqlDb.Models
 
          // Navigation property for one-to-many relationship with Note
         public virtual ICollection<Notes> Notes { get; set; } = new List<Notes>();
+
+        // Navigation property for one-to-many relationship with StudentGroupComposition
+        public virtual ICollection<StudentGroupComposition> StudentGroupCompositions { get; set; } = new List<StudentGroupComposition>();
     }
 }
