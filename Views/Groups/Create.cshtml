@@ -30,7 +30,7 @@
             {
                 for (int i = 0; i < studentCompositionsList.Count; i++)
                 {
-                    <div class="student-composition">
+                    <div class="student-composition" data-index="@i">
                         @Html.Hidden($"StudentGroupCompositions[{i}].StudentId", studentCompositionsList[i].StudentId)
                         @Html.Hidden($"StudentGroupCompositions[{i}].UseMyBalance", studentCompositionsList[i].UseMyBalance)
                         <div class="row">
@@ -115,7 +115,7 @@
 
                 if (studentId) {
                     const newStudent = `
-                        <div class="student-composition">
+                        <div class="student-composition" data-index="${studentCount}">
                             <input type="hidden" name="StudentGroupCompositions[${studentCount}].StudentId" value="${studentId}" />
                             <input type="hidden" name="StudentGroupCompositions[${studentCount}].UseMyBalance" value="${useMyBalance}" />
                             <div class="row">
@@ -150,6 +150,7 @@
             function reindexStudents() {
                 let index = 0;
                 $('.student-composition').each(function() {
+                    $(this).attr('data-index', index);
                     $(this).find('input[name^="StudentGroupCompositions"]').each(function() {
                         const name = $(this).attr('name');
                         const newName = name.replace(/\[\d+\]/, `[${index}]`);
@@ -159,6 +160,19 @@
                 });
                 studentCount = index;
             }
+
+            // Before form submission, ensure all student data is included
+            $('form').submit(function(e) {
+                // Check if there are any students in the group
+                if ($('.student-composition').length === 0) {
+                    alert("Please add at least one student to the group.");
+                    e.preventDefault();
+                    return false;
+                }
+                
+                // Make sure all indices are sequential
+                reindexStudents();
+            });
         });
     </script>
 }
