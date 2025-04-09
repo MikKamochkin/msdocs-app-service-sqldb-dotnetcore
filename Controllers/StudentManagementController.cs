@@ -6,7 +6,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using System.Collections.Generic;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -23,11 +22,8 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> Index(string sortOrder)
         {
             ViewBag.CurrentSort = sortOrder;
-            // Include all related data in one query
-            IQueryable<Student> query = _context.Student
-                .Include(s => s.Contacts)
-                .Include(s => s.Notes);
-            
+            // Include Contacts so that we can display email addresses.
+            IQueryable<Student> query = _context.Student.Include(s => s.Contacts);
             if (!User.IsInRole("admin"))
             {
                 query = query.Where(s => s.AccountingGroup == "S");
@@ -60,7 +56,6 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
             var student = await _context.Student
                 .Include(s => s.Contacts)
-                .Include(s => s.Notes)
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
                 return NotFound();
@@ -76,7 +71,6 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
             var student = await _context.Student
                 .Include(s => s.Contacts)
-                .Include(s => s.Notes)
                 .FirstOrDefaultAsync(s => s.ID == id);
             if (student == null)
                 return NotFound();
@@ -121,30 +115,23 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
             existingStudent.AccountingGroup = User.IsInRole("admin") ? updatedStudent.AccountingGroup : "S";
 
-            // Handle contacts
+            // Synchronize the Contacts collection.
             if (updatedStudent.Contacts != null)
             {
-                // Remove contacts that are no longer present
-                var existingContactIds = existingStudent.Contacts.Select(c => c.ID).ToList();
-                var updatedContactIds = updatedStudent.Contacts.Select(c => c.ID).ToList();
-                var contactsToRemove = existingStudent.Contacts.Where(c => !updatedContactIds.Contains(c.ID)).ToList();
-                foreach (var contact in contactsToRemove)
-                {
-                    _context.Contact.Remove(contact);
-                }
-
-                // Update or add contacts
+                // Process each posted contact.
                 foreach (var contact in updatedStudent.Contacts)
                 {
-                    if (contact.ID == Guid.Empty)
+                    // Treat as new if ID is Guid.Empty or equals the all-zero string.
+                    if (contact.ID == Guid.Empty || contact.ID.ToString() == "00000000-0000-0000-0000-000000000000")
                     {
-                        // New contact
+                        // Assign new ID and mark as Added.
+                        contact.ID = Guid.NewGuid();
                         contact.StudentID = existingStudent.ID;
-                        _context.Contact.Add(contact);
+                        _context.Entry(contact).State = EntityState.Added;
+                        existingStudent.Contacts.Add(contact);
                     }
                     else
                     {
-                        // Existing contact
                         var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == contact.ID);
                         if (existingContact != null)
                         {
@@ -156,7 +143,20 @@ namespace DotNetCoreSqlDb.Controllers
                         }
                     }
                 }
+                // Remove any contacts that were removed on the UI.
+                var postedContactIds = updatedStudent.Contacts
+                                        .Where(c => c.ID != Guid.Empty && c.ID.ToString() != "00000000-0000-0000-0000-000000000000")
+                                        .Select(c => c.ID)
+                                        .ToList();
+                var contactsToRemove = existingStudent.Contacts
+                                        .Where(c => c.ID != Guid.Empty && !postedContactIds.Contains(c.ID))
+                                        .ToList();
+                foreach (var c in contactsToRemove)
+                {
+                    _context.Entry(c).State = EntityState.Deleted;
+                }
             }
+            // If no contacts were submitted, leave existing contacts unchanged.
 
             try
             {
@@ -190,38 +190,24 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
+        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
         {
+            student.CreatedDate = DateTime.Now;
+            if (!User.IsInRole("admin"))
+            {
+                student.AccountingGroup = "S";
+            }
+            if (student.Contacts == null || !student.Contacts.Any())
+            {
+                ModelState.AddModelError("", "Please add at least one contact.");
+            }
             if (ModelState.IsValid)
             {
                 student.ID = Guid.NewGuid();
-                student.CreatedDate = DateTime.Now;
-                
-                // Set AccountingGroup based on user role
-                if (!User.IsInRole("admin"))
-                {
-                    student.AccountingGroup = "S";
-                }
-
-                // Initialize contacts collection if null
-                if (student.Contacts == null)
-                {
-                    student.Contacts = new List<Contact>();
-                }
-
-                // Set StudentID for each contact and ensure they have IDs
-                foreach (var contact in student.Contacts)
-                {
-                    contact.ID = Guid.NewGuid();
-                    contact.StudentID = student.ID;
-                }
-
                 _context.Add(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-
-            // If we get here, something went wrong
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;

@@ -13,16 +13,14 @@ namespace DotNetCoreSqlDb.Models
         [ForeignKey("Student")]
         public Guid StudentID { get; set; }
 
-        [DisplayName("Content")]
-        [Required]
-        public required string Content { get; set; }
+        [DisplayName("Value")]
+        public string? Value { get; set; }
 
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime CreatedDate { get; set; }
-
         // Navigation property to the related Student
-        public virtual Student Student { get; set; }
+        public virtual Student? Student { get; set; }
     }
 }

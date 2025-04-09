@@ -67,23 +67,8 @@
         }
 
         <h4>Contact Information</h4>
-        <!-- The contact summary table will be rendered here -->
-        <div id="contacts">
-            <table id="contactsSummary" style="margin-top:20px;" class="table table-bordered d-none">
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Value</th>
-                        <th>Invitation</th>
-                        <th>Emergency</th>
-                        <th>Money</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
-        </div>
+        <!-- The contact summary (with hidden inputs) will be rendered here -->
+        <div id="contacts"></div>
         <!-- Button to open the modal -->
         <button type="button" id="addContact" class="btn btn-secondary">Add Contact Information</button>
         <br /><br />
@@ -96,7 +81,7 @@
     </div>
 }
 
-<!-- Modal for adding a new contact -->
+<!-- Modal for adding a new contact (existing modal code remains unchanged) -->
 <div id="contactModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -141,45 +126,69 @@
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <!-- Ensure Bootstrap's JavaScript is loaded -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <script type="text/javascript">
+        // Global counters/variables:
         var contactCount = 0;
+        // Holds the index of the contact currently being edited; null if adding a new contact.
         var editingContactIndex = null;
 
+        // Function to add a new contact summary row with data attributes.
         function addContactSummary(index, contactType, typeText, value, invitationBool, emergencyBool, moneyBool) {
-            $("#contactsSummary").removeClass("d-none");
+            // Create the summary table if it doesn't exist.
+            if ($("#contactsSummary").length === 0) {
+                var tableHtml =
+                    '<table id="contactsSummary" style="margin-top:20px;" class="table table-bordered">' +
+                        '<thead>' +
+                            '<tr>' +
+                                '<th>Type</th>' +
+                                '<th>Value</th>' +
+                                '<th>Invitation</th>' +
+                                '<th>Emergency</th>' +
+                                '<th>Money</th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody></tbody>' +
+                    '</table>';
+                $("#contacts").after(tableHtml);
+            }
             
             var summaryRow =
-                '<tr class="contact-summary" data-index="' + index + '">' +
+                '<tr class="contact-summary" data-index="' + index + '" ' +
+                'data-contacttype="' + contactType + '" ' +
+                'data-contactvalue="' + value + '" ' +
+                'data-invitation="' + invitationBool + '" ' +
+                'data-emergency="' + emergencyBool + '" ' +
+                'data-money="' + moneyBool + '">' +
                     '<td>' + typeText + '</td>' +
                     '<td>' + value + '</td>' +
                     '<td>' + (invitationBool ? "✔" : "") + '</td>' +
                     '<td>' + (emergencyBool ? "✔" : "") + '</td>' +
                     '<td>' + (moneyBool ? "✔" : "") + '</td>' +
-                    '<td>' +
-                        '<button type="button" class="btn btn-sm btn-primary edit-contact">Edit</button> ' +
-                        '<button type="button" class="btn btn-sm btn-danger delete-contact">Delete</button>' +
-                    '</td>' +
                     '<td style="display:none;">' +
-                        '<input type="hidden" name="Contacts[' + index + '].Type" value="' + contactType + '" />' +
-                        '<input type="hidden" name="Contacts[' + index + '].Value" value="' + value + '" />' +
-                        '<input type="hidden" name="Contacts[' + index + '].Invitation" value="' + invitationBool + '" />' +
-                        '<input type="hidden" name="Contacts[' + index + '].Emergency" value="' + emergencyBool + '" />' +
-                        '<input type="hidden" name="Contacts[' + index + '].Money" value="' + moneyBool + '" />' +
+                        '<input type="hidden" name="Contacts[' + index + '].Type" value="' + contactType + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Value" value="' + value + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Invitation" value="' + invitationBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Emergency" value="' + emergencyBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + index + '].Money" value="' + moneyBool + '"/>' +
                     '</td>' +
                 '</tr>';
             $("#contactsSummary tbody").append(summaryRow);
         }
 
         $(document).ready(function() {
+            // Initialize the modal with a static backdrop and disabled keyboard.
             $("#contactModal").modal({
                 backdrop: 'static',
                 keyboard: false,
                 show: false
             });
 
-            $("#addContact").click(function() {
+            // When the "Add Another Contact" button is clicked, clear modal fields and set mode to "add".
+            $("#addContact").click(function(e) {
                 editingContactIndex = null;
+                $("#contactModalTitle").text("Add Contact");
                 $("#modalContactType").val("");
                 $("#modalContactValue").val("");
                 $("#modalContactInvitation").prop("checked", false);
@@ -188,71 +197,62 @@
                 $("#contactModal").modal('show');
             });
 
-            $(document).on("click", ".edit-contact", function(e) {
-                e.stopPropagation();
-                var $row = $(this).closest("tr");
+            // Delegate click event to the summary rows to enable editing.
+            $(document).on("click", "#contactsSummary tbody tr.contact-summary", function(e) {
+                // Retrieve the current row's data.
+                var $row = $(this);
                 editingContactIndex = $row.data("index");
-                
-                var $hiddenInputs = $row.find("td:last input[type='hidden']");
-                $("#modalContactType").val($hiddenInputs.filter("[name$='.Type']").val());
-                $("#modalContactValue").val($hiddenInputs.filter("[name$='.Value']").val());
-                $("#modalContactInvitation").prop("checked", $hiddenInputs.filter("[name$='.Invitation']").val().toLowerCase() === "true");
-                $("#modalContactEmergency").prop("checked", $hiddenInputs.filter("[name$='.Emergency']").val().toLowerCase() === "true");
-                $("#modalContactMoney").prop("checked", $hiddenInputs.filter("[name$='.Money']").val().toLowerCase() === "true");
-                
+                $("#modalContactType").val($row.data("contacttype"));
+                $("#modalContactValue").val($row.data("contactvalue"));
+                $("#modalContactInvitation").prop("checked", $row.data("invitation"));
+                $("#modalContactEmergency").prop("checked", $row.data("emergency"));
+                $("#modalContactMoney").prop("checked", $row.data("money"));
+                $("#contactModalTitle").text("Edit Contact");
                 $("#contactModal").modal("show");
             });
 
-            $(document).on("click", ".delete-contact", function(e) {
-                e.stopPropagation();
-                if (confirm("Are you sure you want to delete this contact?")) {
-                    $(this).closest("tr").remove();
-                    if ($("#contactsSummary tbody tr").length === 0) {
-                        $("#contactsSummary").addClass("d-none");
-                    }
-                    // Reindex remaining contacts
-                    $("#contactsSummary tbody tr").each(function(newIndex) {
-                        var $row = $(this);
-                        $row.attr("data-index", newIndex);
-                        $row.find("input[type='hidden']").each(function() {
-                            var $input = $(this);
-                            var name = $input.attr("name");
-                            var newName = name.replace(/\[\d+\]/, "[" + newIndex + "]");
-                            $input.attr("name", newName);
-                        });
-                    });
-                    contactCount = $("#contactsSummary tbody tr").length;
-                }
-            });
-
+            // When Save is clicked in the modal.
             $("#modalSave").click(function() {
                 var contactType = $("#modalContactType").val();
                 var typeText = $("#modalContactType option:selected").text();
                 var value = $("#modalContactValue").val();
                 var invitationBool = $("#modalContactInvitation").is(":checked");
-                var emergencyBool = $("#modalContactEmergency").is(":checked");
-                var moneyBool = $("#modalContactMoney").is(":checked");
+                var emergencyBool  = $("#modalContactEmergency").is(":checked");
+                var moneyBool      = $("#modalContactMoney").is(":checked");
 
-                if (!contactType || !value) {
-                    alert("Please fill in both Contact Type and Value.");
+                // Validate that at least one field is filled (if necessary).
+                if (!contactType && !value && !invitationBool && !emergencyBool && !moneyBool) {
+                    $("#contactModal").modal('hide');
                     return;
                 }
 
+                // If editing an existing contact, update that row.
                 if (editingContactIndex !== null) {
-                    var $row = $("tr.contact-summary[data-index='" + editingContactIndex + "']");
-                    $row.find("td:eq(0)").text(typeText);
-                    $row.find("td:eq(1)").text(value);
-                    $row.find("td:eq(2)").text(invitationBool ? "✔" : "");
-                    $row.find("td:eq(3)").text(emergencyBool ? "✔" : "");
-                    $row.find("td:eq(4)").text(moneyBool ? "✔" : "");
+                    var $row = $("#contactsSummary tbody tr.contact-summary[data-index='" + editingContactIndex + "']");
+                    $row.find("td:nth-child(1)").text(typeText);
+                    $row.find("td:nth-child(2)").text(value);
+                    $row.find("td:nth-child(3)").text(invitationBool ? "✔" : "");
+                    $row.find("td:nth-child(4)").text(emergencyBool ? "✔" : "");
+                    $row.find("td:nth-child(5)").text(moneyBool ? "✔" : "");
                     
-                    var $hiddenInputs = $row.find("td:last input[type='hidden']");
-                    $hiddenInputs.filter("[name$='.Type']").val(contactType);
-                    $hiddenInputs.filter("[name$='.Value']").val(value);
-                    $hiddenInputs.filter("[name$='.Invitation']").val(invitationBool);
-                    $hiddenInputs.filter("[name$='.Emergency']").val(emergencyBool);
-                    $hiddenInputs.filter("[name$='.Money']").val(moneyBool);
+                    var hiddenHtml = 
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Type" value="' + contactType + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Value" value="' + value + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Invitation" value="' + invitationBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Emergency" value="' + emergencyBool + '"/>' +
+                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Money" value="' + moneyBool + '"/>';
+                    $row.find("td:last").html(hiddenHtml);
+                    
+                    // Update data attributes.
+                    $row.data("contacttype", contactType);
+                    $row.data("contactvalue", value);
+                    $row.data("invitation", invitationBool);
+                    $row.data("emergency", emergencyBool);
+                    $row.data("money", moneyBool);
+                    
+                    editingContactIndex = null;
                 } else {
+                    // Otherwise, add a new contact summary row.
                     addContactSummary(contactCount, contactType, typeText, value, invitationBool, emergencyBool, moneyBool);
                     contactCount++;
                 }
@@ -260,11 +260,13 @@
                 $("#contactModal").modal('hide');
             });
 
+            // Cancel button simply closes the modal.
             $("#modalCancel").click(function() {
                 editingContactIndex = null;
                 $("#contactModal").modal('hide');
             });
 
+            // Client-side check: Before form submission, ensure at least one contact is added.
             $("form").submit(function(e) {
                 if ($("#contactsSummary tbody tr").length === 0) {
                     alert("Please add at least one contact.");

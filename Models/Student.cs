@@ -1,20 +1,18 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Collections.Generic;
 
 namespace DotNetCoreSqlDb.Models
 {
     public class Student
     {
-        [Key]
         public Guid ID { get; set; } // Primary Key
 
         [DisplayName("Name")]
         [Required]
         public required string Name { get; set; } 
 
-        [DisplayName("Parent/Employer")]
+        [DisplayName("Parents/Employer")]
         public string? ParentOrEmployer { get; set; }
 
         [DisplayName("Main Notes")]
@@ -27,11 +25,11 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Source")]
         public string? Source { get; set;}
 
-        [DisplayName("Time Zone")]
+        [DisplayName("TimeZone")]
         public string? TimeZoneId { get; set;}
 
-        [DisplayName("Accounting Group")]
-        public string? AccountingGroup { get; set; }
+        [DisplayName("AccountingGroup")]
+        public string AccountingGroup { get; set;} = "";
 
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
