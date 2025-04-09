@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "admin")]
     public class GroupsController : Controller
     {
         private readonly MyDatabaseContext _context;
