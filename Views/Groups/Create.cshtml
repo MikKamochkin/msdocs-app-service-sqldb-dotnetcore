@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Create Group";
+    // Convert ICollection to List for indexing
+    var studentCompositionsList = Model.StudentGroupCompositions?.ToList() ?? new List<DotNetCoreSqlDb.Models.StudentGroupComposition>();
 }
 
 <h2>Create Group</h2>
@@ -24,19 +26,19 @@
 
         <h4>Students in Group</h4>
         <div id="studentCompositions">
-            @if (Model.StudentGroupCompositions != null)
+            @if (studentCompositionsList.Any())
             {
-                foreach (var composition in Model.StudentGroupCompositions)
+                for (int i = 0; i < studentCompositionsList.Count; i++)
                 {
                     <div class="student-composition">
-                        @Html.Hidden("StudentGroupCompositions.StudentId", composition.StudentId)
-                        @Html.Hidden("StudentGroupCompositions.UseMyBalance", composition.UseMyBalance)
+                        @Html.Hidden($"StudentGroupCompositions[{i}].StudentId", studentCompositionsList[i].StudentId)
+                        @Html.Hidden($"StudentGroupCompositions[{i}].UseMyBalance", studentCompositionsList[i].UseMyBalance)
                         <div class="row">
                             <div class="col-md-6">
-                                <span>@composition.Student?.Name</span>
+                                <span>@studentCompositionsList[i].Student?.Name</span>
                             </div>
                             <div class="col-md-4">
-                                <span>@(composition.UseMyBalance ? "Uses Balance" : "No Balance")</span>
+                                <span>@(studentCompositionsList[i].UseMyBalance ? "Uses Balance" : "No Balance")</span>
                             </div>
                             <div class="col-md-2">
                                 <button type="button" class="btn btn-danger btn-sm remove-student">Remove</button>
@@ -98,7 +100,7 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            let studentCount = @(Model.StudentGroupCompositions?.Count ?? 0);
+            let studentCount = @(studentCompositionsList.Count);
 
             // Show modal when Add Student button is clicked
             $('#addStudentBtn').click(function () {
@@ -114,8 +116,8 @@
                 if (studentId) {
                     const newStudent = `
                         <div class="student-composition">
-                            <input type="hidden" name="StudentGroupCompositions.StudentId" value="${studentId}" />
-                            <input type="hidden" name="StudentGroupCompositions.UseMyBalance" value="${useMyBalance}" />
+                            <input type="hidden" name="StudentGroupCompositions[${studentCount}].StudentId" value="${studentId}" />
+                            <input type="hidden" name="StudentGroupCompositions[${studentCount}].UseMyBalance" value="${useMyBalance}" />
                             <div class="row">
                                 <div class="col-md-6">
                                     <span>${studentName}</span>
@@ -140,7 +142,23 @@
             // Handle removing a student
             $(document).on('click', '.remove-student', function () {
                 $(this).closest('.student-composition').remove();
+                // Reindex the remaining students
+                reindexStudents();
             });
+
+            // Function to reindex students after removal
+            function reindexStudents() {
+                let index = 0;
+                $('.student-composition').each(function() {
+                    $(this).find('input[name^="StudentGroupCompositions"]').each(function() {
+                        const name = $(this).attr('name');
+                        const newName = name.replace(/\[\d+\]/, `[${index}]`);
+                        $(this).attr('name', newName);
+                    });
+                    index++;
+                });
+                studentCount = index;
+            }
         });
     </script>
 }
