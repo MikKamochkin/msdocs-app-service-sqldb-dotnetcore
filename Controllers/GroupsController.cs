@@ -45,13 +45,23 @@ namespace DotNetCoreSqlDb.Controllers
         {
             if (ModelState.IsValid)
             {
+                // Generate a new ID for the group
+                group.Id = Guid.NewGuid();
+                
                 // Clear any existing StudentGroupCompositions to avoid duplicates
                 group.StudentGroupCompositions = new List<StudentGroupComposition>();
 
                 // Process the form data to extract StudentGroupCompositions
                 var form = await HttpContext.Request.ReadFormAsync();
-                var studentIds = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.StudentId"));
-                var useMyBalanceValues = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.UseMyBalance"));
+                var studentIds = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.StudentId")).ToList();
+                var useMyBalanceValues = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.UseMyBalance")).ToList();
+
+                // Log the form data for debugging
+                System.Diagnostics.Debug.WriteLine($"Found {studentIds.Count} student IDs in form data");
+                foreach (var key in studentIds)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Student ID key: {key}, Value: {form[key]}");
+                }
 
                 // Create a dictionary to match StudentIds with their corresponding UseMyBalance values
                 var studentCompositions = new Dictionary<string, bool>();
@@ -61,6 +71,7 @@ namespace DotNetCoreSqlDb.Controllers
                     var useMyBalanceKey = key.Replace("StudentId", "UseMyBalance");
                     var useMyBalance = form.ContainsKey(useMyBalanceKey) && form[useMyBalanceKey].ToString().ToLower() == "true";
                     studentCompositions[studentId] = useMyBalance;
+                    System.Diagnostics.Debug.WriteLine($"Added student {studentId} with UseMyBalance={useMyBalance}");
                 }
 
                 // Add each student to the group's StudentGroupCompositions
@@ -68,18 +79,53 @@ namespace DotNetCoreSqlDb.Controllers
                 {
                     if (Guid.TryParse(studentId, out Guid id))
                     {
-                        group.StudentGroupCompositions.Add(new StudentGroupComposition
+                        var composition = new StudentGroupComposition
                         {
+                            Id = Guid.NewGuid(),
+                            GroupId = group.Id,
                             StudentId = id,
                             UseMyBalance = studentCompositions[studentId]
-                        });
+                        };
+                        group.StudentGroupCompositions.Add(composition);
+                        System.Diagnostics.Debug.WriteLine($"Added StudentGroupComposition: Id={composition.Id}, GroupId={composition.GroupId}, StudentId={id}, UseMyBalance={studentCompositions[studentId]}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Failed to parse student ID: {studentId}");
                     }
                 }
 
+                System.Diagnostics.Debug.WriteLine($"Group has {group.StudentGroupCompositions.Count} StudentGroupCompositions before saving");
+                
                 _context.Add(group);
                 await _context.SaveChangesAsync();
+                
+                // Verify that the StudentGroupCompositions were saved
+                var savedGroup = await _context.Group
+                    .Include(g => g.StudentGroupCompositions)
+                    .FirstOrDefaultAsync(g => g.Id == group.Id);
+                
+                if (savedGroup != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Saved group has {savedGroup.StudentGroupCompositions.Count} StudentGroupCompositions");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Failed to retrieve saved group");
+                }
+                
                 return RedirectToAction(nameof(Index));
             }
+            
+            // Log validation errors
+            foreach (var modelState in ModelState.Values)
+            {
+                foreach (var error in modelState.Errors)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Validation error: {error.ErrorMessage}");
+                }
+            }
+            
             ViewBag.Students = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(_context.Student.OrderBy(s => s.Name), "ID", "Name");
             return View(group);
         }
