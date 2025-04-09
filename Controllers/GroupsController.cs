@@ -6,6 +6,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -39,11 +41,41 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Groups/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Group group)
+        public async Task<IActionResult> Create([Bind("Name,StudentGroupCompositions")] Group group)
         {
             if (ModelState.IsValid)
             {
-                group.Id = Guid.NewGuid();
+                // Clear any existing StudentGroupCompositions to avoid duplicates
+                group.StudentGroupCompositions = new List<StudentGroupComposition>();
+
+                // Process the form data to extract StudentGroupCompositions
+                var form = await HttpContext.Request.ReadFormAsync();
+                var studentIds = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.StudentId"));
+                var useMyBalanceValues = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.UseMyBalance"));
+
+                // Create a dictionary to match StudentIds with their corresponding UseMyBalance values
+                var studentCompositions = new Dictionary<string, bool>();
+                foreach (var key in studentIds)
+                {
+                    var studentId = form[key].ToString();
+                    var useMyBalanceKey = key.Replace("StudentId", "UseMyBalance");
+                    var useMyBalance = form.ContainsKey(useMyBalanceKey) && form[useMyBalanceKey].ToString().ToLower() == "true";
+                    studentCompositions[studentId] = useMyBalance;
+                }
+
+                // Add each student to the group's StudentGroupCompositions
+                foreach (var studentId in studentCompositions.Keys)
+                {
+                    if (Guid.TryParse(studentId, out Guid id))
+                    {
+                        group.StudentGroupCompositions.Add(new StudentGroupComposition
+                        {
+                            StudentId = id,
+                            UseMyBalance = studentCompositions[studentId]
+                        });
+                    }
+                }
+
                 _context.Add(group);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
