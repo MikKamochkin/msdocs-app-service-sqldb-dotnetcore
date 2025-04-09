@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -189,32 +190,38 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
+        public async Task<IActionResult> Create([Bind("Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
         {
-            student.CreatedDate = DateTime.Now;
-            if (!User.IsInRole("admin"))
-            {
-                student.AccountingGroup = "S";
-            }
-            if (student.Contacts == null || !student.Contacts.Any())
-            {
-                ModelState.AddModelError("", "Please add at least one contact.");
-            }
             if (ModelState.IsValid)
             {
                 student.ID = Guid.NewGuid();
-                // Set the StudentID for each contact
-                if (student.Contacts != null)
+                student.CreatedDate = DateTime.Now;
+                
+                // Set AccountingGroup based on user role
+                if (!User.IsInRole("admin"))
                 {
-                    foreach (var contact in student.Contacts)
-                    {
-                        contact.StudentID = student.ID;
-                    }
+                    student.AccountingGroup = "S";
                 }
+
+                // Initialize contacts collection if null
+                if (student.Contacts == null)
+                {
+                    student.Contacts = new List<Contact>();
+                }
+
+                // Set StudentID for each contact and ensure they have IDs
+                foreach (var contact in student.Contacts)
+                {
+                    contact.ID = Guid.NewGuid();
+                    contact.StudentID = student.ID;
+                }
+
                 _context.Add(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+
+            // If we get here, something went wrong
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
