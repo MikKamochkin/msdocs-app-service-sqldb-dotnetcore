@@ -120,23 +120,30 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
             existingStudent.AccountingGroup = User.IsInRole("admin") ? updatedStudent.AccountingGroup : "S";
 
-            // Synchronize the Contacts collection.
+            // Handle contacts
             if (updatedStudent.Contacts != null)
             {
-                // Process each posted contact.
+                // Remove contacts that are no longer present
+                var existingContactIds = existingStudent.Contacts.Select(c => c.ID).ToList();
+                var updatedContactIds = updatedStudent.Contacts.Select(c => c.ID).ToList();
+                var contactsToRemove = existingStudent.Contacts.Where(c => !updatedContactIds.Contains(c.ID)).ToList();
+                foreach (var contact in contactsToRemove)
+                {
+                    _context.Contact.Remove(contact);
+                }
+
+                // Update or add contacts
                 foreach (var contact in updatedStudent.Contacts)
                 {
-                    // Treat as new if ID is Guid.Empty or equals the all-zero string.
-                    if (contact.ID == Guid.Empty || contact.ID.ToString() == "00000000-0000-0000-0000-000000000000")
+                    if (contact.ID == Guid.Empty)
                     {
-                        // Assign new ID and mark as Added.
-                        contact.ID = Guid.NewGuid();
+                        // New contact
                         contact.StudentID = existingStudent.ID;
-                        _context.Entry(contact).State = EntityState.Added;
-                        existingStudent.Contacts.Add(contact);
+                        _context.Contact.Add(contact);
                     }
                     else
                     {
+                        // Existing contact
                         var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == contact.ID);
                         if (existingContact != null)
                         {
@@ -148,20 +155,7 @@ namespace DotNetCoreSqlDb.Controllers
                         }
                     }
                 }
-                // Remove any contacts that were removed on the UI.
-                var postedContactIds = updatedStudent.Contacts
-                                        .Where(c => c.ID != Guid.Empty && c.ID.ToString() != "00000000-0000-0000-0000-000000000000")
-                                        .Select(c => c.ID)
-                                        .ToList();
-                var contactsToRemove = existingStudent.Contacts
-                                        .Where(c => c.ID != Guid.Empty && !postedContactIds.Contains(c.ID))
-                                        .ToList();
-                foreach (var c in contactsToRemove)
-                {
-                    _context.Entry(c).State = EntityState.Deleted;
-                }
             }
-            // If no contacts were submitted, leave existing contacts unchanged.
 
             try
             {
@@ -209,6 +203,14 @@ namespace DotNetCoreSqlDb.Controllers
             if (ModelState.IsValid)
             {
                 student.ID = Guid.NewGuid();
+                // Set the StudentID for each contact
+                if (student.Contacts != null)
+                {
+                    foreach (var contact in student.Contacts)
+                    {
+                        contact.StudentID = student.ID;
+                    }
+                }
                 _context.Add(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
