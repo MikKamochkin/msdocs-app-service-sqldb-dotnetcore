@@ -41,16 +41,16 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Groups/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Name,StudentGroupCompositions")] Group group)
+        public async Task<IActionResult> Create([Bind("Name")] Group group)
         {
             if (ModelState.IsValid)
             {
                 // Generate a new ID for the group
                 group.Id = Guid.NewGuid();
                 
-                // Clear any existing StudentGroupCompositions to avoid duplicates
-                group.StudentGroupCompositions = new List<StudentGroupComposition>();
-
+                // Add the group to the context first
+                _context.Add(group);
+                
                 // Process the form data to extract StudentGroupCompositions
                 var form = await HttpContext.Request.ReadFormAsync();
                 var studentIds = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.StudentId")).ToList();
@@ -86,7 +86,9 @@ namespace DotNetCoreSqlDb.Controllers
                             StudentId = id,
                             UseMyBalance = studentCompositions[studentId]
                         };
-                        group.StudentGroupCompositions.Add(composition);
+                        
+                        // Explicitly add each StudentGroupComposition to the context
+                        _context.StudentGroupComposition.Add(composition);
                         System.Diagnostics.Debug.WriteLine($"Added StudentGroupComposition: Id={composition.Id}, GroupId={composition.GroupId}, StudentId={id}, UseMyBalance={studentCompositions[studentId]}");
                     }
                     else
@@ -95,9 +97,9 @@ namespace DotNetCoreSqlDb.Controllers
                     }
                 }
 
-                System.Diagnostics.Debug.WriteLine($"Group has {group.StudentGroupCompositions.Count} StudentGroupCompositions before saving");
+                System.Diagnostics.Debug.WriteLine($"Group has {studentCompositions.Count} StudentGroupCompositions before saving");
                 
-                _context.Add(group);
+                // Save all changes to the database
                 await _context.SaveChangesAsync();
                 
                 // Verify that the StudentGroupCompositions were saved
@@ -159,7 +161,70 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 try
                 {
-                    _context.Update(group);
+                    // Get the existing group with its compositions
+                    var existingGroup = await _context.Group
+                        .Include(g => g.StudentGroupCompositions)
+                        .FirstOrDefaultAsync(g => g.Id == id);
+                    
+                    if (existingGroup == null)
+                        return NotFound();
+                    
+                    // Update the group name
+                    existingGroup.Name = group.Name;
+                    
+                    // Process the form data to extract StudentGroupCompositions
+                    var form = await HttpContext.Request.ReadFormAsync();
+                    var studentIds = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.StudentId")).ToList();
+                    var useMyBalanceValues = form.Keys.Where(k => k.StartsWith("StudentGroupCompositions.UseMyBalance")).ToList();
+                    
+                    // Create a dictionary to match StudentIds with their corresponding UseMyBalance values
+                    var studentCompositions = new Dictionary<string, bool>();
+                    foreach (var key in studentIds)
+                    {
+                        var studentId = form[key].ToString();
+                        var useMyBalanceKey = key.Replace("StudentId", "UseMyBalance");
+                        var useMyBalance = form.ContainsKey(useMyBalanceKey) && form[useMyBalanceKey].ToString().ToLower() == "true";
+                        studentCompositions[studentId] = useMyBalance;
+                    }
+                    
+                    // Remove compositions that are no longer in the form
+                    var compositionsToRemove = existingGroup.StudentGroupCompositions
+                        .Where(c => !studentCompositions.ContainsKey(c.StudentId.ToString()))
+                        .ToList();
+                    
+                    foreach (var composition in compositionsToRemove)
+                    {
+                        _context.StudentGroupComposition.Remove(composition);
+                    }
+                    
+                    // Add or update compositions
+                    foreach (var studentId in studentCompositions.Keys)
+                    {
+                        if (Guid.TryParse(studentId, out Guid studentGuid))
+                        {
+                            var existingComposition = existingGroup.StudentGroupCompositions
+                                .FirstOrDefault(c => c.StudentId == studentGuid);
+                            
+                            if (existingComposition != null)
+                            {
+                                // Update existing composition
+                                existingComposition.UseMyBalance = studentCompositions[studentId];
+                            }
+                            else
+                            {
+                                // Add new composition
+                                var newComposition = new StudentGroupComposition
+                                {
+                                    Id = Guid.NewGuid(),
+                                    GroupId = existingGroup.Id,
+                                    StudentId = studentGuid,
+                                    UseMyBalance = studentCompositions[studentId]
+                                };
+                                _context.StudentGroupComposition.Add(newComposition);
+                            }
+                        }
+                    }
+                    
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -175,7 +240,7 @@ namespace DotNetCoreSqlDb.Controllers
             return View(group);
         }
 
-        /*// POST: Groups/DeleteStudentGroupComposition
+        // POST: Groups/DeleteStudentGroupComposition
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteStudentGroupComposition(Guid compositionId)
@@ -188,6 +253,5 @@ namespace DotNetCoreSqlDb.Controllers
             }
             return Json(new { success = true });
         }
-        */
     }
 } 
