@@ -23,6 +23,9 @@ jobs:
         with:
           dotnet-version: '8.x'
 
+      - name: Restore local tools
+        run: dotnet tool restore
+
       - name: Build with dotnet
         run: dotnet build --configuration Release
 
