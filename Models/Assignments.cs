@@ -12,11 +12,11 @@ namespace DotNetCoreSqlDb.Models
 
         [ForeignKey("Group")]
         public Guid GroupId { get; set; }
-        public Group Group { get; set; }
+        public Group Group { get; set; } = null!;
 
         [ForeignKey("Teacher")]
-        public Guid TeacherId { get; set; }
-        public Teacher Teacher { get; set; }
+        public Guid? TeacherId { get; set; }
+        public Teacher? Teacher { get; set; }
 
         [DisplayName("StudentUnitCost")]
         [Required]

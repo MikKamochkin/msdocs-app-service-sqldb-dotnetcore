@@ -102,40 +102,59 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 try
                 {
-                    // Create the group first
+                    // 1) Create the group
                     group.Id = Guid.NewGuid();
                     _context.Add(group);
                     await _context.SaveChangesAsync();
-                    
+
                     _logger.LogInformation($"Group created with ID: {group.Id}");
-                    
-                    // Now handle the student associations
+
+                    // 2) Insert a “blank” Assignments record (only GroupId, all other non-nullable defaults)
+                    var blankAssignment = new Assignments
+                    {
+                        Id                 = Guid.NewGuid(),
+                        GroupId            = group.Id,
+                        //TeacherId          = Guid.Empty,      // no teacher assigned yet
+                        StudentUnitCost    = 0f,              // default float
+                        StudentUnitType    = string.Empty,    // required string
+                        StudentUnitBalance = 0f,
+                        StudentUnitDuration= 0f,
+                        TeacherPayForUnit  = 0f,
+                        TeacherPayUnitType = 0f,
+                        IsActive           = false
+                    };
+                    _context.Assignments.Add(blankAssignment);
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation($"Blank assignment created for group ID: {group.Id}");
+
+                    // 3) Handle the StudentGroupComposition entries
                     var studentIds = Request.Form["StudentIds"].ToString().Split(',');
                     var useMyBalanceValues = Request.Form["UseMyBalanceValues"].ToString().Split(',');
-                    
+
                     _logger.LogInformation($"Found {studentIds.Length} student IDs");
-                    
-                    // Process each student
+
                     for (int i = 0; i < studentIds.Length; i++)
                     {
                         if (Guid.TryParse(studentIds[i], out Guid studentId))
                         {
-                            bool useMyBalance = i < useMyBalanceValues.Length && useMyBalanceValues[i].ToLower() == "true";
-                            
+                            bool useMyBalance = i < useMyBalanceValues.Length
+                                && useMyBalanceValues[i].ToLower() == "true";
+
                             _logger.LogInformation($"Processing student {studentId} with UseMyBalance: {useMyBalance}");
-                            
+
                             var composition = new StudentGroupComposition
                             {
-                                Id = Guid.NewGuid(),
-                                GroupId = group.Id,
-                                StudentId = studentId,
-                                UseMyBalance = useMyBalance
+                                Id            = Guid.NewGuid(),
+                                GroupId       = group.Id,
+                                StudentId     = studentId,
+                                UseMyBalance  = useMyBalance
                             };
-                            
+
                             _context.StudentGroupComposition.Add(composition);
                         }
                     }
-                    
+
                     await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Index));
                 }
@@ -145,65 +164,44 @@ namespace DotNetCoreSqlDb.Controllers
                     ModelState.AddModelError("", "An error occurred while creating the group. Please try again.");
                 }
             }
-            
-            // If we get here, something went wrong
+
+            // If we get here, something failed; reload students for the dropdown and show the form again
             try
             {
                 var students = _context.Student.OrderBy(s => s.Name).ToList();
-                if (students != null && students.Any())
-                {
+                if (students.Any())
                     ViewBag.Students = new SelectList(students, "ID", "Name");
-                }
                 else
-                {
                     ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
-                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading students in Create POST action");
                 ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
             }
-            
+
             return View(group);
         }
+
 
         // GET: Groups/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var group = await _context.Group
                 .Include(g => g.StudentGroupCompositions)
-                .FirstOrDefaultAsync(m => m.Id == id);
-                
-            if (group == null)
-            {
-                return NotFound();
-            }
-            
-            // Get all students for the dropdown
-            try
-            {
-                var students = _context.Student.OrderBy(s => s.Name).ToList();
-                if (students != null && students.Any())
-                {
-                    ViewBag.Students = new SelectList(students, "ID", "Name");
-                }
-                else
-                {
-                    ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading students in Edit GET action");
-                ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
-            }
-            
+                .ThenInclude(sgc => sgc.Student)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (group == null) return NotFound();
+
+            // populate dropdown
+            var students = await _context.Student
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+            ViewBag.Students = new SelectList(students, "ID", "Name");
+
             return View(group);
         }
 
@@ -212,83 +210,51 @@ namespace DotNetCoreSqlDb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Guid id, [Bind("Id,Name")] Group group)
         {
-            if (id != group.Id)
-            {
-                return NotFound();
-            }
+            if (id != group.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // Update the group name
-                    _context.Update(group);
-                    
-                    // Handle student associations
-                    var existingCompositions = await _context.StudentGroupComposition
-                        .Where(sgc => sgc.GroupId == id)
-                        .ToListAsync();
-                    
-                    // Remove existing compositions
-                    _context.StudentGroupComposition.RemoveRange(existingCompositions);
-                    
-                    // Add new compositions
-                    var studentIds = Request.Form["StudentIds"].ToString().Split(',');
-                    var useMyBalanceValues = Request.Form["UseMyBalanceValues"].ToString().Split(',');
-                    
+                    // update the name only
+                    _context.Entry(group).Property(g => g.Name).IsModified = true;
+
+                    // clear out old compositions
+                    var old = _context.StudentGroupComposition
+                                    .Where(sgc => sgc.GroupId == id);
+                    _context.StudentGroupComposition.RemoveRange(old);
+
+                    // re-add from the hidden fields
+                    var studentIds = Request.Form["StudentIds"].ToString().Split(',', StringSplitOptions.RemoveEmptyEntries);
+                    var useVals   = Request.Form["UseMyBalanceValues"].ToString().Split(',', StringSplitOptions.RemoveEmptyEntries);
+
                     for (int i = 0; i < studentIds.Length; i++)
                     {
-                        if (Guid.TryParse(studentIds[i], out Guid studentId))
+                        if (Guid.TryParse(studentIds[i], out var sid))
                         {
-                            bool useMyBalance = i < useMyBalanceValues.Length && useMyBalanceValues[i].ToLower() == "true";
-                            
-                            var composition = new StudentGroupComposition
-                            {
-                                Id = Guid.NewGuid(),
-                                GroupId = id,
-                                StudentId = studentId,
-                                UseMyBalance = useMyBalance
-                            };
-                            
-                            _context.StudentGroupComposition.Add(composition);
+                            bool use = i < useVals.Length && bool.Parse(useVals[i]);
+                            _context.StudentGroupComposition.Add(new StudentGroupComposition {
+                                Id           = Guid.NewGuid(),
+                                GroupId      = id,
+                                StudentId    = sid,
+                                UseMyBalance = use
+                            });
                         }
                     }
-                    
+
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!GroupExists(group.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    if (!GroupExists(group.Id)) return NotFound();
+                    throw;
                 }
                 return RedirectToAction(nameof(Index));
             }
-            
-            // If we get here, something went wrong
-            try
-            {
-                var students = _context.Student.OrderBy(s => s.Name).ToList();
-                if (students != null && students.Any())
-                {
-                    ViewBag.Students = new SelectList(students, "ID", "Name");
-                }
-                else
-                {
-                    ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading students in Edit POST action");
-                ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
-            }
-            
+
+            // on error, repopulate dropdown and return view
+            var studentsList = await _context.Student.OrderBy(s => s.Name).ToListAsync();
+            ViewBag.Students = new SelectList(studentsList, "ID", "Name");
             return View(group);
         }
 

@@ -1,0 +1,22 @@
+https://chatgpt.com/g/g-p-676121d3bdbc819192e5e5ddfb54ebc1-azure/c/68028113-41e0-8006-af2a-641272d1a34a
+
+File open msdocstsl... NOT TSL file
+
+
+F1: Developer: Reload Window
+F1: Dev containers: Rebuild and Reopen container
+Wait for it to connect
+In bash Terminal: dotnet watch run --launch-profile http
+
+To update DB:
+inside the cotainer:`
+dotnet ef migrations add AddProductsTable
+dotnet ef database update
+
+Access database through the extension on the left
+
+USE DotNetCoreSqlDb;
+GO
+INSERT INTO dbo.Products (Name, Price) VALUES
+  ('Pencil', 0.99),
+  ('Notebook', 2.49);
