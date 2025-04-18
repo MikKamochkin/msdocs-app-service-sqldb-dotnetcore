@@ -62,7 +62,10 @@
                         {
                             foreach (var student in ViewBag.Students)
                             {
-                                <option value="@student.Value">@student.Text</option>
+                                if (student != null && student.Value != null && student.Text != null)
+                                {
+                                    <option value="@student.Value">@student.Text</option>
+                                }
                             }
                         }
                     </select>

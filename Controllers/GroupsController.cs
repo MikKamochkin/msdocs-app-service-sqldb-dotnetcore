@@ -64,12 +64,22 @@ namespace DotNetCoreSqlDb.Controllers
                 var students = _context.Student.OrderBy(s => s.Name).ToList();
                 if (students != null && students.Any())
                 {
-                    ViewBag.Students = new SelectList(students, "Id", "Name");
+                    // Ensure we only include students with valid ID and Name
+                    var validStudents = students.Where(s => s.ID != Guid.Empty && !string.IsNullOrEmpty(s.Name)).ToList();
+                    if (validStudents.Any())
+                    {
+                        ViewBag.Students = new SelectList(validStudents, "ID", "Name");
+                    }
+                    else
+                    {
+                        ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
+                        _logger.LogWarning("No valid students found in the database");
+                    }
                 }
                 else
                 {
                     // If no students exist, create an empty list
-                    ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                    ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
                     _logger.LogWarning("No students found in the database");
                 }
                 
@@ -78,7 +88,7 @@ namespace DotNetCoreSqlDb.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in Create GET action");
-                ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
                 return View(new Group { Name = "" });
             }
         }
@@ -142,17 +152,17 @@ namespace DotNetCoreSqlDb.Controllers
                 var students = _context.Student.OrderBy(s => s.Name).ToList();
                 if (students != null && students.Any())
                 {
-                    ViewBag.Students = new SelectList(students, "Id", "Name");
+                    ViewBag.Students = new SelectList(students, "ID", "Name");
                 }
                 else
                 {
-                    ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                    ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading students in Create POST action");
-                ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
             }
             
             return View(group);
@@ -181,17 +191,17 @@ namespace DotNetCoreSqlDb.Controllers
                 var students = _context.Student.OrderBy(s => s.Name).ToList();
                 if (students != null && students.Any())
                 {
-                    ViewBag.Students = new SelectList(students, "Id", "Name");
+                    ViewBag.Students = new SelectList(students, "ID", "Name");
                 }
                 else
                 {
-                    ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                    ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading students in Edit GET action");
-                ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
             }
             
             return View(group);
@@ -266,17 +276,17 @@ namespace DotNetCoreSqlDb.Controllers
                 var students = _context.Student.OrderBy(s => s.Name).ToList();
                 if (students != null && students.Any())
                 {
-                    ViewBag.Students = new SelectList(students, "Id", "Name");
+                    ViewBag.Students = new SelectList(students, "ID", "Name");
                 }
                 else
                 {
-                    ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                    ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading students in Edit POST action");
-                ViewBag.Students = new SelectList(new List<Student>(), "Id", "Name");
+                ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
             }
             
             return View(group);
