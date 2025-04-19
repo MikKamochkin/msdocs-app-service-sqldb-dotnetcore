@@ -33,6 +33,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LogoutPath = "/Login/Logout";       // Path to logout.
         options.AccessDeniedPath = "/Home/AccessDenied"; // Optional: path for denied access.
         options.ExpireTimeSpan = TimeSpan.FromHours(24); // Cookie expiration time.
+        options.SlidingExpiration = true; // After every valid request the cookie's lifetime is "slid" forward, once every 12 hours
     });
 
 // Add App Service logging
