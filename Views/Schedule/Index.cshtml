@@ -1,0 +1,60 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.Schedule>
+@{
+    ViewData["Title"] = "Schedules";
+}
+
+<div class="row no-gutters">
+    @if (User.IsInRole("admin"))
+    {
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-header">
+                <i class="hgi hgi-stroke hgi-croissant"></i>
+            </div>
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-dark d-flex icon-btn" title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Manage Groups">
+                    <i class="fas fa-users"></i>
+                </a>
+                <a href="@Url.Action("Index", "Schedule")" class="btn btn-success d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
+            </div>
+        </div>
+    }
+    <div class="col">  <!-- main content -->
+        <h2>Schedules</h2>
+        <a href="@Url.Action("Create")" class="btn btn-primary">
+                Create New Schedule
+        </a>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Group</th>
+                    <th>Duration</th>
+                    <th>Date/Time</th>
+                    <th>Status</th>
+                    
+                    
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach(var s in Model) {
+                <tr>
+                    <td>@s.Assignment?.Group?.Name</td>
+                    <td>@s.Duration</td>
+                    <td>@s.DateTime</td>
+                    <td>@s.Status</td>
+                    
+                    
+                    <td>
+                        @Html.ActionLink("Edit", "Edit", new { id = s.Id }, new { @class = "btn btn-sm btn-secondary" })
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -6,10 +6,15 @@ File open msdocstsl... NOT TSL file
 F1: Developer: Reload Window
 F1: Dev containers: Rebuild and Reopen container
 Wait for it to connect
+If error for: "The type or namespace name 'EntityFrameworkCore' does not exist in the namespace 'Microsoft' (are you missing an assembly reference?)"
+run: dotnet restore
+F1: Developer: Reload Window
 In bash Terminal: dotnet watch run --launch-profile http
 
+
+
 To update DB:
-inside the cotainer:`
+inside the cotainer:
 dotnet ef migrations add AddProductsTable
 dotnet ef database update
 

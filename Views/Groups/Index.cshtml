@@ -4,50 +4,91 @@
     ViewData["Title"] = "Groups List";
 }
 
-<h2>Groups List</h2>
+<div class="row no-gutters">
+    @* ——————— Sidebar Column ——————— *@
+    @if (User.IsInRole("admin"))
+    {
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-header">
+                <i class="hgi hgi-stroke hgi-croissant"></i>
+            </div>
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "StudentManagement")"
+                   class="btn btn-dark d-flex icon-btn mb-2"
+                   title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                
+                <a href="@Url.Action("Index", "Groups")"
+                   class="btn btn-success d-flex icon-btn"
+                   title="Manage Groups">
+                    <i class="fas fa-users"></i>
+                </a>
 
-<p>
-    <a href="@Url.Action("Create")" class="btn btn-primary">Create New Group</a>
-</p>
+                <a href="@Url.Action("Index","Schedule")"
+                    class="btn btn-dark d-flex icon-btn"
+                    title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Group Name</th>
-            <th>Students</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var group in Model)
-        {
-            <tr>
-                <td>@Html.DisplayFor(modelItem => group.Name)</td>
-                <td>
-                    @if (group.StudentGroupCompositions != null && group.StudentGroupCompositions.Any())
-                    {
-                        <ul class="list-unstyled">
-                            @foreach (var composition in group.StudentGroupCompositions)
+
+            </div>
+        </div>
+    }
+
+    @* ——————— Main Content Column ——————— *@
+    <div class="@(User.IsInRole("admin") ? "col-md-9" : "col-12")">
+        <h2>Groups List</h2>
+
+        <p>
+            <a href="@Url.Action("Create")" class="btn btn-primary">
+                Create New Group
+            </a>
+        </p>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Group Name</th>
+                    <th>Students</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var group in Model)
+                {
+                    <tr>
+                        <td>@group.Name</td>
+                        <td>
+                            @if (group.StudentGroupCompositions?.Any() ?? false)
                             {
-                                <li>
-                                    @Html.DisplayFor(m => composition.Student.Name)
-                                    @if (composition.UseMyBalance)
+                                <ul class="list-unstyled mb-0">
+                                    @foreach (var comp in group.StudentGroupCompositions)
                                     {
-                                        <span class="badge bg-info">Uses Balance</span>
+                                        <li>
+                                            @comp.Student.Name
+                                            @if (comp.UseMyBalance)
+                                            {
+                                                <span class="badge bg-info">Uses Balance</span>
+                                            }
+                                        </li>
                                     }
-                                </li>
+                                </ul>
                             }
-                        </ul>
-                    }
-                    else
-                    {
-                        <span class="text-muted">No students in group</span>
-                    }
-                </td>
-                <td>
-                    <a href="@Url.Action("Edit", new { id = group.Id })" class="btn btn-sm btn-primary">Edit</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+                            else
+                            {
+                                <span class="text-muted">No students in group</span>
+                            }
+                        </td>
+                        <td>
+                            <a href="@Url.Action("Edit", new { id = group.Id })"
+                               class="btn btn-sm btn-primary">
+                                Edit
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

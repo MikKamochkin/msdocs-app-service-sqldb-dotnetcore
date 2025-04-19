@@ -34,4 +34,30 @@ public static class DropdownOptions
         new SelectListItem { Text = "A", Value = "A" },
         new SelectListItem { Text = "S", Value = "S" }
     };
+
+    public static List<SelectListItem> PayUnitTypes => new List<SelectListItem>
+    {
+        new SelectListItem {Text = "RUB", Value = "RUB"},
+        new SelectListItem {Text = "CAD", Value = "CAD"},
+        new SelectListItem {Text = "EUR", Value = "EUR"},
+        new SelectListItem {Text = "USD", Value = "USD"}  
+    };
+
+    public static List<SelectListItem> ScheduleStatusTypes => new List<SelectListItem>
+    {
+        new SelectListItem { Text = "Planned", Value = "Planned" },
+        new SelectListItem { Text = "Happened", Value = "Happened" },
+        new SelectListItem { Text = "Cancelled", Value = "Cancelled" }
+    };
+
+    public static List<SelectListItem> LessonDurationTypes => new List<SelectListItem>
+    {
+        new SelectListItem { Text = "15 minutes", Value = "15" },
+        new SelectListItem { Text = "30 minutes", Value = "30" },
+        new SelectListItem { Text = "45 minutes", Value = "45" },
+        new SelectListItem { Text = "60 minutes", Value = "60" },
+        new SelectListItem { Text = "90 minutes", Value = "90" },
+        new SelectListItem { Text = "120 minutes", Value = "120" }
+    };
+
 }

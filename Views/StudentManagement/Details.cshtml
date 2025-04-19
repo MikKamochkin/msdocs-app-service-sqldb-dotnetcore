@@ -4,65 +4,99 @@
     ViewData["Title"] = "Student Details";
 }
 
-<h2>Student Details</h2>
+<div class="row no-gutters">
+    @if (User.IsInRole("admin"))
+    {
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-header">
+                <i class="hgi hgi-stroke hgi-croissant"></i>
+            </div>
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-success d-flex icon-btn" title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Manage Groups">
+                    <i class="fas fa-users"></i>
+                </a>
+                <a href="@Url.Action("Index", "Schedule")" class="btn btn-dark d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
+            </div>
+        </div>
+    }
+    <div class="col">
+        <h2>Student Details</h2>
 
-<div>
-    <h4>Student</h4>
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>Name</dt>
-        <dd>@Html.DisplayFor(model => model.Name)</dd>
-        <dt>Parent/Employer</dt>
-        <dd>@Html.DisplayFor(model => model.ParentOrEmployer)</dd>
-        <dt>Main Notes</dt>
-        <dd>@Html.DisplayFor(model => model.MainNotes)</dd>
-        <dt>Created Date</dt>
-        <dd>@Html.DisplayFor(model => model.CreatedDate)</dd>
-        <dt>Source</dt>
-        <dd>@Html.DisplayFor(model => model.Source)</dd>
-        <dt>Time Zone</dt>
-        <dd>@Html.DisplayFor(model => model.TimeZoneId)</dd>
-        @if(User.IsInRole("admin"))
+        <div>
+            <h4>Student</h4>
+            <hr />
+            <dl class="dl-horizontal">
+                <dt>Name</dt>
+                <dd>@Html.DisplayFor(model => model.Name)</dd>
+                <dt>Parent/Employer</dt>
+                <dd>@Html.DisplayFor(model => model.ParentOrEmployer)</dd>
+                <dt>Main Notes</dt>
+                <dd>@Html.DisplayFor(model => model.MainNotes)</dd>
+                <dt>Created Date</dt>
+                <dd>@Html.DisplayFor(model => model.CreatedDate)</dd>
+                <dt>Source</dt>
+                <dd>@Html.DisplayFor(model => model.Source)</dd>
+                <dt>Time Zone</dt>
+                <dd>@Html.DisplayFor(model => model.TimeZoneId)</dd>
+                @if(User.IsInRole("admin"))
+                {
+                    <dt>Accounting Group</dt>
+                    <dd>@Html.DisplayFor(model => model.AccountingGroup)</dd>
+                }
+            </dl>
+        </div>
+
+        <h4>Contact Information</h4>
+        @if(Model.Contacts != null && Model.Contacts.Any())
         {
-            <dt>Accounting Group</dt>
-            <dd>@Html.DisplayFor(model => model.AccountingGroup)</dd>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Value</th>
+                        <th>Invitation</th>
+                        <th>Emergency</th>
+                        <th>Money</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach(var contact in Model.Contacts)
+                    {
+                        <tr>
+                            <td>@Html.DisplayFor(m => contact.Type)</td>
+                            <td>@Html.DisplayFor(m => contact.Value)</td>
+                            <td>@(contact.Invitation ? "✔" : "")</td>
+                            <td>@(contact.Emergency ? "✔" : "")</td>
+                            <td>@(contact.Money ? "✔" : "")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         }
-    </dl>
-</div>
+        else
+        {
+            <p>No contact information available.</p>
+        }
 
-<h4>Contact Information</h4>
-@if(Model.Contacts != null && Model.Contacts.Any())
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Type</th>
-                <th>Value</th>
-                <th>Invitation</th>
-                <th>Emergency</th>
-                <th>Money</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach(var contact in Model.Contacts)
-            {
-                <tr>
-                    <td>@Html.DisplayFor(m => contact.Type)</td>
-                    <td>@Html.DisplayFor(m => contact.Value)</td>
-                    <td>@(contact.Invitation == true ? "✔" : "")</td>
-                    <td>@(contact.Emergency == true ? "✔" : "")</td>
-                    <td>@(contact.Money == true ? "✔" : "")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-else
-{
-    <p>No contact information available.</p>
-}
+        <div class="d-flex">
+            <a  
+                href='@Url.Action("Edit", new { id = Model.ID })'
+                class="btn btn-dark btn-lg d-flex icon-btn me-2"
+                title="Edit Student">
+                <i class="fa-solid fa-pencil"></i>
+            </a>
+            <a 
+                href='@Url.Action("Index")'
+                class="btn btn-dark btn-lg d-flex icon-btn"
+                title="Back to List">
+                <i class="fa-solid fa-list"></i>
+            </a>
+            </div>
 
-<div>
-    <a href="@Url.Action("Edit", new { id = Model.ID })">✏️</a> |
-    <a href="@Url.Action("Index")">Back to List</a>
+    </div>
 </div>

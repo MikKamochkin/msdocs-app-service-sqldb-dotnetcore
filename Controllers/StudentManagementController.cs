@@ -115,6 +115,17 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
             existingStudent.AccountingGroup = User.IsInRole("admin") ? updatedStudent.AccountingGroup : "S";
 
+            var personalGroup = await _context.Group
+                .Include(g => g.StudentGroupCompositions)
+                .Where(g => g.StudentGroupCompositions.Any(c => c.StudentId == id))
+                .ToListAsync();       // bring down candidates
+            var pg = personalGroup
+                .FirstOrDefault(g => g.StudentGroupCompositions.Count == 1);
+            if (pg != null)
+            {
+                pg.Name = updatedStudent.Name;
+            }
+
             // Synchronize the Contacts collection.
             if (updatedStudent.Contacts != null)
             {
@@ -190,30 +201,81 @@ namespace DotNetCoreSqlDb.Controllers
         // POST: Students/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")] Student student)
+        public async Task<IActionResult> Create(
+            [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")]
+            Student student)
         {
+            // set created date
             student.CreatedDate = DateTime.Now;
+
+            // non-admins get forced into group "S"
             if (!User.IsInRole("admin"))
             {
                 student.AccountingGroup = "S";
             }
+
+            // require at least one contact
             if (student.Contacts == null || !student.Contacts.Any())
             {
                 ModelState.AddModelError("", "Please add at least one contact.");
             }
+
             if (ModelState.IsValid)
             {
+                // 1) Save the new Student (and its Contacts)
                 student.ID = Guid.NewGuid();
                 _context.Add(student);
                 await _context.SaveChangesAsync();
+
+                // 2) Create a Group just for this student
+                var group = new Group
+                {
+                    Id   = Guid.NewGuid(),
+                    Name = student.Name
+                };
+                _context.Group.Add(group);
+                await _context.SaveChangesAsync();
+
+                // 3) Link the student into that group
+                var composition = new StudentGroupComposition
+                {
+                    Id           = Guid.NewGuid(),
+                    GroupId      = group.Id,
+                    StudentId    = student.ID,
+                    UseMyBalance = true      // or whatever default you prefer
+                };
+                _context.StudentGroupComposition.Add(composition);
+
+                // 4) Create a blank Assignments entry for the new group
+                var assignment = new Assignments
+                {
+                    Id                  = Guid.NewGuid(),
+                    GroupId             = group.Id,
+                    TeacherId           = null,            // now allowed as nullable
+                    StudentUnitCost     = 0f,
+                    StudentUnitType     = string.Empty,
+                    StudentUnitBalance  = 0f,
+                    StudentUnitDuration = 0f,
+                    TeacherPayForUnit   = 0f,
+                    TeacherPayUnitType  = 0f,
+                    IsActive            = false
+                };
+                _context.Assignments.Add(assignment);
+
+                // 5) Persist composition + assignment
+                await _context.SaveChangesAsync();
+
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
-            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+
+            // if we hit errors, repopulate the dropdowns and show the form again
+            ViewBag.ContactTypes         = DropdownOptions.ContactTypes;
+            ViewBag.SourceTypes          = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
+            ViewBag.Timezones            = TimeZoneMapping.GetTimeZones();
             return View(student);
         }
+
 
         // Delete actions commented out for Students...
 

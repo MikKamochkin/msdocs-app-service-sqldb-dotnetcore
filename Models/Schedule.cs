@@ -11,8 +11,8 @@ namespace DotNetCoreSqlDb.Models
 
         [ForeignKey("Assignment")]
         public Guid AssignmentId { get; set; }
-        public Assignments Assignment { get; set; }
-
+        public Assignments? Assignment { get; set; }
+        
         [DisplayName("DateTime")]
         [Required]
         public required DateTime DateTime { get; set; }

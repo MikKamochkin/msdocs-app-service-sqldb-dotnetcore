@@ -1,81 +1,77 @@
 @using System.Text.Json
-
 @model DotNetCoreSqlDb.Models.Group
 
 @{
     ViewData["Title"] = "Edit Group";
 }
 
-<h2>Edit Group</h2>
+<div class="row no-gutters">
+    @if (User.IsInRole("admin"))
+    {
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-header">
+                <i class="hgi hgi-stroke hgi-croissant"></i>
+            </div>
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-dark d-flex icon-btn" title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                <a href="@Url.Action("Index", "Groups")" class="btn btn-success d-flex icon-btn" title="Manage Groups">
+                    <i class="fas fa-users"></i>
+                </a>
+                <a href="@Url.Action("Index", "Schedule")" class="btn btn-dark d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
+            </div>
+        </div>
+    }
+    <div class="col">
+        <h2>Edit Group</h2>
 
-@using (Html.BeginForm())
-{
-    @Html.AntiForgeryToken()
-    @Html.HiddenFor(m => m.Id)
+        @using (Html.BeginForm())
+        {
+            @Html.AntiForgeryToken()
+            @Html.HiddenFor(m => m.Id)
 
-    <div class="form-horizontal">
-        <h4>Group</h4>
-        <hr />
-        <div class="form-group">
-            @Html.LabelFor(m => m.Name, htmlAttributes: new { @class = "control-label col-md-2" })
-            <div class="col-md-10">
-                @Html.EditorFor(m => m.Name, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+            <div class="form-horizontal">
+                <h4>Group</h4>
+                <hr />
+                <div class="form-group">
+                    @Html.LabelFor(m => m.Name, new { @class = "control-label col-md-2" })
+                    <div class="col-md-10">
+                        @Html.EditorFor(m => m.Name, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <h4>Students in Group</h4>
+                <input type="hidden" id="StudentIds" name="StudentIds" value="@string.Join(",", Model.StudentGroupCompositions.Select(c => c.StudentId))" />
+                <input type="hidden" id="UseMyBalanceValues" name="UseMyBalanceValues" value="@string.Join(",", Model.StudentGroupCompositions.Select(c => c.UseMyBalance.ToString().ToLower()))" />
+
+                <div id="studentCompositions"></div>
+
+                <button type="button" id="addStudentBtn" class="btn btn-secondary">Add Student</button>
+                <br /><br />
+
+                <div class="form-group">
+                    <div class="col-md-offset-2 col-md-10">
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">Cancel</a>
+                        <input type="submit" value="Save" class="btn btn-primary" />
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Modal for Adding a Student -->
+        <div class="modal fade" id="addStudentModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <!-- same modal content as Create -->
+                </div>
             </div>
         </div>
 
-        <h4>Students in Group</h4>
-        <!-- these two fields back the exact same Request.Form keys your POST action reads -->
-        <input type="hidden" id="StudentIds"       name="StudentIds"       value="@string.Join(",", Model.StudentGroupCompositions.Select(c=>c.StudentId))" />
-        <input type="hidden" id="UseMyBalanceValues" name="UseMyBalanceValues" 
-               value="@string.Join(",", Model.StudentGroupCompositions.Select(c=>c.UseMyBalance.ToString().ToLower()))" />
-
-        <div id="studentCompositions"></div>
-
-        <button type="button" id="addStudentBtn" class="btn btn-secondary">Add Student</button>
-        <br /><br />
-
-        <div class="form-group">
-            <div class="col-md-offset-2 col-md-10">
-                <a href="@Url.Action("Index")" class="btn btn-secondary">Cancel</a>
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </div>
     </div>
-}
-
-<!-- Modal for Adding a Student -->
-<div class="modal fade" id="addStudentModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Add Student to Group</h5>
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="studentSelect">Student</label>
-          <select id="studentSelect" class="form-control">
-            <option value="">Select a student…</option>
-            @foreach (var student in (SelectList)ViewBag.Students)
-            {
-                <option value="@student.Value">@student.Text</option>
-            }
-          </select>
-        </div>
-        <div class="form-group">
-          <div class="custom-control custom-checkbox">
-            <input type="checkbox" class="custom-control-input" id="useMyBalance" />
-            <label class="custom-control-label" for="useMyBalance">Use My Balance</label>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" id="saveStudentBtn" class="btn btn-primary">Add Student</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 @section Scripts {

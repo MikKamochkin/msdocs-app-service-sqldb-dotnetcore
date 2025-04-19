@@ -133,7 +133,7 @@ body {
 
 /* Footer styling */
 footer {
-  background-color: #f8f9fa;
+  background-color: #add6ff;
   text-align: center;
   padding: 15px;
 }
@@ -179,6 +179,16 @@ footer {
   text-decoration: underline;
 }
 
+.sidebar-content .icon-btn {
+  width: 3rem;       /* e.g. 48px */
+  height: 3rem;      /* same as width to keep it square */
+  padding-left: 0;        /* remove the default btn padding */
+  display: flex;     /* ensure flex centering still works */
+  justify-content: center;
+  align-items: center;
+}
+
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .login-container,
@@ -223,7 +233,7 @@ footer {
 
 /* Admin Sidebar Styles */
 .admin-sidebar {
-    background-color: #f8f9fa;
+    background-color: #add6ff;
     border-right: 1px solid #dee2e6;
     padding: 20px 0;
     min-height: calc(100vh - 150px);
@@ -233,9 +243,11 @@ footer {
 }
 
 .sidebar-header {
-    padding: 0 15px 15px 15px;
-    border-bottom: 1px solid #dee2e6;
+    padding-left: 20px;
+    padding-bottom: 15px;
+    border-bottom: 0px solid #dee2e6;
     margin-bottom: 15px;
+    display: flex;
 }
 
 .sidebar-header h4 {
@@ -244,19 +256,23 @@ footer {
     font-weight: 600;
 }
 
+.sidebar-header .hgi-croissant {
+  font-size: 2.5rem;           /* adjust as needed (e.g. 2rem, 3rem) */
+  line-height: 1;              /* prevent extra vertical spacing */
+}
+
 .sidebar-content {
     padding: 0 15px;
 }
 
 .sidebar-content .btn {
     margin-bottom: 10px;
-    text-align: left;
-    padding: 10px 15px;
+    text-align: center;
+    padding: 15px 15px;
+    margin-right: 0px;
 }
 
-.sidebar-content .btn i {
-    margin-right: 8px;
-}
+
 
 /* Responsive adjustments for the sidebar */
 @media (max-width: 768px) {
