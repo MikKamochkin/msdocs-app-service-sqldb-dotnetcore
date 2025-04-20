@@ -6,7 +6,10 @@ using Microsoft.Extensions.Logging;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace DotNetCoreSqlDb.Controllers
@@ -25,108 +28,115 @@ namespace DotNetCoreSqlDb.Controllers
             _logger  = logger;
         }
 
-        // GET: Schedule
-        public async Task<IActionResult> Index()
+        // GET: Schedule/Manage
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> Manage(Guid? teacherId, DateTime? date)
         {
-            var schedules = await _context.Schedule
-                .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Group)
-                .OrderBy(s => s.DateTime)
+            // 1) Teachers dropdown
+            var teachers = await _context.Teacher
+                .Select(t => new { t.Id, t.Name })
+                .OrderBy(t => t.Name)
                 .ToListAsync();
-            return View(schedules);
-        }
+            ViewBag.Teachers = new SelectList(teachers, "Id", "Name", teacherId);
 
-        // GET: Schedule/Create
-        public IActionResult Create()
-        {
-            PopulateAssignmentsDropDown();
-            ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes;
-            ViewBag.ScheduleStatusTypes = DropdownOptions.ScheduleStatusTypes;
-            var model = new Schedule {
-                DateTime = DateTime.Now,
-                Status   = string.Empty,
-                Duration = 0
-            };
-            return View(model);
-        }
+            // 2) Selected date (default today)
+            var selectedDate = (date ?? DateTime.Today).Date;
+            ViewBag.SelectedDate = selectedDate.ToString("yyyy-MM-dd");
 
-        // POST: Schedule/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(
-            [Bind("AssignmentId,DateTime,Status,Duration")] Schedule schedule)
-        {
-            _logger.LogInformation("Schedule/Create POST called; valid? {Valid}", ModelState.IsValid);
-
-            if (!ModelState.IsValid)
-            {
-                // Log out validation errors
-                var errors = ModelState
-                    .SelectMany(kvp => kvp.Value?.Errors
-                        .Select(err => $"{kvp.Key}: {err.ErrorMessage}")
-                    ?? Enumerable.Empty<string>())
-                    .ToList();
-                _logger.LogWarning("Create validation failed: {Errors}", string.Join("; ", errors));
-
-                PopulateAssignmentsDropDown(schedule.AssignmentId);
-                return View(schedule);
-            }
-
-            schedule.Id = Guid.NewGuid();
-            _context.Add(schedule);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        // GET: Schedule/Edit/{id}
-        public async Task<IActionResult> Edit(Guid? id)
-        {
-            if (id == null) return NotFound();
-            var schedule = await _context.Schedule.FindAsync(id);
-            if (schedule == null) return NotFound();
-            ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes;
-            ViewBag.ScheduleStatusTypes = DropdownOptions.ScheduleStatusTypes;
-            PopulateAssignmentsDropDown(schedule.AssignmentId);
-            return View(schedule);
-        }
-
-        // POST: Schedule/Edit/{id}
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(
-            Guid id,
-            [Bind("Id,AssignmentId,DateTime,Status,Duration")] Schedule schedule)
-        {
-            if (id != schedule.Id) return NotFound();
-
-            if (!ModelState.IsValid)
-            {
-                PopulateAssignmentsDropDown(schedule.AssignmentId);
-                return View(schedule);
-            }
-
-            try
-            {
-                _context.Update(schedule);
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Schedule.Any(e => e.Id == schedule.Id))
-                    return NotFound();
-                throw;
-            }
-            return RedirectToAction(nameof(Index));
-        }
-
-        private void PopulateAssignmentsDropDown(Guid? selectedId = null)
-        {
-            var list = _context.Assignments
-                .Include(a => a.Group)
-                .Select(a => new { a.Id, Display = a.Group.Name })
-                .OrderBy(x => x.Display)
+            // 3) 15‑min time slots
+            ViewBag.Times = Enumerable
+                .Range(0, 24 * 4)
+                .Select(i => TimeSpan.FromMinutes(i * 15))
+                .Select(ts => new SelectListItem {
+                    Value = ts.ToString(@"hh\:mm"),
+                    Text  = ts.ToString(@"hh\:mm")
+                })
                 .ToList();
-            ViewBag.Assignments = new SelectList(list, "Id", "Display", selectedId);
+
+            // 4) Status dropdown
+            ViewBag.Statuses = DropdownOptions.ScheduleStatusTypes;
+
+            // 5) Student‑groups for this teacher
+            var groupItems = new List<SelectListItem>();
+            if (teacherId.HasValue)
+            {
+                groupItems = await _context.Assignments
+                    .Include(a => a.Group)
+                    .Where(a => a.TeacherId == teacherId)
+                    .Select(a => new SelectListItem {
+                        Value = a.Id.ToString(),
+                        Text  = a.Group.Name
+                    })
+                    .OrderBy(x => x.Text)
+                    .ToListAsync();
+            }
+            ViewBag.Groups = groupItems;
+
+            // 6) Load existing schedules for teacher + date
+            var existing = new List<Schedule>();
+            if (teacherId.HasValue)
+            {
+                existing = await _context.Schedule
+                    .Include(s => s.Assignment)
+                        .ThenInclude(a => a.Group)
+                    .Where(s =>
+                        s.Assignment.TeacherId == teacherId
+                        && s.DateTime.Date        == selectedDate
+                    )
+                    .ToListAsync();
+            }
+
+            // 7) Flatten into cycle‑free JSON, including the group’s name
+            var flat = existing
+                .Select(r => new {
+                    r.Id,
+                    r.AssignmentId,
+                    DateTime  = r.DateTime.ToString("o"),
+                    r.Status,
+                    r.Duration,
+                    GroupName = r.Assignment.Group.Name
+                })
+                .ToList();
+
+            ViewBag.ExistingJson = JsonSerializer.Serialize(
+                flat,
+                new JsonSerializerOptions {
+                    ReferenceHandler = ReferenceHandler.IgnoreCycles
+                }
+            );
+
+            return View(existing);
+        }
+
+        // POST: Schedule/Manage
+        [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> Manage(
+            Guid teacherId,
+            DateTime selectedDate,
+            List<Schedule> schedules)
+        {
+            // 1) Upsert each posted row
+            foreach (var row in schedules)
+            {
+                if (row.Id == Guid.Empty)
+                {
+                    row.Id = Guid.NewGuid();
+                    _context.Schedule.Add(row);
+                }
+                else
+                {
+                    _context.Schedule.Update(row);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // 2) Redirect back to the same teacher+date
+            return RedirectToAction(nameof(Manage), new {
+                teacherId,
+                date = selectedDate.ToString("yyyy-MM-dd")
+            });
         }
     }
 }

@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>4a92d050-dcd1-4646-a1de-106ec04c1f02</UserSecretsId>
+    <RazorCompileOnBuild>true</RazorCompileOnBuild>
+    <RazorCompileOnPublish>true</RazorCompileOnPublish>
   </PropertyGroup>
 
   <ItemGroup>

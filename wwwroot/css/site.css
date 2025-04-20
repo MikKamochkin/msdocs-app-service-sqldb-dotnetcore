@@ -179,6 +179,15 @@ footer {
   text-decoration: underline;
 }
 
+.icon-btn {
+  width: 3rem !important;       /* same as sidebar */
+  height: 3rem !important;      /* same as sidebar */
+  padding: 0 !important;        /* remove Bootstrap’s default padding */
+  display: flex !important;     /* enable flex centering */
+  justify-content: center !important;
+  align-items: center !important;
+}
+
 .sidebar-content .icon-btn {
   width: 3rem;       /* e.g. 48px */
   height: 3rem;      /* same as width to keep it square */
@@ -187,7 +196,22 @@ footer {
   justify-content: center;
   align-items: center;
 }
+/* container for details‑view icon buttons */
+.details-buttons {
+  display: flex;            /* row layout */
+  flex-wrap: wrap;          /* wrap if viewport is narrow */
+  gap: 0.5rem;              /* spacing between buttons */
+  align-items: center;      /* vertical align */
+  margin-top: 1rem;         /* optional spacing from content above */
+}
 
+/* force details-buttons .icon-btn to be a true flex square */
+.details-buttons .icon-btn {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;       /* strip out any leftover btn padding */
+}
 
 /* Responsive adjustments */
 @media (max-width: 768px) {

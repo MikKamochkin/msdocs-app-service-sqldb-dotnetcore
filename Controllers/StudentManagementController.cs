@@ -127,7 +127,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             // Synchronize the Contacts collection.
-            if (updatedStudent.Contacts != null)
+            if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
             {
                 // Process each posted contact.
                 foreach (var contact in updatedStudent.Contacts)

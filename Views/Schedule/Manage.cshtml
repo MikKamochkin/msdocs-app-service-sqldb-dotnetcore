@@ -1,0 +1,176 @@
+@model List<DotNetCoreSqlDb.Models.Schedule>
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"]   = "Manage Schedule";
+    var existingJson    = ViewBag.ExistingJson as string ?? "[]";
+}
+
+<h2>Manage Schedule</h2>
+
+<form asp-action="Manage" method="post">
+    <div class="form-inline mb-3">
+        <label class="mr-2">Teacher</label>
+        <select name="teacherId"
+                class="form-control mr-3"
+                asp-items="(SelectList)ViewBag.Teachers"
+                onchange="this.form.submit()">
+            <option value="">— select —</option>
+        </select>
+
+        <button type="button"
+                class="btn btn-outline-secondary mr-1"
+                onclick="shiftDay(-1)">← Prev</button>
+
+        <input type="date"
+               name="selectedDate"
+               value="@ViewBag.SelectedDate"
+               class="form-control mr-1"
+               onchange="this.form.submit()" />
+
+        <button type="button"
+                class="btn btn-outline-secondary"
+                onclick="shiftDay(+1)">Next →</button>
+    </div>
+
+    <hr />
+
+
+
+    <table class="table table-bordered" id="entriesTable">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Student</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div id="hiddenRows"></div>
+    
+    <button type="submit" class="btn btn-success">Save All</button>
+        <div class="form-inline mb-2"></div>
+            <label class="mr-2">Time</label>
+            <select id="timeSelect"
+                class="form-control mr-3"
+                asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
+
+            <label class="mr-2">Student</label>
+            <select id="groupSelect"
+                class="form-control mr-3"
+                asp-items="(IEnumerable<SelectListItem>)ViewBag.Groups"></select>
+
+            <label class="mr-2">Status</label>
+            <select id="statusSelect"
+                class="form-control mr-3"
+                asp-items="(IEnumerable<SelectListItem>)ViewBag.Statuses"></select>
+
+            <button type="button"
+                class="btn btn-primary"
+                onclick="addOrUpdateEntry()">Save Entry</button>
+        </div>
+</form>
+
+@section Scripts {
+<script>
+    function shiftDay(delta) {
+        var input = document.querySelector('input[name=selectedDate]');
+        var d     = new Date(input.value);
+        d.setDate(d.getDate() + delta);
+        input.value = d.toISOString().split('T')[0];
+        input.form.submit();
+    }
+
+    // --- bootstrap the existing rows from JSON (flat, no cycles) ---
+    const existing = @Html.Raw(existingJson);
+
+    let rows         = existing.map(r => ({
+        Id:        r.Id,
+        AssignmentId: r.AssignmentId,
+        DateTime:  r.DateTime,
+        Status:    r.Status,
+        Duration:  r.Duration,
+        GroupName: r.GroupName
+    }));
+    let editingIndex = -1;
+
+    $(function(){
+        renderTable();
+    });
+
+    function renderTable() {
+        const tbody = $('#entriesTable tbody').empty();
+        $('#hiddenRows').empty();
+
+        rows.forEach((r,i) => {
+            const dt   = new Date(r.DateTime),
+                  t    = dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),
+                  cls  = i === editingIndex ? 'table-info' : '';
+
+            tbody.append(`
+                <tr class="${cls}" onclick="editRow(${i})">
+                  <td>${t}</td>
+                  <td>${r.GroupName}</td>
+                  <td>${r.Status}</td>
+                </tr>
+            `);
+
+            // hidden inputs for the form post
+            ['Id','AssignmentId','DateTime','Status','Duration']
+              .forEach(prop => {
+                $('<input>').attr({
+                  type:  'hidden',
+                  name:  `schedules[${i}].${prop}`,
+                  value: r[prop]
+                }).appendTo('#hiddenRows');
+              });
+        });
+    }
+
+    function addOrUpdateEntry() {
+        const t  = $('#timeSelect').val(),
+              g  = $('#groupSelect').val(),
+              s  = $('#statusSelect').val(),
+              d0 = $('input[name=selectedDate]').val();
+
+        if (!t || !g || !s) {
+            return alert('Time, Student & Status are required.');
+        }
+
+        const iso = new Date(d0 + 'T' + t + ':00').toISOString(),
+              name = $('#groupSelect option:selected').text();
+
+        const entry = {
+            Id:           '',
+            AssignmentId: g,
+            DateTime:     iso,
+            Status:       s,
+            Duration:     0,
+            GroupName:    name
+        };
+
+        if (editingIndex >= 0) {
+            rows[editingIndex] = entry;
+            editingIndex = -1;
+        } else {
+            rows.push(entry);
+        }
+
+        renderTable();
+    }
+
+    function editRow(i) {
+        editingIndex = i;
+        const r = rows[i],
+              dt = new Date(r.DateTime),
+              hh = dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+        $('#timeSelect').val(hh);
+        $('#groupSelect').val(r.AssignmentId);
+        $('#statusSelect').val(r.Status);
+        renderTable();
+    }
+</script>
+}

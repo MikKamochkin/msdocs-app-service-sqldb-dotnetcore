@@ -47,7 +47,8 @@ public static class DropdownOptions
     {
         new SelectListItem { Text = "Planned", Value = "Planned" },
         new SelectListItem { Text = "Happened", Value = "Happened" },
-        new SelectListItem { Text = "Cancelled", Value = "Cancelled" }
+        new SelectListItem { Text = "Cancelled", Value = "Cancelled" },
+        new SelectListItem { Text = "Deleted", Value = "Deleted" }
     };
 
     public static List<SelectListItem> LessonDurationTypes => new List<SelectListItem>

@@ -101,8 +101,43 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @* existing contact rows *@
+                        @if (Model.Contacts != null && Model.Contacts.Any())
+                        {
+                            for (int i = 0; i < Model.Contacts.Count; i++)
+                            {
+                                var c = Model.Contacts.ElementAt(i);
+                                <tr class="contact-summary" data-index="@i">
+                                    <td>
+                                        <span class="contact-type">
+                                            @(DropdownOptions.ContactTypes.FirstOrDefault(x => x.Value == c.Type)?.Text)
+                                        </span>
+                                        @Html.Hidden($"Contacts[{i}].Type", c.Type)
+                                    </td>
+                                    <td>
+                                        <span class="contact-value">@c.Value</span>
+                                        @Html.Hidden($"Contacts[{i}].Value", c.Value)
+                                    </td>
+                                    <td>
+                                        <span class="contact-invitation">@(c.Invitation ? "✔" : "")</span>
+                                        @Html.Hidden($"Contacts[{i}].Invitation", c.Invitation.ToString().ToLower())
+                                    </td>
+                                    <td>
+                                        <span class="contact-emergency">@(c.Emergency ? "✔" : "")</span>
+                                        @Html.Hidden($"Contacts[{i}].Emergency", c.Emergency.ToString().ToLower())
+                                    </td>
+                                    <td>
+                                        <span class="contact-money">@(c.Money ? "✔" : "")</span>
+                                        @Html.Hidden($"Contacts[{i}].Money", c.Money.ToString().ToLower())
+                                    </td>
+                                    @* contact ID so we know which ones to update *@
+                                    @Html.Hidden($"Contacts[{i}].ID", c.ID)
+                                    @* tell the model‐binder this index exists *@
+                                    <input type="hidden" name="Contacts.Index" value="@i" />
+                                </tr>
+                            }
+                        }
                     </tbody>
+
                 </table>
                 <button type="button" id="addContactBtn" class="btn btn-secondary">Add Contact</button>
                 <br /><br />
