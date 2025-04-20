@@ -2,175 +2,241 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 
 @{
-    ViewData["Title"]   = "Manage Schedule";
-    var existingJson    = ViewBag.ExistingJson as string ?? "[]";
+    ViewData["Title"] = "Manage Schedule";
+    var existingJson = ViewBag.ExistingJson as string ?? "[]";
 }
 
-<h2>Manage Schedule</h2>
+<div class="row no-gutters">
+  @if (User.IsInRole("admin"))
+    {
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-header">
+                <i class="hgi hgi-stroke hgi-croissant"></i>
+            </div>
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-dark d-flex icon-btn" title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Manage Groups">
+                    <i class="fas fa-users"></i>
+                </a>
+                <a href="@Url.Action("Manage", "Schedule")" class="btn btn-success d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
+            </div>
+        </div>
+    }
+  <div class="col">
+  <h2>Manage Schedule</h2>
 
-<form asp-action="Manage" method="post">
+  <form asp-action="Manage" method="post">
     <div class="form-inline mb-3">
-        <label class="mr-2">Teacher</label>
-        <select name="teacherId"
-                class="form-control mr-3"
-                asp-items="(SelectList)ViewBag.Teachers"
-                onchange="this.form.submit()">
-            <option value="">— select —</option>
-        </select>
+      <label class="mr-2">Teacher</label>
+      <select name="teacherId"
+              class="form-control mr-3"
+              asp-items="(SelectList)ViewBag.Teachers"
+              onchange="this.form.submit()">
+        <option value="">— select —</option>
+      </select>
 
-        <button type="button"
-                class="btn btn-outline-secondary mr-1"
-                onclick="shiftDay(-1)">← Prev</button>
+      <button type="button"
+              class="btn btn-outline-secondary mr-1"
+              onclick="shiftDay(-1)">← Prev</button>
 
-        <input type="date"
-               name="selectedDate"
-               value="@ViewBag.SelectedDate"
-               class="form-control mr-1"
-               onchange="this.form.submit()" />
+      <input type="date"
+            name="selectedDate"
+            value="@ViewBag.SelectedDate"
+            class="form-control mr-1"
+            onchange="this.form.submit()" />
 
-        <button type="button"
-                class="btn btn-outline-secondary"
-                onclick="shiftDay(+1)">Next →</button>
+      <button type="button"
+              class="btn btn-outline-secondary"
+              onclick="shiftDay(+1)">Next →</button>
     </div>
 
     <hr />
 
+    <div class="form-inline mb-2">
+      <label class="mr-2">Time</label>
+      <select id="timeSelect"
+              class="form-control mr-3"
+              asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
 
+      <label class="mr-2">Student</label>
+      <select id="groupSelect"
+              class="form-control mr-3"
+              asp-items="(IEnumerable<SelectListItem>)ViewBag.Groups"></select>
+
+      <label class="mr-2">Status</label>
+      <select id="statusSelect"
+              class="form-control mr-3"
+              asp-items="(IEnumerable<SelectListItem>)ViewBag.Statuses"></select>
+
+      <label class="mr-2">Duration</label>               <!-- new -->
+      <select id="durationSelect"                         
+              class="form-control mr-3"
+              asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonDurationTypes"></select> <!-- new -->
+
+      <button type="button"
+              class="btn btn-primary"
+              onclick="addOrUpdateEntry()">Save Entry</button>
+    </div>
 
     <table class="table table-bordered" id="entriesTable">
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Student</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Student</th>
+          <th>Status</th>
+          <th>Duration</th>     <!-- new -->
+          <th>🗑️</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
     </table>
 
     <div id="hiddenRows"></div>
-    
     <button type="submit" class="btn btn-success">Save All</button>
-        <div class="form-inline mb-2"></div>
-            <label class="mr-2">Time</label>
-            <select id="timeSelect"
-                class="form-control mr-3"
-                asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
-
-            <label class="mr-2">Student</label>
-            <select id="groupSelect"
-                class="form-control mr-3"
-                asp-items="(IEnumerable<SelectListItem>)ViewBag.Groups"></select>
-
-            <label class="mr-2">Status</label>
-            <select id="statusSelect"
-                class="form-control mr-3"
-                asp-items="(IEnumerable<SelectListItem>)ViewBag.Statuses"></select>
-
-            <button type="button"
-                class="btn btn-primary"
-                onclick="addOrUpdateEntry()">Save Entry</button>
-        </div>
-</form>
-
+  </form>
+  </div>
+</div>
 @section Scripts {
 <script>
-    function shiftDay(delta) {
-        var input = document.querySelector('input[name=selectedDate]');
-        var d     = new Date(input.value);
-        d.setDate(d.getDate() + delta);
-        input.value = d.toISOString().split('T')[0];
-        input.form.submit();
-    }
+  function shiftDay(delta) {
+    const input = document.querySelector('input[name=selectedDate]');
+    const d     = new Date(input.value);
+    d.setDate(d.getDate() + delta);
+    input.value = d.toISOString().slice(0,10);
+    input.form.submit();
+  }
 
-    // --- bootstrap the existing rows from JSON (flat, no cycles) ---
-    const existing = @Html.Raw(existingJson);
+  const existing = @Html.Raw(existingJson);
+  let rows = existing.map(r => ({
+    Id:           r.Id,
+    AssignmentId: r.AssignmentId,
+    GroupId:      r.GroupId,
+    DateTime:     r.DateTime,
+    Status:       r.Status,
+    Duration:     r.Duration,   // carry through existing duration
+    GroupName:    r.GroupName,
+    deleted:      false
+  }));
+  let editingRow = null;
 
-    let rows         = existing.map(r => ({
-        Id:        r.Id,
-        AssignmentId: r.AssignmentId,
-        DateTime:  r.DateTime,
-        Status:    r.Status,
-        Duration:  r.Duration,
-        GroupName: r.GroupName
-    }));
-    let editingIndex = -1;
+  $(function(){ renderTable(); });
 
-    $(function(){
-        renderTable();
+  function renderTable() {
+    rows.sort((a,b) => new Date(a.DateTime) - new Date(b.DateTime));
+
+    const tbody = $('#entriesTable tbody').empty();
+    $('#hiddenRows').empty();
+
+    let schedIndex = 0;
+    rows.forEach((r,i) => {
+      const dt  = new Date(r.DateTime),
+            hh  = dt.getHours().toString().padStart(2,'0'),
+            mm  = dt.getMinutes().toString().padStart(2,'0'),
+            t   = hh + ':' + mm,
+            cls = r.deleted
+                  ? 'table-danger'
+                  : (r === editingRow ? 'table-info' : '');
+
+      tbody.append(`
+        <tr class="${cls}">
+          <td onclick="editRow(${i})">${t}</td>
+          <td onclick="editRow(${i})">${r.GroupName}</td>
+          <td onclick="editRow(${i})">${r.Status}</td>
+          <td onclick="editRow(${i})">${r.Duration}</td>    <!-- new -->
+          <td class="text-center">
+            ${r.deleted
+              ? `<button class="btn btn-sm btn-secondary" onclick="undoDelete(${i})">⟲</button>`
+              : `<button class="btn btn-sm btn-danger" onclick="deleteRow(${i})">×</button>`}
+          </td>
+        </tr>
+      `);
+
+      if (!r.deleted) {
+        ['Id','AssignmentId','DateTime','Status','Duration']
+          .forEach(prop => {
+            $('<input>').attr({
+              type:  'hidden',
+              name:  `schedules[${schedIndex}].${prop}`,
+              value: r[prop]
+            }).appendTo('#hiddenRows');
+          });
+        schedIndex++;
+      }
+
+      if (r.deleted && r.Id) {
+        $('<input>').attr({
+          type: 'hidden',
+          name: 'toDelete',
+          value: r.Id
+        }).appendTo('#hiddenRows');
+      }
     });
+  }
 
-    function renderTable() {
-        const tbody = $('#entriesTable tbody').empty();
-        $('#hiddenRows').empty();
+  function addOrUpdateEntry() {
+    const t   = $('#timeSelect').val(),
+          g   = $('#groupSelect').val(),
+          s   = $('#statusSelect').val(),
+          d0  = $('input[name=selectedDate]').val(),
+          dur = $('#durationSelect').val();
+    if (!t||!g||!s||!dur) return alert('All fields are required.');
 
-        rows.forEach((r,i) => {
-            const dt   = new Date(r.DateTime),
-                  t    = dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),
-                  cls  = i === editingIndex ? 'table-info' : '';
-
-            tbody.append(`
-                <tr class="${cls}" onclick="editRow(${i})">
-                  <td>${t}</td>
-                  <td>${r.GroupName}</td>
-                  <td>${r.Status}</td>
-                </tr>
-            `);
-
-            // hidden inputs for the form post
-            ['Id','AssignmentId','DateTime','Status','Duration']
-              .forEach(prop => {
-                $('<input>').attr({
-                  type:  'hidden',
-                  name:  `schedules[${i}].${prop}`,
-                  value: r[prop]
-                }).appendTo('#hiddenRows');
-              });
-        });
-    }
-
-    function addOrUpdateEntry() {
-        const t  = $('#timeSelect').val(),
-              g  = $('#groupSelect').val(),
-              s  = $('#statusSelect').val(),
-              d0 = $('input[name=selectedDate]').val();
-
-        if (!t || !g || !s) {
-            return alert('Time, Student & Status are required.');
-        }
-
-        const iso = new Date(d0 + 'T' + t + ':00').toISOString(),
-              name = $('#groupSelect option:selected').text();
-
-        const entry = {
-            Id:           '',
+    const id      = editingRow ? editingRow.Id : '',
+          localDt = d0 + 'T' + t + ':00',
+          name    = $('#groupSelect option:selected').text(),
+          entry   = {
+            Id:           id,
             AssignmentId: g,
-            DateTime:     iso,
+            GroupId:      g,
+            DateTime:     localDt,
             Status:       s,
-            Duration:     0,
-            GroupName:    name
-        };
+            Duration:     parseInt(dur),   // new
+            GroupName:    name,
+            deleted:      false
+          };
 
-        if (editingIndex >= 0) {
-            rows[editingIndex] = entry;
-            editingIndex = -1;
-        } else {
-            rows.push(entry);
-        }
-
-        renderTable();
+    if (editingRow) {
+      const idx = rows.indexOf(editingRow);
+      if (idx > -1) rows[idx] = entry;
+      editingRow = null;
+    } else {
+      rows.push(entry);
     }
 
-    function editRow(i) {
-        editingIndex = i;
-        const r = rows[i],
-              dt = new Date(r.DateTime),
-              hh = dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    renderTable();
+  }
 
-        $('#timeSelect').val(hh);
-        $('#groupSelect').val(r.AssignmentId);
-        $('#statusSelect').val(r.Status);
-        renderTable();
-    }
+  function editRow(i) {
+    if (rows[i].deleted) return;
+    editingRow = rows[i];
+
+    const r  = rows[i],
+          dt = new Date(r.DateTime),
+          hh = dt.getHours().toString().padStart(2,'0'),
+          mm = dt.getMinutes().toString().padStart(2,'0'),
+          t  = hh + ':' + mm;
+
+    $('#timeSelect').val(t);
+    $('#groupSelect').val(r.AssignmentId);
+    $('#statusSelect').val(r.Status);
+    $('#durationSelect').val(r.Duration);   // new
+
+    renderTable();
+  }
+
+  function deleteRow(i) {
+    if (rows[i] === editingRow) editingRow = null;
+    rows[i].deleted = true;
+    renderTable();
+  }
+
+  function undoDelete(i) {
+    rows[i].deleted = false;
+    renderTable();
+  }
 </script>
 }

@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
 using System;
@@ -18,18 +17,13 @@ namespace DotNetCoreSqlDb.Controllers
     public class ScheduleController : Controller
     {
         private readonly MyDatabaseContext _context;
-        private readonly ILogger<ScheduleController> _logger;
 
-        public ScheduleController(
-            MyDatabaseContext context,
-            ILogger<ScheduleController> logger)
+        public ScheduleController(MyDatabaseContext context)
         {
             _context = context;
-            _logger  = logger;
         }
 
         // GET: Schedule/Manage
-        [Authorize(Roles = "admin")]
         public async Task<IActionResult> Manage(Guid? teacherId, DateTime? date)
         {
             // 1) Teachers dropdown
@@ -39,13 +33,12 @@ namespace DotNetCoreSqlDb.Controllers
                 .ToListAsync();
             ViewBag.Teachers = new SelectList(teachers, "Id", "Name", teacherId);
 
-            // 2) Selected date (default today)
+            // 2) Selected date (default = today)
             var selectedDate = (date ?? DateTime.Today).Date;
             ViewBag.SelectedDate = selectedDate.ToString("yyyy-MM-dd");
 
-            // 3) 15‑min time slots
-            ViewBag.Times = Enumerable
-                .Range(0, 24 * 4)
+            // 3) Build 15‑minute time slots
+            ViewBag.Times = Enumerable.Range(0, 24 * 4)
                 .Select(i => TimeSpan.FromMinutes(i * 15))
                 .Select(ts => new SelectListItem {
                     Value = ts.ToString(@"hh\:mm"),
@@ -56,67 +49,94 @@ namespace DotNetCoreSqlDb.Controllers
             // 4) Status dropdown
             ViewBag.Statuses = DropdownOptions.ScheduleStatusTypes;
 
-            // 5) Student‑groups for this teacher
-            var groupItems = new List<SelectListItem>();
+            // 4.1) **Duration dropdown** (new)
+            ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes;
+
+            // 5) Groups (i.e. students) for that teacher
+            List<SelectListItem> groupItems = new();
             if (teacherId.HasValue)
             {
-                groupItems = await _context.Assignments
-                    .Include(a => a.Group)
+                var assignments = await _context.Assignments
                     .Where(a => a.TeacherId == teacherId)
+                    .Select(a => new {
+                        a.Id,
+                        a.GroupId,
+                        GroupName = a.Group!.Name
+                    })
+                    .OrderBy(x => x.GroupName)
+                    .ToListAsync();
+
+                groupItems = assignments
+                    .GroupBy(x => x.GroupId)
+                    .Select(g => g.First())
                     .Select(a => new SelectListItem {
                         Value = a.Id.ToString(),
-                        Text  = a.Group.Name
+                        Text  = a.GroupName
                     })
                     .OrderBy(x => x.Text)
-                    .ToListAsync();
+                    .ToList();
             }
             ViewBag.Groups = groupItems;
 
-            // 6) Load existing schedules for teacher + date
+            // 6) Load existing schedule entries for that teacher + date
             var existing = new List<Schedule>();
             if (teacherId.HasValue)
             {
                 existing = await _context.Schedule
-                    .Include(s => s.Assignment)
-                        .ThenInclude(a => a.Group)
+                    .Include(s => s.Assignment!)
+                        .ThenInclude(a => a.Group!)
                     .Where(s =>
-                        s.Assignment.TeacherId == teacherId
-                        && s.DateTime.Date        == selectedDate
+                        s.Assignment!.TeacherId == teacherId &&
+                        s.DateTime.Date             == selectedDate
                     )
+                    .OrderBy(s => s.DateTime)
                     .ToListAsync();
             }
 
-            // 7) Flatten into cycle‑free JSON, including the group’s name
-            var flat = existing
-                .Select(r => new {
-                    r.Id,
-                    r.AssignmentId,
-                    DateTime  = r.DateTime.ToString("o"),
-                    r.Status,
-                    r.Duration,
-                    GroupName = r.Assignment.Group.Name
-                })
-                .ToList();
+            // Flatten into JSON payload with group name & duration
+            var flat = existing.Select(r => new {
+                r.Id,
+                r.AssignmentId,
+                DateTime  = r.DateTime.ToString("o"),
+                r.Status,
+                r.Duration,
+                GroupName = r.Assignment!.Group!.Name
+            }).ToList();
 
-            ViewBag.ExistingJson = JsonSerializer.Serialize(
-                flat,
-                new JsonSerializerOptions {
-                    ReferenceHandler = ReferenceHandler.IgnoreCycles
-                }
-            );
+            ViewBag.ExistingJson = JsonSerializer.Serialize(flat, new JsonSerializerOptions {
+                ReferenceHandler = ReferenceHandler.IgnoreCycles
+            });
 
             return View(existing);
         }
 
         // POST: Schedule/Manage
         [HttpPost, ValidateAntiForgeryToken]
-        [Authorize(Roles = "admin")]
         public async Task<IActionResult> Manage(
             Guid teacherId,
             DateTime selectedDate,
-            List<Schedule> schedules)
+            List<Schedule> schedules,
+            List<Guid>? toDelete)
         {
-            // 1) Upsert each posted row
+            // 1) remove any flagged-for-deletion rows
+            if (toDelete != null)
+            {
+                foreach (var id in toDelete)
+                {
+                    var s = await _context.Schedule.FindAsync(id);
+                    if (s != null)
+                        _context.Schedule.Remove(s);
+                }
+            }
+
+            foreach (var row in schedules)
+            {
+                if (row.DateTime.Kind == DateTimeKind.Utc)
+                {
+                    row.DateTime = row.DateTime.ToLocalTime();
+                }
+            }
+            // 2) upsert the rest
             foreach (var row in schedules)
             {
                 if (row.Id == Guid.Empty)
@@ -132,7 +152,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             await _context.SaveChangesAsync();
 
-            // 2) Redirect back to the same teacher+date
+            // redirect back to the same teacher/date
             return RedirectToAction(nameof(Manage), new {
                 teacherId,
                 date = selectedDate.ToString("yyyy-MM-dd")
