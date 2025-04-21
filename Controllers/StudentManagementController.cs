@@ -24,10 +24,13 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.CurrentSort = sortOrder;
             // Include Contacts so that we can display email addresses.
             IQueryable<Student> query = _context.Student.Include(s => s.Contacts);
-            if (!User.IsInRole("admin"))
+
+            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
+            if (!isPrivileged)
             {
                 query = query.Where(s => s.AccountingGroup == "S");
             }
+
             switch (sortOrder)
             {
                 case "Name":
@@ -54,13 +57,17 @@ namespace DotNetCoreSqlDb.Controllers
         {
             if (id == null)
                 return NotFound();
+
             var student = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
                 return NotFound();
-            if (!User.IsInRole("admin") && student.AccountingGroup != "S")
+
+            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
+            if (!isPrivileged && student.AccountingGroup != "S")
                 return Forbid();
+
             return View(student);
         }
 
@@ -69,13 +76,17 @@ namespace DotNetCoreSqlDb.Controllers
         {
             if (id == null)
                 return NotFound();
+
             var student = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == id);
             if (student == null)
                 return NotFound();
-            if (!User.IsInRole("admin") && student.AccountingGroup != "S")
+
+            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
+            if (!isPrivileged && student.AccountingGroup != "S")
                 return Forbid();
+
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
@@ -90,6 +101,7 @@ namespace DotNetCoreSqlDb.Controllers
         {
             if (id != updatedStudent.ID)
                 return NotFound();
+
             if (!ModelState.IsValid)
             {
                 ViewBag.ContactTypes = DropdownOptions.ContactTypes;
@@ -98,13 +110,16 @@ namespace DotNetCoreSqlDb.Controllers
                 ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
                 return View(updatedStudent);
             }
+
             // Load existing student (with contacts) from DB.
             var existingStudent = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == id);
             if (existingStudent == null)
                 return NotFound();
-            if (!User.IsInRole("admin") && existingStudent.AccountingGroup != "S")
+
+            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
+            if (!isPrivileged && existingStudent.AccountingGroup != "S")
                 return Forbid();
 
             // Update scalar properties.
@@ -113,7 +128,7 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.MainNotes = updatedStudent.MainNotes;
             existingStudent.Source = updatedStudent.Source;
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
-            existingStudent.AccountingGroup = User.IsInRole("admin") ? updatedStudent.AccountingGroup : "S";
+            existingStudent.AccountingGroup = isPrivileged ? updatedStudent.AccountingGroup : "S";
 
             var personalGroup = await _context.Group
                 .Include(g => g.StudentGroupCompositions)
@@ -191,7 +206,8 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
             ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
             Student student = new Student { Name = string.Empty };
-            if (User.IsInRole("admin"))
+            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
+            if (isPrivileged)
             {
                 student.AccountingGroup = "A";
             }
@@ -208,8 +224,9 @@ namespace DotNetCoreSqlDb.Controllers
             // set created date
             student.CreatedDate = DateTime.Now;
 
-            // non-admins get forced into group "S"
-            if (!User.IsInRole("admin"))
+            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
+            // non-admin/supports get forced into group "S"
+            if (!isPrivileged)
             {
                 student.AccountingGroup = "S";
             }
@@ -275,9 +292,6 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.Timezones            = TimeZoneMapping.GetTimeZones();
             return View(student);
         }
-
-
-        // Delete actions commented out for Students...
 
         // DeleteContact action for deleting a single contact.
         [HttpPost]

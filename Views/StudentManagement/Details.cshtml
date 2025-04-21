@@ -5,7 +5,7 @@
 }
 
 <div class="row no-gutters">
-    @if (User.IsInRole("admin"))
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
     {
         <div class="col-auto admin-sidebar">
             <div class="sidebar-header">
@@ -43,7 +43,7 @@
                 <dd>@Html.DisplayFor(model => model.Source)</dd>
                 <dt>Time Zone</dt>
                 <dd>@Html.DisplayFor(model => model.TimeZoneId)</dd>
-                @if(User.IsInRole("admin"))
+                @if(User.IsInRole("admin") || User.IsInRole("support"))
                 {
                     <dt>Accounting Group</dt>
                     <dd>@Html.DisplayFor(model => model.AccountingGroup)</dd>

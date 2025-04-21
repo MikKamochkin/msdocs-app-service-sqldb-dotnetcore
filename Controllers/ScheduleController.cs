@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "support")]
     public class ScheduleController : Controller
     {
         private readonly MyDatabaseContext _context;

@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "support")]
     public class GroupsController : Controller
     {
         private readonly MyDatabaseContext _context;

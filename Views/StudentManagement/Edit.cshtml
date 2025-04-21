@@ -5,7 +5,7 @@
 }
 
 <div class="row no-gutters">
-    @if (User.IsInRole("admin"))
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
     {
         <div class="col-auto admin-sidebar">
             <div class="sidebar-header">
@@ -78,7 +78,7 @@
                 </div>
 
                 <!-- Accounting Group (admin only) -->
-                @if (User.IsInRole("admin"))
+                @if (User.IsInRole("admin") || User.IsInRole("support"))
                 {
                     <div class="form-group">
                         @Html.LabelFor(m => m.AccountingGroup, new { @class = "control-label col-md-2" })

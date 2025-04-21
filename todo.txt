@@ -1,3 +1,16 @@
+cannot change people in group
+add isactive to dbo.group
+when group set to inactive, deactivate assignment for that group
+2 buttons for groups: deactive and deactivate and copy
+deactivate and copy with prepopulate group selection with the previous groups data so it's easy to change a small thing
+only show groups where >1 person
+
+
+
+for assignment:
+when a new group is made, get sent to assignment creation/editing with that group as the prepopulated option
+
 DONE: when editing a group, add student button doesn't open the modal correctly
 DONE: when editing group, add option to change use balance
 add option to delete group when it's empty after editing
+

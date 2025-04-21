@@ -4,7 +4,7 @@
     ViewData["Title"] = "Create Schedule";
 }
 
-<div class="row no-gutters">
+@*<div class="row no-gutters">
     @if (User.IsInRole("admin"))
     {
         <div class="col-auto admin-sidebar">
@@ -41,7 +41,7 @@
             <div class="form-horizontal">
 
                 <div class="form-group">
-                    @* “Group” will be rendered instead of “AssignmentId” *@
+                    @* “Group” will be rendered instead of “AssignmentId” 
                     @Html.LabelFor(m => m.AssignmentId, "Group", new { @class = "control-label col-md-2" })
                     <div class="col-md-10">
                         @Html.DropDownListFor(
@@ -66,7 +66,7 @@
                     @Html.LabelFor(m => m.Status, htmlAttributes: new { @class = "control-label col-md-2" })
                     <div class="col-md-10">
                         @Html.DropDownListFor(m => m.Status, (IEnumerable<SelectListItem>)ViewBag.ScheduleStatusTypes, "Select Status", new { @class = "form-control" })
-                        @*@Html.EditorFor(m => m.Status, new { htmlAttributes = new { @class = "form-control" } })*@
+                        @*Html.EditorFor(m => m.Status, new { htmlAttributes = new { @class = "form-control" } })*
                         @Html.ValidationMessageFor(m => m.Status, "", new { @class = "text-danger" })
                     </div>
                 </div>
@@ -75,7 +75,7 @@
                     @Html.LabelFor(m => m.Duration, htmlAttributes: new { @class = "control-label col-md-2" })
                     <div class="col-md-10">
                         @Html.DropDownListFor(m => m.Duration, (IEnumerable<SelectListItem>)ViewBag.LessonDurationTypes, "Select Duration", new { @class = "form-control" })
-                        @*@Html.EditorFor(m => m.Duration, new { htmlAttributes = new { @class = "form-control", type = "number", min = "0" } })*@
+                        @*Html.EditorFor(m => m.Duration, new { htmlAttributes = new { @class = "form-control", type = "number", min = "0" } })*
                         @Html.ValidationMessageFor(m => m.Duration, "", new { @class = "text-danger" })
                     </div>
                 </div>
@@ -92,6 +92,6 @@
 </div>
 
 @section Scripts {
-    @* Enables client‑side validation *@
+    @* Enables client‑side validation *
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
+}*@
