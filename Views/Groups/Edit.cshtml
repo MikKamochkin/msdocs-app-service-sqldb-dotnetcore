@@ -63,14 +63,40 @@
         }
 
         <!-- Modal for Adding a Student -->
-        <div class="modal fade" id="addStudentModal" tabindex="-1">
+        <div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
-                    <!-- same modal content as Create -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Student to Group</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="studentSelect">Student</label>
+                            <select id="studentSelect" class="form-control">
+                                <option value="">Select a student…</option>
+                                @foreach (var student in (SelectList)ViewBag.Students)
+                                {
+                                    <option value="@student.Value">@student.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="useMyBalance" />
+                                <label class="custom-control-label" for="useMyBalance">Use My Balance</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" id="saveStudentBtn" class="btn btn-primary">Add Student</button>
+                    </div>
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -95,11 +121,9 @@ $(function() {
             students.forEach((s,i) => {
                 html += `<tr>
                     <td>${s.name}</td>
-                    <td>${s.useMyBalance ? 'Yes' : 'No'}</td>
+                    <td><input type="checkbox" class="toggle-balance" data-index="${i}" ${s.useMyBalance ? 'checked' : ''}></td>
                     <td>
-                      <button type="button" class="btn btn-danger btn-sm remove-student" data-index="${i}">
-                        Remove
-                      </button>
+                      <button type="button" class="btn btn-danger btn-sm remove-student" data-index="${i}">Remove</button>
                     </td>
                 </tr>`;
             });
@@ -115,8 +139,10 @@ $(function() {
     // initial render
     updateDisplay();
 
-    // add student
-    $('#addStudentBtn').click(()=>$('#addStudentModal').modal('show'));
+    // show modal
+    $('#addStudentBtn').click(() => $('#addStudentModal').modal('show'));
+
+    // save from modal
     $('#saveStudentBtn').click(function() {
         const id   = $('#studentSelect').val();
         const name = $('#studentSelect option:selected').text();
@@ -135,6 +161,13 @@ $(function() {
         const i = +$(this).data('index');
         students.splice(i, 1);
         updateDisplay();
+    });
+
+    // toggle use balance
+    $(document).on('change', '.toggle-balance', function() {
+        const i = +$(this).data('index');
+        students[i].useMyBalance = $(this).is(':checked');
+        $('#UseMyBalanceValues').val(students.map(s => s.useMyBalance).join(','));
     });
 });
 </script>

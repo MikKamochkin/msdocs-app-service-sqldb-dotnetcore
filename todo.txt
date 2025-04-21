@@ -1,3 +1,3 @@
-when editing a group, add student button doesn't open the modal correctly
-when editing group, add option to change use balance
+DONE: when editing a group, add student button doesn't open the modal correctly
+DONE: when editing group, add option to change use balance
 add option to delete group when it's empty after editing

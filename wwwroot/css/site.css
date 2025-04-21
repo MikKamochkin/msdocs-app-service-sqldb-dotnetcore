@@ -302,7 +302,7 @@ footer {
 @media (max-width: 768px) {
     .admin-sidebar {
         min-height: auto;
-        margin-bottom: 20px;
+        margin-bottom: 0px;
         border-right: none;
         border-bottom: 1px solid #dee2e6;
         margin-left: 0; /* Reset margin on mobile */
