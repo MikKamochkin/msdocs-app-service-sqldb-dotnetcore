@@ -11,6 +11,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Net.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -19,12 +20,19 @@ namespace DotNetCoreSqlDb.Controllers
     {
         private readonly MyDatabaseContext _context;
         private readonly ILogger<WhatsAppController> _logger;
-        private const string _bearer = "4440b2fb9d48747b656dc2da886fcc3d68331d1a0f41b703e67fc490493dc5b9c62ad15e1be09e8d";
+        private readonly string _apiKey;
 
-        public WhatsAppController(MyDatabaseContext context, ILogger<WhatsAppController> logger)
+        public WhatsAppController(MyDatabaseContext context, ILogger<WhatsAppController> logger, IConfiguration config)
         {
             _context = context;
             _logger = logger;
+
+            _apiKey = config["WASSENGER-API-KEY"];
+
+            if (string.IsNullOrWhiteSpace(_apiKey))
+            {
+                throw new InvalidOperationException("WASSENGER-API-KEY IS MISSING FROM THE CONFIGURATION/KEY VAULT");
+            }
         }
 
         public async Task<IActionResult> Index(Guid? sentId)
@@ -45,7 +53,7 @@ namespace DotNetCoreSqlDb.Controllers
             using var http = new HttpClient { BaseAddress = new Uri("https://api.wassenger.com") };
 
             // the docs use a custom “Token” header rather than Bearer
-            http.DefaultRequestHeaders.Add("Token", _bearer);
+            http.DefaultRequestHeaders.Add("Token", _apiKey);
 
             var payloadObj = new { phone = phone };
             var json        = JsonSerializer.Serialize(payloadObj);
@@ -115,7 +123,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             using var httpClient = new HttpClient { BaseAddress = new Uri("https://api.wassenger.com") };
             httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _bearer);
+                new AuthenticationHeaderValue("Bearer", _apiKey);
 
             try
             {
@@ -152,7 +160,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             using var httpClient = new HttpClient { BaseAddress = new Uri("https://api.wassenger.com") };
             httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _bearer);
+                new AuthenticationHeaderValue("Bearer", _apiKey);
 
             var resp = await httpClient.GetAsync($"/v1/messages/{message.WassengerMessageId}");
             var body = await resp.Content.ReadAsStringAsync();

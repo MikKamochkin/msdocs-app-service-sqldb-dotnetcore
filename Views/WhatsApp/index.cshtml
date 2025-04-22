@@ -26,73 +26,168 @@
                 <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-success d-flex icon-btn" title="Schedule">
                     <i class="hgi hgi-stroke hgi-message-01"></i>
                 </a>
-                
+               
             </div>
         </div>
     }
     <div class="col-md-10">
         <h2>Voice Messages</h2>
-        <table class="table">
+
+        <!-- Search box -->
+        <input id="search-box"
+               type="text"
+               class="form-control mb-3"
+               placeholder="Search descriptions…" />
+
+        <table class="table" id="messages-table">
             <thead>
                 <tr>
-                <th>Name</th><th>Description</th><th>Phone &amp; Send</th><th>Live Status</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Phone &amp; Send</th>
+                    <th>Live Status</th>
                 </tr>
             </thead>
             <tbody>
-            @foreach(var vm in Model){
-                <tr>
-                <td>@vm.Name</td>
-                <td class="description-col">@vm.Description</td>
-                <td>
-                    <form onsubmit="sendAndTrack(event, '@vm.Id')" class="d-flex mb-0">
-                    <input type="hidden" name="id" value="@vm.Id" />
-                    <input type="text" name="phone" placeholder="+1 647‑555‑0123"
-                            class="form-control me-2" required pattern="^\+(?:1\d{10}|7\d{10}|(?:3\d|4\d)\d{7,13})$" title="Must be a valid NA (+1), RU (+7) or EU (+30–+49) E.164 number"/>
-                    <button type="submit" id="send-btn-@vm.Id"
-                            class="btn btn-sm btn-primary">Send</button>
-                    </form>
-                </td>
-                <td>
-                    <span id="status-@vm.Id" class="ms-2 small"></span>
-                </td>
-                </tr>
-            }
+                @* Populated by JavaScript *@
             </tbody>
         </table>
     </div>
+</div>
+
+<!-- Fuse.js CDN for client-side fuzzy search -->
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 
 <script>
+  // Expose only minimal data to JS for safety
+  const allMessages = @Html.Raw(
+    System.Text.Json.JsonSerializer.Serialize(
+      Model.Select(m => new { m.Id, m.Name, m.Description })
+    )
+  );
+
+  // Debounce helper
+  function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Fuse.js with ignoreLocation so substrings anywhere match
+    const fuse = new Fuse(allMessages, {
+      keys: ['Description'],
+      threshold: 0.3,
+      distance: 100,
+      ignoreLocation: true,
+      minMatchCharLength: 2
+    });
+
+    const tableBody = document.querySelector('#messages-table tbody');
+    const searchBox = document.getElementById('search-box');
+
+    // Render function: safe DOM creation
+    function render(items) {
+      tableBody.innerHTML = '';
+      items.forEach(vm => {
+        const tr = document.createElement('tr');
+
+        // Name cell
+        const tdName = document.createElement('td');
+        tdName.textContent = vm.Name || '';
+        tr.appendChild(tdName);
+
+        // Description cell
+        const tdDesc = document.createElement('td');
+        tdDesc.classList.add('description-col');
+        tdDesc.textContent = vm.Description;
+        tr.appendChild(tdDesc);
+
+        // Phone & Send cell
+        const tdPhone = document.createElement('td');
+        const form   = document.createElement('form');
+        form.classList.add('d-flex', 'mb-0');
+        form.onsubmit = e => sendAndTrack(e, vm.Id);
+
+        // hidden ID
+        const hid = document.createElement('input');
+        hid.type  = 'hidden';
+        hid.name  = 'id';
+        hid.value = vm.Id;
+        form.appendChild(hid);
+
+        // phone input
+        const input = document.createElement('input');
+        Object.assign(input, {
+          type: 'text',
+          name: 'phone',
+          placeholder: '+1 647‑555‑0123',
+          required: true,
+          pattern: '^\\+(?:1\\d{10}|7\\d{10}|(?:3\\d|4\\d)\\d{7,13})$',
+          title: 'Must be a valid NA (+1), RU (+7) or EU (+30–+49) E.164 number'
+        });
+        input.classList.add('form-control', 'me-2');
+        form.appendChild(input);
+
+        // send button
+        const btn = document.createElement('button');
+        btn.type = 'submit';
+        btn.id   = `send-btn-${vm.Id}`;
+        btn.classList.add('btn', 'btn-sm', 'btn-primary');
+        btn.textContent = 'Send';
+        form.appendChild(btn);
+
+        tdPhone.appendChild(form);
+        tr.appendChild(tdPhone);
+
+        // Live Status cell
+        const tdStatus = document.createElement('td');
+        const span     = document.createElement('span');
+        span.id    = `status-${vm.Id}`;
+        span.classList.add('ms-2', 'small');
+        tdStatus.appendChild(span);
+        tr.appendChild(tdStatus);
+
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // Initial render of all messages
+    render(allMessages);
+
+    // Search input handler with debounce
+    searchBox.addEventListener('input', debounce(e => {
+      const q = e.target.value.trim();
+      if (!q) {
+        render(allMessages);
+      } else {
+        const results = fuse.search(q).map(r => r.item);
+        render(results);
+      }
+    }, 150));
+  });
+</script>
+
+<!-- Existing WhatsApp send/status scripts -->
+<script>
   async function validateNumber(phone) {
-  //console.log('➡️ Validating phone number:', phone);
-
-  let res;
-  try {
-    res = await fetch(`/WhatsApp/ValidateContact?phone=${encodeURIComponent(phone)}`);
-  } catch (err) {
-    //console.error('❌ Network error on ValidateContact:', err);
-    return false;
+    let res;
+    try {
+      res = await fetch(`/WhatsApp/ValidateContact?phone=${encodeURIComponent(phone)}`);
+    } catch {
+      return false;
+    }
+    const raw = await res.text();
+    let json;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      return false;
+    }
+    return json.valid === true;
   }
-
-  //console.log('🔄 ValidateContact HTTP status:', res.status, 'OK?', res.ok);
-  
-  // grab raw text in case JSON is malformed
-  const raw = await res.text();
-  //console.log('📦 Raw response body:', raw);
-
-  let json;
-  try {
-    json = JSON.parse(raw);
-    //console.log('🗄️ Parsed JSON:', json);
-  } catch (err) {
-    //console.error('❌ JSON parse error:', err);
-    return false;
-  }
-
-  // finally, inspect the “status” field too
-  //console.log('🏷️ Contact status field:', json.status, '; valid:', json.valid);
-  return json.valid === true;
-}
-
 
   async function sendAndTrack(evt, id) {
     evt.preventDefault();
@@ -148,18 +243,14 @@
         const ds   = data.deliveryStatus;
         lastStatus = ds || lastStatus;
 
-        //console.log(ds + " DATA STATUS -----------------------------------");
-
-        // update on delivery/read/fail
         if (ds === 'delivered' || ds === 'processed' || ds === 'read' || ds === 'sent') {
-          statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02 align-intems: center justify-content:center"></i>';
+          statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
           clearInterval(handle);
         }
-        else if (['failed','cancelled','revoked'].includes(ds)) {
+        else if ([`failed`,`cancelled`,`revoked`].includes(ds)) {
           statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
           clearInterval(handle);
         }
-        // else keep spinner for queued/processing
       } catch {
         clearInterval(handle);
         statusEl.innerHTML = '<i class="fa fa-times"></i>';
@@ -167,7 +258,6 @@
 
       if (attempts >= maxAttempts) {
         clearInterval(handle);
-        // fallback to last known
         if (lastStatus === 'delivered') {
           statusEl.innerHTML = '<i class="fa fa-arrow-right"></i>';
         }

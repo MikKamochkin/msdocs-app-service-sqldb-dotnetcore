@@ -1,8 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Azure.Identity;
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddAzureKeyVault(
+        new Uri("https://tslvault.vault.azure.net/"),
+        new DefaultAzureCredential());
 
 // Add database context and cache
 if (builder.Environment.IsDevelopment())
@@ -21,6 +27,11 @@ else
         options.InstanceName = "SampleInstance";
     });
 }
+
+// Program.cs (anywhere you already have builder)
+
+var WassengerApiKey = builder.Configuration["WASSENGER_API_KEY"];
+
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
