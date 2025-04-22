@@ -6,9 +6,17 @@ using Azure.Extensions.AspNetCore.Configuration.Secrets;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddAzureKeyVault(
+/*builder.Configuration.AddAzureKeyVault(
         new Uri("https://tslvault.vault.azure.net/"),
-        new DefaultAzureCredential());
+        new DefaultAzureCredential());*/
+
+var vaultUri = new Uri("https://tslvault.vault.azure.net/");
+
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS")))
+{
+    // only in non‑CI environments
+    builder.Configuration.AddAzureKeyVault(vaultUri, new DefaultAzureCredential());
+}
 
 // Add database context and cache
 if (builder.Environment.IsDevelopment())
