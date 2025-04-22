@@ -1,0 +1,178 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.WhatsAppVoiceMessages>
+
+@{
+    ViewData["Title"] = "WhatsApp Voice Messages";
+}
+
+<div class="row no-gutters">
+    @if (User.IsInRole("support"))
+    {
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-header">
+                <i class="hgi hgi-stroke hgi-croissant"></i>
+            </div>
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-dark d-flex icon-btn" title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                
+                <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Manage Groups">
+                    <i class="fas fa-users"></i>
+                </a>
+
+                <a href="@Url.Action("Manage", "Schedule")" class="btn btn-dark d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
+                <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-success d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-message-01"></i>
+                </a>
+                
+            </div>
+        </div>
+    }
+    <div class="col-md-10">
+        <h2>Voice Messages</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                <th>Name</th><th>Description</th><th>Phone &amp; Send</th><th>Live Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach(var vm in Model){
+                <tr>
+                <td>@vm.Name</td>
+                <td class="description-col">@vm.Description</td>
+                <td>
+                    <form onsubmit="sendAndTrack(event, '@vm.Id')" class="d-flex mb-0">
+                    <input type="hidden" name="id" value="@vm.Id" />
+                    <input type="text" name="phone" placeholder="+1 647‑555‑0123"
+                            class="form-control me-2" required pattern="^\+(?:1\d{10}|7\d{10}|(?:3\d|4\d)\d{7,13})$" title="Must be a valid NA (+1), RU (+7) or EU (+30–+49) E.164 number"/>
+                    <button type="submit" id="send-btn-@vm.Id"
+                            class="btn btn-sm btn-primary">Send</button>
+                    </form>
+                </td>
+                <td>
+                    <span id="status-@vm.Id" class="ms-2 small"></span>
+                </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+<script>
+  async function validateNumber(phone) {
+  //console.log('➡️ Validating phone number:', phone);
+
+  let res;
+  try {
+    res = await fetch(`/WhatsApp/ValidateContact?phone=${encodeURIComponent(phone)}`);
+  } catch (err) {
+    //console.error('❌ Network error on ValidateContact:', err);
+    return false;
+  }
+
+  //console.log('🔄 ValidateContact HTTP status:', res.status, 'OK?', res.ok);
+  
+  // grab raw text in case JSON is malformed
+  const raw = await res.text();
+  //console.log('📦 Raw response body:', raw);
+
+  let json;
+  try {
+    json = JSON.parse(raw);
+    //console.log('🗄️ Parsed JSON:', json);
+  } catch (err) {
+    //console.error('❌ JSON parse error:', err);
+    return false;
+  }
+
+  // finally, inspect the “status” field too
+  //console.log('🏷️ Contact status field:', json.status, '; valid:', json.valid);
+  return json.valid === true;
+}
+
+
+  async function sendAndTrack(evt, id) {
+    evt.preventDefault();
+    const form = evt.target;
+    const phone = form.phone.value;
+    const btn = document.getElementById(`send-btn-${id}`);
+    const statusEl = document.getElementById(`status-${id}`);
+
+    // 1) validate
+    statusEl.innerHTML = '<div class="loading-spinner"></div>';
+    if (!await validateNumber(phone)) {
+      statusEl.innerHTML = '<i class="fa fa-times"></i> Invalid number';
+      return;
+    }
+
+    // 2) send
+    btn.disabled = true;
+    btn.classList.add('disabled');
+    statusEl.innerHTML = '<div class="loading-spinner"></div>';
+
+    let sendOk = false;
+    try {
+      const res = await fetch(`/WhatsApp/Send`, {
+        method: 'POST',
+        body: new FormData(form)
+      });
+      sendOk = res.ok;
+    } catch {
+      sendOk = false;
+    }
+
+    if (!sendOk) {
+      statusEl.innerHTML = '<i class="fa fa-times"></i>';
+      btn.disabled = false;
+      return;
+    }
+
+    // 3) poll status
+    pollStatus(id);
+  }
+
+  function pollStatus(id) {
+    const btn = document.getElementById(`send-btn-${id}`);
+    const statusEl = document.getElementById(`status-${id}`);
+    const maxAttempts = 300;
+    let attempts = 0, lastStatus = null;
+
+    const handle = setInterval(async () => {
+      attempts++;
+      try {
+        const res  = await fetch(`/WhatsApp/GetStatus?id=${id}`);
+        const data = await res.json();
+        const ds   = data.deliveryStatus;
+        lastStatus = ds || lastStatus;
+
+        //console.log(ds + " DATA STATUS -----------------------------------");
+
+        // update on delivery/read/fail
+        if (ds === 'delivered' || ds === 'processed' || ds === 'read' || ds === 'sent') {
+          statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02 align-intems: center justify-content:center"></i>';
+          clearInterval(handle);
+        }
+        else if (['failed','cancelled','revoked'].includes(ds)) {
+          statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
+          clearInterval(handle);
+        }
+        // else keep spinner for queued/processing
+      } catch {
+        clearInterval(handle);
+        statusEl.innerHTML = '<i class="fa fa-times"></i>';
+      }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(handle);
+        // fallback to last known
+        if (lastStatus === 'delivered') {
+          statusEl.innerHTML = '<i class="fa fa-arrow-right"></i>';
+        }
+        btn.disabled = false;
+      }
+    }, 1000);
+  }
+</script>

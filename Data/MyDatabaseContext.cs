@@ -33,6 +33,8 @@ namespace DotNetCoreSqlDb.Data
         public DbSet<DotNetCoreSqlDb.Models.Schedule> Schedule { get; set; } = default!;
 
         public DbSet<DotNetCoreSqlDb.Models.StudentGroupComposition> StudentGroupComposition { get; set; } = default!;    
+
+        public DbSet<DotNetCoreSqlDb.Models.WhatsAppVoiceMessages> WhatsAppVoiceMessages { get; set; } = default!;
         
     }
 }

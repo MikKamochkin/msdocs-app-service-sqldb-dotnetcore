@@ -296,6 +296,36 @@ footer {
     margin-right: 0px;
 }
 
+/* cap description so it wraps instead of growing the table */
+.description-col {
+  max-width: 250px;          /* whatever fits your design */
+  white-space: normal;       /* allow wrapping */
+  word-wrap: break-word;     /* break long words/URLs */
+  overflow: hidden;          /* hide any overflow */
+}
+
+/* make the status <span> a flex container so its contents (spinner or icon) are centered */
+span.ms-2.small {
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  /* give it a consistent size if you like: */
+  width: 2rem;
+  height: 2rem;
+}
+
+/* center the spinner itself inside that flex parent */
+.loading-spinner {
+  display: inline-block;
+  margin: auto;
+}
+
+/* ensure any <i class="hgi …"> icons also center their glyph */
+.hgi {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
 
 
 /* Responsive adjustments for the sidebar */
