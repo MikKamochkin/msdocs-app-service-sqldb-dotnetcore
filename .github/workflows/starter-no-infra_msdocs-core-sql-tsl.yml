@@ -18,6 +18,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      -name: Login to Azure (for EF design‑time Key Vault access)
+      uses: azure/login@v2
+      with:
+        client-id:       ${{ secrets.AZUREAPPSERVICE_CLIENTID_CAF2EE1618D04516B4BA91E4793847CF }}
+        tenant-id:       ${{ secrets.AZUREAPPSERVICE_TENANTID_F29C156E00274E9EA2B06074DDF03D30 }}
+        subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_11396412C14A4F23AA8956AFCF1A1B93 }}
+
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
@@ -37,7 +44,6 @@ jobs:
 
       - name: Create migrations bundle
         run: dotnet ef migrations bundle --runtime linux-x64 -o ${{env.DOTNET_ROOT}}/myapp/migrationsbundle
-
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
