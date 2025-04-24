@@ -1,11 +1,10 @@
-@model DotNetCoreSqlDb.Models.Student
+@model DotNetCoreSqlDb.Models.Assignments
 
 @{
-    ViewData["Title"] = "Create Student";
+    ViewData["Title"] = "Create Assignment";
 }
 
 <div class="row no-gutters">
-    @* ——————— Sidebar Column ——————— *@
     @if (User.IsInRole("admin") || User.IsInRole("support"))
     {
         <div class="col-auto admin-sidebar">
@@ -13,265 +12,78 @@
                 <i class="hgi hgi-stroke hgi-croissant"></i>
             </div>
             <div class="sidebar-content">
-                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-success d-flex icon-btn" title="Student Management">
-                    <i class="fas fa-user-graduate"></i>
-                </a>
-                <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Manage Groups">
-                    <i class="fas fa-users"></i>
-                </a>
-                <a href="@Url.Action("Manage", "Schedule")" class="btn btn-dark d-flex icon-btn" title="Schedule">
-                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
-                </a>
-                <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-dark d-flex icon-btn" title="WhatsApp">
-                    <i class="hgi hgi-stroke hgi-message-01"></i>
-                </a>
+                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-dark icon-btn" title="Students"><i class="fas fa-user-graduate"></i></a>
+                <a href="@Url.Action("Index", "Groups")"            class="btn btn-dark icon-btn" title="Groups"><i class="fas fa-users"></i></a>
+                <a href="@Url.Action("Manage", "Schedule")"         class="btn btn-dark icon-btn" title="Schedule"><i class="hgi hgi-stroke hgi-calendar-03"></i></a>
+                <a href="@Url.Action("Index", "Whatsapp")"          class="btn btn-dark icon-btn" title="WhatsApp"><i class="hgi hgi-stroke hgi-message-01"></i></a>
+                <a href="@Url.Action("Index", "Assignments")"       class="btn btn-success icon-btn" title="Assignments"><i class="fas fa-tasks"></i></a>
             </div>
         </div>
-    }
-
-    @* ——————— Main Content Column ——————— *@
-    <div class="@(User.IsInRole("admin") || User.IsInRole("support") ? "col-md-9" : "col-12")">
-        <h2>Create Student</h2>
-
+    
+    <div class="col">
+        <h2>Create Assignment</h2>
         @Html.ValidationSummary(true, "", new { @class = "text-danger" })
 
-        @using (Html.BeginForm()) 
+        @using (Html.BeginForm())
         {
             @Html.AntiForgeryToken()
-            <div class="form-horizontal">
-                <h4>Student</h4>
-                <hr />
-                <div class="form-group">
-                    @Html.LabelFor(m => m.Name, new { @class = "control-label col-md-2" })
-                    <div class="col-md-10">
-                        @Html.EditorFor(m => m.Name, new { htmlAttributes = new { @class = "form-control" } })
-                        @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
-                    </div>
-                </div>
-                <div class="form-group">
-                    @Html.LabelFor(m => m.ParentOrEmployer, new { @class = "control-label col-md-2" })
-                    <div class="col-md-10">
-                        @Html.EditorFor(m => m.ParentOrEmployer, new { htmlAttributes = new { @class = "form-control" } })
-                        @Html.ValidationMessageFor(m => m.ParentOrEmployer, "", new { @class = "text-danger" })
-                    </div>
-                </div>
-                <div class="form-group">
-                    @Html.LabelFor(m => m.MainNotes, new { @class = "control-label col-md-2" })
-                    <div class="col-md-10">
-                        @Html.EditorFor(m => m.MainNotes, new { htmlAttributes = new { @class = "form-control" } })
-                        @Html.ValidationMessageFor(m => m.MainNotes, "", new { @class = "text-danger" })
-                    </div>
-                </div>
 
-                <!-- Source dropdown -->
-                <div class="form-group">
-                    @Html.LabelFor(m => m.Source, new { @class = "control-label col-md-2" })
-                    <div class="col-md-10">
-                        @Html.DropDownListFor(m => m.Source, (IEnumerable<SelectListItem>)ViewBag.SourceTypes, "Select Source", new { @class = "form-control" })
-                        @Html.ValidationMessageFor(m => m.Source, "", new { @class = "text-danger" })
-                    </div>
-                </div>
-
-                <!-- Timezone dropdown -->
-                <div class="form-group">
-                    @Html.LabelFor(m => m.TimeZoneId, new { @class = "control-label col-md-2" })
-                    <div class="col-md-10">
-                        @Html.DropDownListFor(m => m.TimeZoneId, (IEnumerable<SelectListItem>)ViewBag.TimeZones, "Select Time Zone", new { @class = "form-control" })
-                        @Html.ValidationMessageFor(m => m.TimeZoneId, "", new { @class = "text-danger" })
-                    </div>
-                </div>
-
-                @* Accounting Group only for admins *@
-                @if (User.IsInRole("admin") || User.IsInRole("support"))
-                {
-                    <div class="form-group">
-                        @Html.LabelFor(m => m.AccountingGroup, new { @class = "control-label col-md-2" })
-                        <div class="col-md-10">
-                            @Html.DropDownListFor(m => m.AccountingGroup, (IEnumerable<SelectListItem>)ViewBag.AccountingGroupTypes, "Accounting Group", new { @class = "form-control" })
-                            @Html.ValidationMessageFor(m => m.AccountingGroup, "", new { @class = "text-danger" })
-                        </div>
-                    </div>
-                }
-
-                <h4>Contact Information</h4>
-                <div id="contacts"></div>
-                <button type="button" id="addContact" class="btn btn-secondary">Add Contact Information</button>
-                <br /><br />
-
-                <div class="form-group">
-                    <div class="col-md-offset-2 col-md-10">
-                        <input type="submit" value="Create" class="btn btn-primary" />
-                    </div>
-                </div>
+            <div class="form-group">
+                @Html.LabelFor(m => m.GroupId)
+                @Html.DropDownListFor(m => m.GroupId, (SelectList)ViewBag.Groups, "Select Group", new { @class="form-control" })
+                @Html.ValidationMessageFor(m => m.GroupId, "", new { @class="text-danger" })
             </div>
+
+            <div class="form-group">
+                @Html.LabelFor(m => m.TeacherId)
+                @Html.DropDownListFor(m => m.TeacherId, (SelectList)ViewBag.Teachers, "— unassigned —", new { @class="form-control" })
+                @Html.ValidationMessageFor(m => m.TeacherId, "", new { @class="text-danger" })
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(m => m.StudentUnitCost)
+                @Html.EditorFor(m => m.StudentUnitCost, new { htmlAttributes = new { @class="form-control" } })
+                @Html.ValidationMessageFor(m => m.StudentUnitCost, "", new { @class="text-danger" })
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(m => m.StudentUnitType)
+                @Html.DropDownListFor(m => m.StudentUnitType, (IEnumerable<SelectListItem>)ViewBag.PayUnits, new { @class="form-control" })
+                @Html.ValidationMessageFor(m => m.StudentUnitType, "", new { @class="text-danger" })
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(m => m.StudentUnitBalance)
+                @Html.EditorFor(m => m.StudentUnitBalance, new { htmlAttributes = new { @class="form-control" } })
+                @Html.ValidationMessageFor(m => m.StudentUnitBalance, "", new { @class="text-danger" })
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(m => m.StudentUnitDuration)
+                @Html.DropDownListFor(m => m.StudentUnitDuration, (IEnumerable<SelectListItem>)ViewBag.DurationTypes, new { @class="form-control" })
+                @Html.ValidationMessageFor(m => m.StudentUnitDuration, "", new { @class="text-danger" })
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(m => m.TeacherPayForUnit)
+                @Html.EditorFor(m => m.TeacherPayForUnit, new { htmlAttributes = new { @class="form-control" } })
+                @Html.ValidationMessageFor(m => m.TeacherPayForUnit, "", new { @class="text-danger" })
+            </div>
+
+            <div class="form-group">
+                @Html.LabelFor(m => m.TeacherPayUnitType)
+                @Html.DropDownListFor(m => m.TeacherPayUnitType, (IEnumerable<SelectListItem>)ViewBag.PayUnits, "Select Currency", new { @class="form-control" })
+                @Html.ValidationMessageFor(m => m.TeacherPayUnitType, "", new { @class="text-danger" })
+            </div>
+
+            <div class="form-group form-check">
+                @Html.CheckBoxFor(m => m.IsActive, new { @class="form-check-input" })
+                @Html.LabelFor(m => m.IsActive, new { @class="form-check-label" })
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create</button>
+            <a asp-action="Index" class="btn btn-secondary">Cancel</a>
         }
-
-        <!-- Modal for adding a new contact -->
-        <div id="contactModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
-          <div class="modal-dialog">
-            <div class="modal-content">
-               <div class="modal-header">
-                   <h5 class="modal-title">Add Contact Information</h5>
-               </div>
-               <div class="modal-body">
-                 <div class="form-group">
-                    <label class="control-label">Contact Type</label>
-                    @Html.DropDownList("modalContactType", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control", id="modalContactType" })
-                 </div>
-                 <div class="form-group">
-                    <label class="control-label">Value</label>
-                    @Html.TextBox("modalContactValue", null, new { @class = "form-control", id="modalContactValue" })
-                 </div>
-                 <div class="form-group">
-                    <label class="control-label">Invitation</label>
-                    <div>
-                        @Html.CheckBox("modalContactInvitation", false, new { id="modalContactInvitation" })
-                    </div>
-                 </div>
-                 <div class="form-group">
-                    <label class="control-label">Emergency</label>
-                    <div>
-                        @Html.CheckBox("modalContactEmergency", false, new { id="modalContactEmergency" })
-                    </div>
-                 </div>
-                 <div class="form-group">
-                    <label class="control-label">Money</label>
-                    <div>
-                        @Html.CheckBox("modalContactMoney", false, new { id="modalContactMoney" })
-                    </div>
-                 </div>
-               </div>
-               <div class="modal-footer">
-                 <button type="button" id="modalCancel" class="btn btn-secondary">Cancel</button>
-                 <button type="button" id="modalSave" class="btn btn-primary">Save</button>
-               </div>
-            </div>
-          </div>
-        </div>
     </div>
+    }
 </div>
-
-@section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
-    <script type="text/javascript">
-        // Global counters/variables:
-        var contactCount = 0;
-        var editingContactIndex = null;
-
-        function addContactSummary(index, contactType, typeText, value, invitationBool, emergencyBool, moneyBool) {
-            if ($("#contactsSummary").length === 0) {
-                var tableHtml =
-                    '<table id="contactsSummary" class="table table-bordered" style="margin-top:20px;">' +
-                        '<thead><tr>' +
-                            '<th>Type</th><th>Value</th><th>Invitation</th><th>Emergency</th><th>Money</th>' +
-                        '</tr></thead>' +
-                        '<tbody></tbody>' +
-                    '</table>';
-                $("#contacts").after(tableHtml);
-            }
-
-            var summaryRow =
-                '<tr class="contact-summary" data-index="' + index + '"' +
-                    ' data-contacttype="' + contactType + '"' +
-                    ' data-contactvalue="' + value + '"' +
-                    ' data-invitation="' + invitationBool + '"' +
-                    ' data-emergency="' + emergencyBool + '"' +
-                    ' data-money="' + moneyBool + '">' +
-                    '<td>' + typeText + '</td>' +
-                    '<td>' + value + '</td>' +
-                    '<td>' + (invitationBool ? "✔" : "") + '</td>' +
-                    '<td>' + (emergencyBool ? "✔" : "") + '</td>' +
-                    '<td>' + (moneyBool ? "✔" : "") + '</td>' +
-                    '<td style="display:none;">' +
-                        '<input type="hidden" name="Contacts[' + index + '].Type" value="' + contactType + '"/>' +
-                        '<input type="hidden" name="Contacts[' + index + '].Value" value="' + value + '"/>' +
-                        '<input type="hidden" name="Contacts[' + index + '].Invitation" value="' + invitationBool + '"/>' +
-                        '<input type="hidden" name="Contacts[' + index + '].Emergency" value="' + emergencyBool + '"/>' +
-                        '<input type="hidden" name="Contacts[' + index + '].Money" value="' + moneyBool + '"/>' +
-                    '</td>' +
-                '</tr>';
-            $("#contactsSummary tbody").append(summaryRow);
-        }
-
-        $(document).ready(function() {
-            $("#contactModal").modal({ backdrop: 'static', keyboard: false, show: false });
-
-            $("#addContact").click(function() {
-                editingContactIndex = null;
-                $("#modalContactType").val("");
-                $("#modalContactValue").val("");
-                $("#modalContactInvitation").prop("checked", false);
-                $("#modalContactEmergency").prop("checked", false);
-                $("#modalContactMoney").prop("checked", false);
-                $("#contactModal").modal('show');
-            });
-
-            $(document).on("click", "#contactsSummary tbody tr.contact-summary", function() {
-                var $row = $(this);
-                editingContactIndex = $row.data("index");
-                $("#modalContactType").val($row.data("contacttype"));
-                $("#modalContactValue").val($row.data("contactvalue"));
-                $("#modalContactInvitation").prop("checked", $row.data("invitation"));
-                $("#modalContactEmergency").prop("checked", $row.data("emergency"));
-                $("#modalContactMoney").prop("checked", $row.data("money"));
-                $("#contactModal").modal("show");
-            });
-
-            $("#modalSave").click(function() {
-                var contactType     = $("#modalContactType").val();
-                var typeText        = $("#modalContactType option:selected").text();
-                var value           = $("#modalContactValue").val();
-                var invitationBool  = $("#modalContactInvitation").is(":checked");
-                var emergencyBool   = $("#modalContactEmergency").is(":checked");
-                var moneyBool       = $("#modalContactMoney").is(":checked");
-
-                if (!contactType && !value && !invitationBool && !emergencyBool && !moneyBool) {
-                    $("#contactModal").modal('hide');
-                    return;
-                }
-
-                if (editingContactIndex !== null) {
-                    var $row = $("#contactsSummary tbody tr.contact-summary[data-index='" + editingContactIndex + "']");
-                    $row.find("td:nth-child(1)").text(typeText);
-                    $row.find("td:nth-child(2)").text(value);
-                    $row.find("td:nth-child(3)").text(invitationBool ? "✔" : "");
-                    $row.find("td:nth-child(4)").text(emergencyBool ? "✔" : "");
-                    $row.find("td:nth-child(5)").text(moneyBool ? "✔" : "");
-                    var hiddenHtml =
-                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Type" value="' + contactType + '"/>' +
-                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Value" value="' + value + '"/>' +
-                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Invitation" value="' + invitationBool + '"/>' +
-                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Emergency" value="' + emergencyBool + '"/>' +
-                        '<input type="hidden" name="Contacts[' + editingContactIndex + '].Money" value="' + moneyBool + '"/>';
-                    $row.find("td:last").html(hiddenHtml);
-
-                    $row.data("contacttype", contactType);
-                    $row.data("contactvalue", value);
-                    $row.data("invitation", invitationBool);
-                    $row.data("emergency", emergencyBool);
-                    $row.data("money", moneyBool);
-
-                    editingContactIndex = null;
-                } else {
-                    addContactSummary(contactCount, contactType, typeText, value, invitationBool, emergencyBool, moneyBool);
-                    contactCount++;
-                }
-
-                $("#contactModal").modal('hide');
-            });
-
-            $("#modalCancel").click(function() {
-                editingContactIndex = null;
-                $("#contactModal").modal('hide');
-            });
-
-            $("form").submit(function(e) {
-                if ($("#contactsSummary tbody tr").length === 0) {
-                    alert("Please add at least one contact.");
-                    e.preventDefault();
-                }
-            });
-        });
-    </script>
-}

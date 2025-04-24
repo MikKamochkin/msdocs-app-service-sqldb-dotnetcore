@@ -4,54 +4,77 @@
 @{
     ViewData["Title"] = "Assignments";
 }
+<div class="row no-gutters">
+    @* ——————— Sidebar Column ——————— *@
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-header">
+                <i class="hgi hgi-stroke hgi-croissant"></i>
+            </div>
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "StudentManagement")"
+                   class="btn btn-dark d-flex icon-btn mb-2"
+                   title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                
+                <a href="@Url.Action("Index", "Groups")"
+                   class="btn btn-dark d-flex icon-btn"
+                   title="Manage Groups">
+                    <i class="fas fa-users"></i>
+                </a>
 
+                <a href="@Url.Action("Manage", "Schedule")"
+                    class="btn btn-dark d-flex icon-btn"
+                    title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
+                <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-dark d-flex icon-btn" title="WhatsApp">
+                    <i class="hgi hgi-stroke hgi-message-01"></i>
+                </a>
+                <a href="@Url.Action("Index", "Assignments")"       class="btn btn-success icon-btn" title="Assignments"><i class="fas fa-tasks"></i></a>
+
+            </div>
+        </div>
+    }
+    <div class="@(User.IsInRole("admin") || User.IsInRole("support") ? "col-md-9" : "col-12")">
 <h1>Assignments</h1>
 <p>
-    <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
+    <a href="@Url.Action("Create")" class="btn btn-primary">Create New Assignment</a>
 </p>
 <table class="table table-striped">
     <thead>
         <tr>
-            @*<th>Id</th>*@
             <th>Group</th>
             <th>Teacher</th>
-            <th>Student Unit Cost</th>
-            <th>Student Unit Type</th>
-            <th>Student Unit Balance</th>
-            <th>Student Unit Duration</th>
-            <th>Teacher Pay/Unit</th>
-            <th>Teacher Pay Unit Type</th>
-            @*<th>Active?</th>*@
+            <th>Cost / Type</th>
+            <th>Balance</th>
+            <th>Duration</th>
+            <th>Pay / Unit</th>
+            <th>Active?</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
     @foreach (var a in Model)
     {
         <tr>
-            @*<td>@a.Id</td>*@
             <td>@a.Group.Name</td>
-            <td>
-                @(a.Teacher != null 
-                    ? a.Teacher.Name 
-                    : "<em>unassigned</em>")
-            </td>
-            <td>@a.StudentUnitCost</td>
-            <td>@a.StudentUnitType</td>
+            <td>@(a.Teacher != null ? a.Teacher.Name : "<em>Unassigned</em>")</td>
+            <td>@a.StudentUnitCost @a.StudentUnitType</td>
             <td>@a.StudentUnitBalance</td>
             <td>@a.StudentUnitDuration</td>
-            <td>@a.TeacherPayForUnit</td>
-            <td>@a.TeacherPayUnitType</td>
+            <td>@a.TeacherPayForUnit / @a.TeacherPayUnitType</td>
+            <td>@(a.IsActive ? "Yes" : "No")</td>
             <td>
-                @*@if (a.IsActive)
-                {
-                    <span class="text-success">Yes</span>
-                }
-                else
-                {
-                    <span class="text-muted">No</span>
-                }*@
+                <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-sm btn-info">
+                    Details
+                </a>
             </td>
         </tr>
     }
     </tbody>
 </table>
+</div>
+</div>

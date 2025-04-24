@@ -12,7 +12,8 @@ namespace DotNetCoreSqlDb.Models
 
         [ForeignKey("Group")]
         public Guid GroupId { get; set; }
-        public Group Group { get; set; } = null!;
+        
+        public Group? Group { get; set; }
 
         [ForeignKey("Teacher")]
         public Guid? TeacherId { get; set; }
@@ -40,7 +41,7 @@ namespace DotNetCoreSqlDb.Models
 
         [DisplayName("TeacherPayUnitType")]
         [Required]
-        public required float TeacherPayUnitType { get; set; }
+        public required string TeacherPayUnitType { get; set; }
 
         [DisplayName("IsActive")]
         [Required]

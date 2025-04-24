@@ -265,7 +265,7 @@ namespace DotNetCoreSqlDb.Controllers
                 _context.StudentGroupComposition.Add(composition);
 
                 // 4) Create a blank Assignments entry for the new group
-                var assignment = new Assignments
+                /*var assignment = new Assignments
                 {
                     Id                  = Guid.NewGuid(),
                     GroupId             = group.Id,
@@ -275,13 +275,13 @@ namespace DotNetCoreSqlDb.Controllers
                     StudentUnitBalance  = 0f,
                     StudentUnitDuration = 0f,
                     TeacherPayForUnit   = 0f,
-                    TeacherPayUnitType  = 0f,
+                    TeacherPayUnitType  = string.Empty,
                     IsActive            = false
                 };
                 _context.Assignments.Add(assignment);
 
                 // 5) Persist composition + assignment
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();*/
 
                 return RedirectToAction(nameof(Index));
             }

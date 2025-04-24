@@ -136,7 +136,7 @@ namespace DotNetCoreSqlDb.Controllers
                     _logger.LogInformation($"Group created with ID: {group.Id}");
 
                     // 2) Insert a “blank” Assignments record (only GroupId, all other non-nullable defaults)
-                    var blankAssignment = new Assignments
+                    /*var blankAssignment = new Assignments
                     {
                         Id                 = Guid.NewGuid(),
                         GroupId            = group.Id,
@@ -146,11 +146,11 @@ namespace DotNetCoreSqlDb.Controllers
                         StudentUnitBalance = 0f,
                         StudentUnitDuration= 0f,
                         TeacherPayForUnit  = 0f,
-                        TeacherPayUnitType = 0f,
+                        TeacherPayUnitType = string.Empty,
                         IsActive           = false
                     };
                     _context.Assignments.Add(blankAssignment);
-                    await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync();*/
 
                     _logger.LogInformation($"Blank assignment created for group ID: {group.Id}");
 
