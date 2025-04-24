@@ -1,0 +1,57 @@
+@* Views/Assignments/Index.cshtml *@
+@model IEnumerable<DotNetCoreSqlDb.Models.Assignments>
+
+@{
+    ViewData["Title"] = "Assignments";
+}
+
+<h1>Assignments</h1>
+<p>
+    <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
+</p>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            @*<th>Id</th>*@
+            <th>Group</th>
+            <th>Teacher</th>
+            <th>Student Unit Cost</th>
+            <th>Student Unit Type</th>
+            <th>Student Unit Balance</th>
+            <th>Student Unit Duration</th>
+            <th>Teacher Pay/Unit</th>
+            <th>Teacher Pay Unit Type</th>
+            @*<th>Active?</th>*@
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var a in Model)
+    {
+        <tr>
+            @*<td>@a.Id</td>*@
+            <td>@a.Group.Name</td>
+            <td>
+                @(a.Teacher != null 
+                    ? a.Teacher.Name 
+                    : "<em>unassigned</em>")
+            </td>
+            <td>@a.StudentUnitCost</td>
+            <td>@a.StudentUnitType</td>
+            <td>@a.StudentUnitBalance</td>
+            <td>@a.StudentUnitDuration</td>
+            <td>@a.TeacherPayForUnit</td>
+            <td>@a.TeacherPayUnitType</td>
+            <td>
+                @*@if (a.IsActive)
+                {
+                    <span class="text-success">Yes</span>
+                }
+                else
+                {
+                    <span class="text-muted">No</span>
+                }*@
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

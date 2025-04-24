@@ -248,7 +248,8 @@ namespace DotNetCoreSqlDb.Controllers
                 var group = new Group
                 {
                     Id   = Guid.NewGuid(),
-                    Name = student.Name
+                    Name = student.Name                
+                    
                 };
                 _context.Group.Add(group);
                 await _context.SaveChangesAsync();

@@ -13,6 +13,11 @@ namespace DotNetCoreSqlDb.Models
         [Required]
         public required string Name { get; set; }
 
+        [DisplayName("IsActive")]
+        public bool IsActive { get; set;} = false;
+
+
+
         // Navigation properties
         public virtual ICollection<StudentGroupComposition> StudentGroupCompositions { get; set; } = new List<StudentGroupComposition>();
         public virtual ICollection<Assignments> Assignments { get; set; } = new List<Assignments>();

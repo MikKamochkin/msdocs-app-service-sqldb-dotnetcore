@@ -10,6 +10,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Data;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -29,8 +32,11 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> Index()
         {
             var groups = await _context.Group
+                .Where(g => g.StudentGroupCompositions.Count > 1)
+                .Where (g => g.IsActive == true)
                 .Include(g => g.StudentGroupCompositions)
                 .ThenInclude(sgc => sgc.Student)
+                .ThenInclude(s => s.Contacts)
                 .ToListAsync();
             return View(groups);
         }
@@ -56,42 +62,61 @@ namespace DotNetCoreSqlDb.Controllers
         }
 
         // GET: Groups/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create(Guid? copyFromGroupId = null)
         {
+            // 1) Populate the Students dropdown for the modal
             try
             {
-                // Get all students for the dropdown
-                var students = _context.Student.OrderBy(s => s.Name).ToList();
-                if (students != null && students.Any())
-                {
-                    // Ensure we only include students with valid ID and Name
-                    var validStudents = students.Where(s => s.ID != Guid.Empty && !string.IsNullOrEmpty(s.Name)).ToList();
-                    if (validStudents.Any())
-                    {
-                        ViewBag.Students = new SelectList(validStudents, "ID", "Name");
-                    }
-                    else
-                    {
-                        ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
-                        _logger.LogWarning("No valid students found in the database");
-                    }
-                }
+                var allStudents = await _context.Student
+                    .OrderBy(s => s.Name)
+                    .ToListAsync();
+
+                if (allStudents.Any())
+                    ViewBag.Students = new SelectList(allStudents, "ID", "Name");
                 else
-                {
-                    // If no students exist, create an empty list
                     ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
-                    _logger.LogWarning("No students found in the database");
-                }
-                
-                return View(new Group { Name = "" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in Create GET action");
+                _logger.LogWarning(ex, "Failed to load students for Create view");
                 ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
-                return View(new Group { Name = "" });
             }
+
+            // 2) Prepare a fresh Group model
+            var model = new Group
+            {
+                Name = ""     // user will fill or we’ll override below if copying
+                // Id and IsActive left to defaults
+            };
+
+            // 3) If we’re copying from an existing group, fetch its data
+            if (copyFromGroupId.HasValue)
+            {
+                var sourceGroup = await _context.Group
+                    .Include(g => g.StudentGroupCompositions)
+                        .ThenInclude(sgc => sgc.Student)
+                    .FirstOrDefaultAsync(g => g.Id == copyFromGroupId.Value);
+
+                if (sourceGroup != null)
+                {
+                    // Copy the name
+                    model.Name = sourceGroup.Name;
+
+                    // Build a simple list of { id, name, useMyBalance } for the client script
+                    ViewBag.CopyStudents = sourceGroup.StudentGroupCompositions
+                        .Select(sgc => new
+                        {
+                            id            = sgc.StudentId,
+                            name          = sgc.Student.Name,
+                            useMyBalance  = sgc.UseMyBalance
+                        })
+                        .ToList();
+                }
+            }
+
+            return View(model);
         }
+
 
         // POST: Groups/Create
         [HttpPost]
@@ -104,6 +129,7 @@ namespace DotNetCoreSqlDb.Controllers
                 {
                     // 1) Create the group
                     group.Id = Guid.NewGuid();
+                    group.IsActive = true;
                     _context.Add(group);
                     await _context.SaveChangesAsync();
 
@@ -257,6 +283,7 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.Students = new SelectList(studentsList, "ID", "Name");
             return View(group);
         }
+        /*
 
         // GET: Groups/Delete/5
         public async Task<IActionResult> Delete(Guid? id)
@@ -298,6 +325,65 @@ namespace DotNetCoreSqlDb.Controllers
                 await _context.SaveChangesAsync();
             }
             
+            return RedirectToAction(nameof(Index));
+        }
+        */
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Deactivate(Guid id)
+        {
+            var g = await _context.Group.FindAsync(id);
+            if (g != null)
+            {
+                g.IsActive = false;
+                var assignments = await _context.Assignments
+                    .Where(a => a.GroupId == id)
+                    .ToListAsync();
+                assignments.ForEach(a => a.IsActive = false);
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeactivateAndCopy(Guid id)
+        {
+            var g = await _context.Group
+                .Include(gp => gp.StudentGroupCompositions)
+                    .ThenInclude(sgc => sgc.Student)
+                .FirstOrDefaultAsync(gp => gp.Id == id);
+
+            if (g != null)
+            {
+                g.IsActive = false;
+
+                var assignments = await _context.Assignments
+                    .Where(a => a.GroupId == id)
+                    .ToListAsync();
+                assignments.ForEach(a => a.IsActive = false);
+                await _context.SaveChangesAsync();
+            
+                var newGroup = new Group {
+                    Name = g.Name,
+                    IsActive= true
+                };
+
+                ViewBag.CopyStudents = g.StudentGroupCompositions
+                    .Select(sgc => new {
+                        id = sgc.StudentId,
+                        name = sgc.Student.Name,
+                        useMyBalance = sgc.UseMyBalance
+                    })
+                    .ToList();
+                
+                var students = await _context.Student.OrderBy(s => s.Name).ToListAsync();
+                ViewBag.Students = new SelectList(students, "ID", "Name");
+
+                return View("Create", newGroup);
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

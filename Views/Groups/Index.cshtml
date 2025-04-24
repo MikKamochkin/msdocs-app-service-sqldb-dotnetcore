@@ -30,7 +30,7 @@
                     title="Schedule">
                     <i class="hgi hgi-stroke hgi-calendar-03"></i>
                 </a>
-                <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-dark d-flex icon-btn" title="Schedule">
+                <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-dark d-flex icon-btn" title="WhatsApp">
                     <i class="hgi hgi-stroke hgi-message-01"></i>
                 </a>
 
@@ -83,14 +83,59 @@
                             }
                         </td>
                         <td>
-                            <a href="@Url.Action("Edit", new { id = group.Id })"
-                               class="btn btn-sm btn-primary">
-                                Edit
-                            </a>
+                            <!-- Deactivate -->
+                            @using (Html.BeginForm("Deactivate", "Groups", FormMethod.Post, new { @class="d-inline" }))
+                            {
+                                @Html.AntiForgeryToken()
+                                @Html.Hidden("id", group.Id)
+                                <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
+                            }
+
+                            <!-- Deactivate & Copy -->
+                            @using (Html.BeginForm("DeactivateAndCopy", "Groups", FormMethod.Post, new { @class="d-inline ml-1" }))
+                            {
+                                @Html.AntiForgeryToken()
+                                @Html.Hidden("id", group.Id)
+                                <button type="submit" class="btn btn-sm btn-info">Deactivate &amp; Copy</button>
+                            }
+
+                            <!-- Copy Emails -->
+                            @{
+                                // collect the emails for JS
+                                var emails = group.StudentGroupCompositions
+                                    .SelectMany(sgc =>
+                                        sgc.Student.Contacts
+                                            .Where(c => c.Type == "Email")
+                                            .Select(c => c.Value))
+                                    .Distinct();
+                                var emailList = string.Join(";", emails);
+                            }
+                            <button type="button"
+                                    class="btn btn-sm btn-secondary ml-1"
+                                    data-emails="@emailList"
+                                    onclick="copyGroupEmails(this)">
+                                Copy Emails
+                            </button>
                         </td>
+
                     </tr>
                 }
             </tbody>
         </table>
     </div>
 </div>
+@section Scripts {
+  <script>
+    function copyGroupEmails(btn) {
+      const list = btn.getAttribute("data-emails");
+      if (!list) {
+        alert("No emails to copy.");
+        return;
+      }
+      navigator.clipboard.writeText(list)
+        .then(() => alert("Copied: " + list))
+        .catch(err => alert("Copy failed: " + err));
+    }
+  </script>
+}
+

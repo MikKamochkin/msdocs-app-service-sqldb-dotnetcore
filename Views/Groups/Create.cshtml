@@ -21,7 +21,7 @@
                 <a href="@Url.Action("Manage", "Schedule")" class="btn btn-dark d-flex icon-btn" title="Schedule">
                     <i class="hgi hgi-stroke hgi-calendar-03"></i>
                 </a>
-                <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-dark d-flex icon-btn" title="Schedule">
+                <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-dark d-flex icon-btn" title="WhatsApp">
                     <i class="hgi hgi-stroke hgi-message-01"></i>
                 </a>
             </div>
@@ -32,7 +32,7 @@
 
         @Html.ValidationSummary(true, "", new { @class = "text-danger" })
 
-        @using (Html.BeginForm())
+        @using (Html.BeginForm("Create", "Groups", FormMethod.Post))
         {
             @Html.AntiForgeryToken()
             <div class="form-horizontal">
@@ -99,13 +99,24 @@
 
     </div>
 </div>
-
+@* at the very top of your Scripts section *@
+@{
+    // serialize the list or fallback to an empty array
+    var copyJson = ViewBag.CopyStudents is not null
+        ? System.Text.Json.JsonSerializer.Serialize(ViewBag.CopyStudents)
+        : "[]";
+}
 @section Scripts {
     <script>
         $(document).ready(function () {
             // Array to store student data
             let students = [];
-
+            const copied = @Html.Raw(copyJson);
+            if (Array.isArray(copied) && copied.length) {
+                copied.forEach(s => students.push(s));
+                updateStudentDisplay();
+                updateHiddenFields();
+            }
             // Show modal when Add Student button is clicked
             $('#addStudentBtn').click(function () {
                 $('#addStudentModal').modal('show');
