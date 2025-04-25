@@ -337,12 +337,21 @@ namespace DotNetCoreSqlDb.Controllers
             if (g != null)
             {
                 g.IsActive = false;
+
+                // grab only the assignments that are still active
                 var assignments = await _context.Assignments
-                    .Where(a => a.GroupId == id)
+                    .Where(a => a.GroupId == id && a.IsActive)
                     .ToListAsync();
-                assignments.ForEach(a => a.IsActive = false);
+
+                _logger.LogInformation($"Deactivate: found {assignments.Count} active assignments for Group {id}");
+
+                foreach (var a in assignments)
+                    a.IsActive = false;
+
+                // since these were loaded and tracked, changing the property is enough
                 await _context.SaveChangesAsync();
             }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -360,24 +369,31 @@ namespace DotNetCoreSqlDb.Controllers
                 g.IsActive = false;
 
                 var assignments = await _context.Assignments
-                    .Where(a => a.GroupId == id)
+                    .Where(a => a.GroupId == id && a.IsActive)
                     .ToListAsync();
-                assignments.ForEach(a => a.IsActive = false);
+
+                _logger.LogInformation($"DeactivateAndCopy: found {assignments.Count} active assignments for Group {id}");
+
+                foreach (var a in assignments)
+                    a.IsActive = false;
+
                 await _context.SaveChangesAsync();
-            
-                var newGroup = new Group {
-                    Name = g.Name,
-                    IsActive= true
+
+                // now set up the copy
+                var newGroup = new Group
+                {
+                    Name     = g.Name,
+                    IsActive = true
                 };
 
                 ViewBag.CopyStudents = g.StudentGroupCompositions
                     .Select(sgc => new {
-                        id = sgc.StudentId,
-                        name = sgc.Student.Name,
-                        useMyBalance = sgc.UseMyBalance
+                        id            = sgc.StudentId,
+                        name          = sgc.Student.Name,
+                        useMyBalance  = sgc.UseMyBalance
                     })
                     .ToList();
-                
+
                 var students = await _context.Student.OrderBy(s => s.Name).ToListAsync();
                 ViewBag.Students = new SelectList(students, "ID", "Name");
 
@@ -386,6 +402,8 @@ namespace DotNetCoreSqlDb.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+
 
         private bool GroupExists(Guid id)
         {

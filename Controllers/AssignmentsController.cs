@@ -29,6 +29,7 @@ namespace DotNetCoreSqlDb.Controllers
             var assignments = await _context.Assignments
                 .Include(a => a.Group)
                 .Include(a => a.Teacher)
+                .Where(a => a.IsActive == true)
                 .ToListAsync();
             return View(assignments);
         }
@@ -69,6 +70,8 @@ namespace DotNetCoreSqlDb.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Assignments assignment)
         {
+            assignment.IsActive = true;
+            
             if (!ModelState.IsValid)
             {
                 // Log or inspect validation failures
@@ -148,7 +151,9 @@ namespace DotNetCoreSqlDb.Controllers
         private async Task PopulateDropdowns(Assignments model)
         {
             ViewBag.Groups        = new SelectList(
-                                       await _context.Group.ToListAsync(),
+                                       await _context.Group
+                                       .Where(g => g.IsActive)
+                                       .ToListAsync(),
                                        "Id", "Name",
                                        model.GroupId);
             ViewBag.Teachers      = new SelectList(
