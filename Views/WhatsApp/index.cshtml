@@ -199,6 +199,7 @@
       if (!res.ok) throw new Error();
       // ✨ on success: replace spinner with checkmark
       statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
+      btn.disabled = false;
     } catch {
       // ❌ on error: show cancel icon and re-enable the button
       statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
