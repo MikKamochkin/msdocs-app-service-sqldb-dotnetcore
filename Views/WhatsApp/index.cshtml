@@ -15,19 +15,18 @@
                 <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-dark d-flex icon-btn" title="Student Management">
                     <i class="fas fa-user-graduate"></i>
                 </a>
-                
                 <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Manage Groups">
                     <i class="fas fa-users"></i>
                 </a>
-
                 <a href="@Url.Action("Manage", "Schedule")" class="btn btn-dark d-flex icon-btn" title="Schedule">
                     <i class="hgi hgi-stroke hgi-calendar-03"></i>
                 </a>
-                <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-success d-flex icon-btn" title="WhatsApp">
+                <a href="@Url.Action("Index", "WhatsApp")" class="btn btn-success d-flex icon-btn" title="WhatsApp">
                     <i class="hgi hgi-stroke hgi-message-01"></i>
                 </a>
-                <a href="@Url.Action("Index", "Assignments")"       class="btn btn-dark icon-btn" title="Assignments"><i class="fas fa-tasks"></i></a>
-               
+                <a href="@Url.Action("Index", "Assignments")" class="btn btn-dark icon-btn" title="Assignments">
+                    <i class="fas fa-tasks"></i>
+                </a>
             </div>
         </div>
     }
@@ -56,28 +55,24 @@
     </div>
 </div>
 
-<!-- Fuse.js CDN for client-side fuzzy search -->
+<!-- Fuse.js for client-side search -->
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
-
 <script>
-  // Expose only minimal data to JS for safety
   const allMessages = @Html.Raw(
     System.Text.Json.JsonSerializer.Serialize(
       Model.Select(m => new { m.Id, m.Name, m.Description })
     )
   );
 
-  // Debounce helper
   function debounce(fn, delay) {
     let timer;
-    return function(...args) {
+    return (...args) => {
       clearTimeout(timer);
       timer = setTimeout(() => fn.apply(this, args), delay);
     };
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    // Initialize Fuse.js with ignoreLocation so substrings anywhere match
     const fuse = new Fuse(allMessages, {
       keys: ['Description'],
       threshold: 0.3,
@@ -89,65 +84,55 @@
     const tableBody = document.querySelector('#messages-table tbody');
     const searchBox = document.getElementById('search-box');
 
-    // Render function: safe DOM creation
     function render(items) {
       tableBody.innerHTML = '';
       items.forEach(vm => {
         const tr = document.createElement('tr');
 
-        // Name cell
         const tdName = document.createElement('td');
         tdName.textContent = vm.Name || '';
         tr.appendChild(tdName);
 
-        // Description cell
         const tdDesc = document.createElement('td');
         tdDesc.classList.add('description-col');
         tdDesc.textContent = vm.Description;
         tr.appendChild(tdDesc);
 
-        // Phone & Send cell
         const tdPhone = document.createElement('td');
-        const form   = document.createElement('form');
+        const form = document.createElement('form');
         form.classList.add('d-flex', 'mb-0');
         form.onsubmit = e => sendAndTrack(e, vm.Id);
 
-        // hidden ID
         const hid = document.createElement('input');
-        hid.type  = 'hidden';
-        hid.name  = 'id';
-        hid.value = vm.Id;
+        hid.type = 'hidden'; hid.name = 'id'; hid.value = vm.Id;
         form.appendChild(hid);
 
-        // phone input
         const input = document.createElement('input');
         Object.assign(input, {
           type: 'text',
           name: 'phone',
-          placeholder: '+1 647‑555‑0123',
+          placeholder: '+16475550123',
           required: true,
           pattern: '^\\+(?:1\\d{10}|7\\d{10}|(?:3\\d|4\\d)\\d{7,13})$',
-          title: 'Must be a valid NA (+1), RU (+7) or EU (+30–+49) E.164 number'
+          title: 'Valid NA (+1), RU (+7) or EU (+30–+49) E.164 number'
         });
         input.classList.add('form-control', 'me-2');
         form.appendChild(input);
 
-        // send button
         const btn = document.createElement('button');
         btn.type = 'submit';
-        btn.id   = `send-btn-${vm.Id}`;
-        btn.classList.add('btn', 'btn-sm', 'btn-primary');
+        btn.id = `send-btn-${vm.Id}`;
+        btn.classList.add('btn','btn-sm','btn-primary');
         btn.textContent = 'Send';
         form.appendChild(btn);
 
         tdPhone.appendChild(form);
         tr.appendChild(tdPhone);
 
-        // Live Status cell
         const tdStatus = document.createElement('td');
-        const span     = document.createElement('span');
-        span.id    = `status-${vm.Id}`;
-        span.classList.add('ms-2', 'small');
+        const span = document.createElement('span');
+        span.id = `status-${vm.Id}`;
+        span.classList.add('ms-2','small');
         tdStatus.appendChild(span);
         tr.appendChild(tdStatus);
 
@@ -155,41 +140,47 @@
       });
     }
 
-    // Initial render of all messages
     render(allMessages);
 
-    // Search input handler with debounce
     searchBox.addEventListener('input', debounce(e => {
       const q = e.target.value.trim();
-      if (!q) {
-        render(allMessages);
-      } else {
-        const results = fuse.search(q).map(r => r.item);
-        render(results);
-      }
+      render(q ? fuse.search(q).map(r => r.item) : allMessages);
     }, 150));
   });
 </script>
 
-<!-- Existing WhatsApp send/status scripts -->
+@* SignalR client lib *@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 <script>
+  const connection = new signalR.HubConnectionBuilder()
+    .withUrl("/hubs/whstatus")
+    .build();
+
+  connection.on("statusUpdated", (dbId, status) => {
+    const el = document.getElementById(`status-${dbId}`);
+    if (!el) return;
+    if (["delivered","processed","read","sent"].includes(status)) {
+      el.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
+    } else if (["failed","cancelled","revoked"].includes(status)) {
+      el.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
+    }
+  });
+
+  connection.start().catch(console.error);
+
+  // helper to validate numbers via our API
   async function validateNumber(phone) {
-    let res;
     try {
-      res = await fetch(`/WhatsApp/ValidateContact?phone=${encodeURIComponent(phone)}`);
+      const res = await fetch(`/WhatsApp/ValidateContact?phone=${encodeURIComponent(phone)}`);
+      if (!res.ok) return false;
+      const data = await res.json();
+      return data.valid === true && data.exists === true;
     } catch {
       return false;
     }
-    const raw = await res.text();
-    let json;
-    try {
-      json = JSON.parse(raw);
-    } catch {
-      return false;
-    }
-    return json.valid === true;
   }
 
+  // send & then rely on SignalR for status updates
   async function sendAndTrack(evt, id) {
     evt.preventDefault();
     const form = evt.target;
@@ -197,73 +188,22 @@
     const btn = document.getElementById(`send-btn-${id}`);
     const statusEl = document.getElementById(`status-${id}`);
 
-    // 1) validate
     statusEl.innerHTML = '<div class="loading-spinner"></div>';
     if (!await validateNumber(phone)) {
       statusEl.innerHTML = '<i class="fa fa-times"></i> Invalid number';
       return;
     }
 
-    // 2) send
     btn.disabled = true;
-    btn.classList.add('disabled');
-    statusEl.innerHTML = '<div class="loading-spinner"></div>';
-
-    let sendOk = false;
     try {
       const res = await fetch(`/WhatsApp/Send`, {
         method: 'POST',
         body: new FormData(form)
       });
-      sendOk = res.ok;
+      if (!res.ok) throw new Error();
     } catch {
-      sendOk = false;
-    }
-
-    if (!sendOk) {
       statusEl.innerHTML = '<i class="fa fa-times"></i>';
       btn.disabled = false;
-      return;
     }
-
-    // 3) poll status
-    pollStatus(id);
-  }
-
-  function pollStatus(id) {
-    const btn = document.getElementById(`send-btn-${id}`);
-    const statusEl = document.getElementById(`status-${id}`);
-    const maxAttempts = 300;
-    let attempts = 0, lastStatus = null;
-
-    const handle = setInterval(async () => {
-      attempts++;
-      try {
-        const res  = await fetch(`/WhatsApp/GetStatus?id=${id}`);
-        const data = await res.json();
-        const ds   = data.deliveryStatus;
-        lastStatus = ds || lastStatus;
-
-        if (ds === 'delivered' || ds === 'processed' || ds === 'read' || ds === 'sent') {
-          statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
-          clearInterval(handle);
-        }
-        else if ([`failed`,`cancelled`,`revoked`].includes(ds)) {
-          statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
-          clearInterval(handle);
-        }
-      } catch {
-        clearInterval(handle);
-        statusEl.innerHTML = '<i class="fa fa-times"></i>';
-      }
-
-      if (attempts >= maxAttempts) {
-        clearInterval(handle);
-        if (lastStatus === 'delivered') {
-          statusEl.innerHTML = '<i class="fa fa-arrow-right"></i>';
-        }
-        btn.disabled = false;
-      }
-    }, 1000);
   }
 </script>

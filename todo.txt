@@ -1,7 +1,7 @@
 
-when group marked as inactive, check if there's an assignment for that group, and set it as inactive.
-in assignment creation/editing, for groups only show active ones
-when creating assignment, dont give option to set it as inactive, active by default
+DONE:when group marked as inactive, check if there's an assignment for that group, and set it as inactive.
+DONE:in assignment creation/editing, for groups only show active ones
+DONE:when creating assignment, dont give option to set it as inactive, active by default
 
 DONE:cannot change people in group
 

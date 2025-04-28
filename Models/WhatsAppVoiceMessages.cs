@@ -21,7 +21,7 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Name")]
         public string? Name { get; set; }
 
-        
+        public string? DeliveryStatus { get; set; }
 
     }
 } 

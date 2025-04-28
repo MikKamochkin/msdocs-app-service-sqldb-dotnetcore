@@ -3,6 +3,9 @@ using DotNetCoreSqlDb.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Azure.Identity;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
+using DotNetCoreSqlDb.Services;
+using System.Net.Http.Headers;
+using DotNetCoreSqlDb.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +43,8 @@ else
 
 var WassengerApiKey = builder.Configuration["WASSENGER_API_KEY"];
 
+var WassengerExpectedSecret = builder.Configuration["WASSENGER_WEBHOOK_EXPECTED_SECRET"];
+
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -54,6 +59,18 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromHours(24); // Cookie expiration time.
         options.SlidingExpiration = true; // After every valid request the cookie's lifetime is "slid" forward, once every 12 hours
     });
+
+
+builder.Services.AddSignalR();
+
+builder.Services.AddHttpClient("Wassenger", client =>
+{
+    client.BaseAddress = new Uri("https://api.wassenger.com");
+    client.DefaultRequestHeaders.Add("Token", builder.Configuration["WASSENGER-API-KEY"]);
+    client.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue("Bearer", builder.Configuration["WASSENGER-API-KEY"]);
+});
+builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
 
 // Add App Service logging
 builder.Logging.AddAzureWebAppDiagnostics();
@@ -76,6 +93,9 @@ app.UseRouting();
 // IMPORTANT: Add authentication middleware before authorization.
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapControllers();
+app.MapHub<WhatsAppHub>("/hubs/whstatus");
 
 app.MapControllerRoute(
     name: "default",
