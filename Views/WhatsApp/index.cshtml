@@ -13,50 +13,39 @@
             </div>
             <div class="sidebar-content">
                 <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-dark d-flex icon-btn" title="Student Management">
-                    <i class="fas fa-user-graduate"></i>
+                    <i class="fas fa-user-graduate"></i> Student Management
                 </a>
-                <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Manage Groups">
-                    <i class="fas fa-users"></i>
+                <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Groups">
+                    <i class="fas fa-users"></i> Groups
                 </a>
-                <a href="@Url.Action("Manage", "Schedule")" class="btn btn-dark d-flex icon-btn" title="Schedule">
-                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                <a href="@Url.Action("Index", "Assignments")" class="btn btn-dark d-flex icon-btn" title="Assignments">
+                    <i class="fas fa-tasks"></i> Assignments
                 </a>
-                <a href="@Url.Action("Index", "WhatsApp")" class="btn btn-success d-flex icon-btn" title="WhatsApp">
-                    <i class="hgi hgi-stroke hgi-message-01"></i>
-                </a>
-                <a href="@Url.Action("Index", "Assignments")" class="btn btn-dark icon-btn" title="Assignments">
-                    <i class="fas fa-tasks"></i>
+                <a href="@Url.Action("Index", "WhatsApp")" class="btn btn-primary d-flex icon-btn" title="WhatsApp">
+                    <i class="fab fa-whatsapp"></i> WhatsApp
                 </a>
             </div>
         </div>
+        <div class="col pl-3">
     }
-    <div class="col-md-10">
-        <h2>Voice Messages</h2>
 
-        <!-- Search box -->
-        <input id="search-box"
-               type="text"
-               class="form-control mb-3"
-               placeholder="Search descriptions…" />
-
-        <table class="table" id="messages-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Phone &amp; Send</th>
-                    <th>Live Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                @* Populated by JavaScript *@
-            </tbody>
-        </table>
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <input type="text" id="searchBox" class="form-control" placeholder="Search voice messages..." />
+            </div>
+        </div>
+        <div class="row" id="messagesContainer"></div>
     </div>
+
+    @if (User.IsInRole("support"))
+    {
+        </div>
+    }
 </div>
 
-<!-- Fuse.js for client-side search -->
-<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
+@* Fuse JS and initial render *@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
 <script>
   const allMessages = @Html.Raw(
     System.Text.Json.JsonSerializer.Serialize(
@@ -74,30 +63,33 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     const fuse = new Fuse(allMessages, {
-      keys: ['Description'],
-      threshold: 0.3,
-      distance: 100,
-      ignoreLocation: true,
-      minMatchCharLength: 2
+      keys: ['Name', 'Description'],
+      threshold: 0.3
     });
 
-    const tableBody = document.querySelector('#messages-table tbody');
-    const searchBox = document.getElementById('search-box');
-
     function render(items) {
-      tableBody.innerHTML = '';
+      const container = document.getElementById('messagesContainer');
+      container.innerHTML = '';
+
       items.forEach(vm => {
+        const col = document.createElement('div');
+        col.className = 'col-md-4 mb-3';
+        const card = document.createElement('div');
+        card.className = 'card h-100';
+        const body = document.createElement('div');
+        body.className = 'card-body';
+
+        const title = document.createElement('h5');
+        title.className = 'card-title';
+        title.textContent = vm.Name;
+        body.appendChild(title);
+
+        const desc = document.createElement('p');
+        desc.className = 'card-text';
+        desc.textContent = vm.Description;
+        body.appendChild(desc);
+
         const tr = document.createElement('tr');
-
-        const tdName = document.createElement('td');
-        tdName.textContent = vm.Name || '';
-        tr.appendChild(tdName);
-
-        const tdDesc = document.createElement('td');
-        tdDesc.classList.add('description-col');
-        tdDesc.textContent = vm.Description;
-        tr.appendChild(tdDesc);
-
         const tdPhone = document.createElement('td');
         const form = document.createElement('form');
         form.classList.add('d-flex', 'mb-0');
@@ -136,12 +128,15 @@
         tdStatus.appendChild(span);
         tr.appendChild(tdStatus);
 
-        tableBody.appendChild(tr);
+        card.appendChild(body);
+        col.appendChild(card);
+        container.appendChild(col);
       });
     }
 
     render(allMessages);
 
+    const searchBox = document.getElementById('searchBox');
     searchBox.addEventListener('input', debounce(e => {
       const q = e.target.value.trim();
       render(q ? fuse.search(q).map(r => r.item) : allMessages);
@@ -180,29 +175,27 @@
     }
   }
 
-  // send & then rely on SignalR for status updates
   async function sendAndTrack(evt, id) {
     evt.preventDefault();
-    const form = evt.target;
-    const phone = form.phone.value;
-    const btn = document.getElementById(`send-btn-${id}`);
+    const form    = evt.target;
     const statusEl = document.getElementById(`status-${id}`);
-
-    statusEl.innerHTML = '<div class="loading-spinner"></div>';
-    if (!await validateNumber(phone)) {
-      statusEl.innerHTML = '<i class="fa fa-times"></i> Invalid number';
-      return;
-    }
-
+    // show spinner while sending
+    statusEl.innerHTML =
+      '<div class="spinner-border spinner-border-sm" role="status"></div>';
+    const btn = document.getElementById(`send-btn-${id}`);
     btn.disabled = true;
+
     try {
       const res = await fetch(`/WhatsApp/Send`, {
         method: 'POST',
         body: new FormData(form)
       });
       if (!res.ok) throw new Error();
+      // ✨ on success: replace spinner with checkmark
+      statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
     } catch {
-      statusEl.innerHTML = '<i class="fa fa-times"></i>';
+      // ❌ on error: show cancel icon and re-enable the button
+      statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
       btn.disabled = false;
     }
   }
