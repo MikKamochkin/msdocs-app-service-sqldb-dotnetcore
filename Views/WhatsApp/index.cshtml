@@ -5,7 +5,7 @@
 }
 
 <div class="row no-gutters">
-    @if (User.IsInRole("support"))
+    @if (User.IsInRole("support")  || User.IsInRole("admin")  || User.IsInRole("assistant"))
     {
         <div class="col-auto admin-sidebar">
             <div class="sidebar-header">
@@ -182,28 +182,39 @@
 
   // send & then rely on SignalR for status updates
   async function sendAndTrack(evt, id) {
-    evt.preventDefault();
-    const form    = evt.target;
-    const statusEl = document.getElementById(`status-${id}`);
-    // show spinner while sending
-    statusEl.innerHTML =
-      '<div class="spinner-border spinner-border-sm" role="status"></div>';
-    const btn = document.getElementById(`send-btn-${id}`);
-    btn.disabled = true;
+  evt.preventDefault();
+  const form     = evt.target;
+  const phone    = form.querySelector('input[name="phone"]').value;
+  const statusEl = document.getElementById(`status-${id}`);
+  const btn      = document.getElementById(`send-btn-${id}`);
 
-    try {
-      const res = await fetch(`/WhatsApp/Send`, {
-        method: 'POST',
-        body: new FormData(form)
-      });
-      if (!res.ok) throw new Error();
-      // ✨ on success: replace spinner with checkmark
-      statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
-      btn.disabled = false;
-    } catch {
-      // ❌ on error: show cancel icon and re-enable the button
-      statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
-      btn.disabled = false;
-    }
+  // 1) Show spinner while validating…
+  statusEl.innerHTML = 
+    '<div class="spinner-border spinner-border-sm" role="status"></div>';
+  btn.disabled = true;
+
+  // 2) Call your ValidateContact endpoint first
+  const isValid = await validateNumber(phone);
+  if (!isValid) {
+    // Not a WhatsApp number: show cancel icon, re-enable Send
+    statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
+    btn.disabled = false;
+    return;
   }
+
+  // 3) It’s a real WhatsApp number—go ahead and send
+  try {
+    const res = await fetch(`/WhatsApp/Send`, {
+      method: 'POST',
+      body: new FormData(form)
+    });
+    if (!res.ok) throw new Error();
+    statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
+  } catch {
+    statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 </script>

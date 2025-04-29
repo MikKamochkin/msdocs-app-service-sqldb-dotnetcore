@@ -5,7 +5,7 @@
 }
 
 <div class="row no-gutters">
-    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
     {
         <div class="col-auto admin-sidebar">
             <div class="sidebar-header">
