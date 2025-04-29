@@ -13,9 +13,12 @@ namespace DotNetCoreSqlDb.Controllers
     public class StudentManagementController : Controller
     {
         private readonly MyDatabaseContext _context;
-        public StudentManagementController(MyDatabaseContext context)
+        private readonly ILogger<StudentManagementController> _logger;
+
+        public StudentManagementController(MyDatabaseContext context,  ILogger<StudentManagementController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: Students
@@ -138,7 +141,7 @@ namespace DotNetCoreSqlDb.Controllers
 
 
             // Find all the GroupIds where this student appears
-            var soloGroupIds = await _context.StudentGroupComposition
+            /*var soloGroupIds = await _context.StudentGroupComposition
                 .Where(sgc => sgc.StudentId == id)          // all compositions for this student
                 .GroupBy(sgc => sgc.GroupId)                // group them by GroupId
                 .Where(g => g.Count() == 1)                 // keep only groups with exactly one member
@@ -151,8 +154,24 @@ namespace DotNetCoreSqlDb.Controllers
                 .ToListAsync();
 
             // 3) Rename them
+            //_logger.LogInformation($"Found {studentNamePlusParent} student IDs");
             foreach (var g in soloGroups)
+                g.Name = studentNamePlusParent;*/
+
+            var soloGroups = await _context.Group
+                // count all compositions (across all students) in each group
+                .Where(g =>
+                    g.StudentGroupCompositions.Count == 1
+                    && g.StudentGroupCompositions.Any(c => c.StudentId == id))
+                .ToListAsync();
+
+            // rename them and tell EF Core these Name properties changed
+            foreach (var g in soloGroups)
+            {
                 g.Name = studentNamePlusParent;
+                // if for some reason your context is in NoTracking mode, you can force it:
+                // _context.Entry(g).Property(x => x.Name).IsModified = true;
+            }
 
             // Synchronize the Contacts collection.
             if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
