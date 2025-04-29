@@ -159,18 +159,15 @@ namespace DotNetCoreSqlDb.Controllers
                 g.Name = studentNamePlusParent;*/
 
             var soloGroups = await _context.Group
-                // count all compositions (across all students) in each group
                 .Where(g =>
-                    g.StudentGroupCompositions.Count == 1
+                    g.StudentGroupCompositions.Count() == 1
                     && g.StudentGroupCompositions.Any(c => c.StudentId == id))
                 .ToListAsync();
 
-            // rename them and tell EF Core these Name properties changed
+            // Rename each one
             foreach (var g in soloGroups)
             {
                 g.Name = studentNamePlusParent;
-                // if for some reason your context is in NoTracking mode, you can force it:
-                // _context.Entry(g).Property(x => x.Name).IsModified = true;
             }
 
             // Synchronize the Contacts collection.
@@ -317,9 +314,9 @@ namespace DotNetCoreSqlDb.Controllers
                     IsActive            = false
                 };
                 _context.Assignments.Add(assignment);
-
+                */
                 // 5) Persist composition + assignment
-                await _context.SaveChangesAsync();*/
+                await _context.SaveChangesAsync();
 
                 return RedirectToAction(nameof(Index));
             }
