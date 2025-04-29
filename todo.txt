@@ -1,3 +1,5 @@
+when automatically creating group, group name = student + parent/employer concatinated
+
 
 DONE:when group marked as inactive, check if there's an assignment for that group, and set it as inactive.
 DONE:in assignment creation/editing, for groups only show active ones
