@@ -130,16 +130,29 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
             existingStudent.AccountingGroup = isPrivileged ? updatedStudent.AccountingGroup : "S";
 
-            var personalGroup = await _context.Group
-                .Include(g => g.StudentGroupCompositions)
-                .Where(g => g.StudentGroupCompositions.Any(c => c.StudentId == id))
-                .ToListAsync();       // bring down candidates
-            var pg = personalGroup
-                .FirstOrDefault(g => g.StudentGroupCompositions.Count == 1);
-            if (pg != null)
-            {
-                pg.Name = updatedStudent.Name;
-            }
+
+            var suffix   = string.IsNullOrWhiteSpace(existingStudent.ParentOrEmployer)
+                   ? ""
+                   : " – " + existingStudent.ParentOrEmployer;
+            var studentNamePlusParent = existingStudent.Name + suffix;
+
+
+            // Find all the GroupIds where this student appears
+            var soloGroupIds = await _context.StudentGroupComposition
+                .Where(sgc => sgc.StudentId == id)          // all compositions for this student
+                .GroupBy(sgc => sgc.GroupId)                // group them by GroupId
+                .Where(g => g.Count() == 1)                 // keep only groups with exactly one member
+                .Select(g => g.Key)                         // select the GroupId
+                .ToListAsync();
+
+            // 2) Load those groups
+            var soloGroups = await _context.Group
+                .Where(g => soloGroupIds.Contains(g.Id))
+                .ToListAsync();
+
+            // 3) Rename them
+            foreach (var g in soloGroups)
+                g.Name = studentNamePlusParent;
 
             // Synchronize the Contacts collection.
             if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
@@ -244,11 +257,17 @@ namespace DotNetCoreSqlDb.Controllers
                 _context.Add(student);
                 await _context.SaveChangesAsync();
 
+                var suffix   = string.IsNullOrWhiteSpace(student.ParentOrEmployer)
+                   ? ""
+                   : " – " + student.ParentOrEmployer;
+                var studentNamePlusParent = student.Name + suffix;
+
                 // 2) Create a Group just for this student
                 var group = new Group
                 {
                     Id   = Guid.NewGuid(),
-                    Name = student.Name                
+                    Name = studentNamePlusParent,
+                    IsActive = true            
                     
                 };
                 _context.Group.Add(group);

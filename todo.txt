@@ -1,5 +1,12 @@
-when automatically creating group, group name = student + parent/employer concatinated
+when automatically creating/editing group, group name = student + parent/employer concatinated
+send group names viewbag to create assignments alphabetically
 
+
+
+
+get id of student we're editing
+in studentgroupcomposition, find all where studentid = id
+get groupid of these records; get unique group -> solo group. edit that group's name
 
 DONE:when group marked as inactive, check if there's an assignment for that group, and set it as inactive.
 DONE:in assignment creation/editing, for groups only show active ones
