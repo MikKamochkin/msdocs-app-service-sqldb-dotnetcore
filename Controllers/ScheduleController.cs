@@ -10,6 +10,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using TimeZoneConverter;
+
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -51,6 +53,23 @@ namespace DotNetCoreSqlDb.Controllers
 
             // 4.1) **Duration dropdown** (new)
             ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes;
+
+            /*ViewBag.TimeZones = TimeZoneMapping.PreferredTimeZones
+                .OrderBy(k=>k.Key)
+                .Select(kvp => new SelectListItem {
+                    Value = kvp.Key.ToString(),
+                    Text = kvp.Value,
+                    Selected = kvp.Key == -5
+                })
+                .ToList();*/
+            //ViewBag.TimeZones = TimeZoneMapping.GetTimeZones();
+            var timeZones = TimeZoneMapping.GetTimeZones();
+            var defaultZone = TZConvert.WindowsToIana("Eastern Standard Time");
+            foreach (var tz in timeZones)
+            {
+                tz.Selected = tz.Value == defaultZone;
+            }
+            ViewBag.TimeZones = timeZones;
 
             // 5) Groups (i.e. students) for that teacher
             List<SelectListItem> groupItems = new();
@@ -116,7 +135,8 @@ namespace DotNetCoreSqlDb.Controllers
             Guid teacherId,
             DateTime selectedDate,
             List<Schedule> schedules,
-            List<Guid>? toDelete)
+            List<Guid>? toDelete,
+            int timeZoneOffset)
         {
             // 1) remove any flagged-for-deletion rows
             if (toDelete != null)

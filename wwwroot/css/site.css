@@ -327,6 +327,30 @@ span.ms-2.small {
   align-items: center;
 }
 
+/* make the date picker indicator cover the entire input */
+#selectedDate {
+  position: relative;       /* ensure indicator can be absolutely positioned */
+}
+#selectedDate::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;               /* hide the native icon graphic */
+  cursor: pointer;          /* indicate it’s clickable */
+}
+
+/* Firefox uses a different pseudo, if you need it there too: */
+#selectedDate::-moz-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
 
 /* Responsive adjustments for the sidebar */
 @media (max-width: 768px) {

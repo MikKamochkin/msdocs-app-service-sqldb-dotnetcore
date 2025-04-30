@@ -1,73 +1,60 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
 using System.Collections.Generic;
+using TimeZoneConverter;
 
 public static class TimeZoneMapping
 {
     // Mapping for preferred time zones (offset hour -> user-friendly name)
-    public static readonly Dictionary<int, string> PreferredTimeZones = new Dictionary<int, string>
+    private static readonly Dictionary<string, string> PreferredTimeZones = new()
     {
-        { -12, "Dateline Standard Time" },
-        { -11, "UTC-11" },
-        { -10, "Hawaiian Standard Time" },
-        { -9,  "Alaskan Standard Time" },
-        { -8,  "Pacific Standard Time" },
-        { -7,  "US Mountain Standard Time" },
-        { -6,  "Central Standard Time" },
-        { -5,  "Toronto" },  // <-- Example: just "Toronto"
-        { -4,  "Atlantic Standard Time" },
-        {  0,  "GMT Standard Time" },
-        {  1,  "Central Europe Standard Time (Paris)" },
-        {  2,  "E. Europe Standard Time" },
-        {  3,  "Russian Standard Time (Moscow, St. Petersburg)" },
-        {  4,  "Azerbaijan Standard Time" },
-        {  5,  "Pakistan Standard Time" },
-        {  6,  "Central Asia Standard Time" },
-        {  7,  "SE Asia Standard Time" },
-        {  8,  "China Standard Time" },
-        {  9,  "Tokyo Standard Time" },
-        { 10,  "AUS Eastern Standard Time" },
-        { 11,  "Central Pacific Standard Time" },
-        { 12,  "New Zealand Standard Time" },
-        { 13,  "Tonga Standard Time" }
+        { "Dateline Standard Time",       "UTC-11" }, // UTC−12
+        { "UTC-11",                       "UTC-10" },  // UTC−11
+        { "Hawaiian Standard Time",       "UTC-9" },                         // UTC−10
+        { "Alaskan Standard Time",        "UTC-8" },                        // UTC−9
+        { "Pacific Standard Time",        "Vancouver Los Angeles" },                     // UTC−8
+        { "Mountain Standard Time",       "Calgary" },                         // UTC−7
+        { "Central Standard Time",        "Chicago" },                         // UTC−6
+        { "Eastern Standard Time",        "Toronto / New-York" },                         // UTC−5
+        { "Atlantic Standard Time",       "Halifax" },                        // UTC−4
+        { "UTC-02",                       "UTC−2" },  // UTC−2
+        { "Azores Standard Time",         "UTC−1" },                    // UTC−1
+        { "UTC",                          "London" },                                            // UTC±0
+        { "Romance Standard Time",        "Paris" },                  // UTC+1
+        { "E. Europe Standard Time",      "Belgrade" },               // UTC+2
+        { "Russian Standard Time",        "Moscow / St. Petersburg / Kyiv" },                   // UTC+3
+        { "Arabian Standard Time",        "UTC+4" },                     // UTC+4
+        { "Pakistan Standard Time",       "UTC+5" },                        // UTC+5
+        { "Central Asia Standard Time",   "UTC+6" },                     // UTC+6
+        { "SE Asia Standard Time",        "UTC+7" },                       // UTC+7
+        { "China Standard Time",          "UTC+8" },                           // UTC+8
+        { "Tokyo Standard Time",          "UTC+9" },                             // UTC+9
+        { "AUS Eastern Standard Time",    "UTC+10" },                // UTC+10
+        { "Magadan Standard Time",        "UTC+11" },                         // UTC+11
+        { "New Zealand Standard Time",    "UTC+12" },                    // UTC+12
+        { "Tonga Standard Time",          "UTC+13" },                        // UTC+13
+        { "Line Islands Standard Time",   "UTC+14" }                  // UTC+14
     };
+
 
     public static List<SelectListItem> GetTimeZones()
     {
-        var timeZones = new List<SelectListItem>();
+        var items = new List<SelectListItem>();
 
         foreach (var kvp in PreferredTimeZones)
         {
-            TimeZoneInfo tz = null;
-            var offset = TimeSpan.FromHours(kvp.Key);
+            var windowsId = kvp.Key;
+            var display   = kvp.Value;
 
-            try
-            {
-                // Attempt to get the system time zone by ID.
-                // If kvp.Value is a valid Windows time zone ID, it won't throw.
-                tz = TimeZoneInfo.FindSystemTimeZoneById(kvp.Value);
-            }
-            catch (TimeZoneNotFoundException)
-            {
-                // If the system time zone isn't found, create a custom one.
-                string customTimeZoneId = $"Custom_{offset}";
-                tz = TimeZoneInfo.CreateCustomTimeZone(
-                    customTimeZoneId,
-                    offset,
-                    kvp.Value,   // <-- Use your dictionary value as the display name
-                    kvp.Value
-                );
-            }
+            // Convert Windows ID to IANA
+            string ianaId = TZConvert.WindowsToIana(windowsId);
 
-            // Use the dictionary value (kvp.Value) for the dropdown text
-            // so it always matches exactly what you wrote in PreferredTimeZones.
-            timeZones.Add(new SelectListItem
-            {
-                Value = tz.Id,
-                Text = kvp.Value
+            items.Add(new SelectListItem {
+                Value = ianaId,
+                Text  = display
             });
         }
 
-        return timeZones;
+        return items;
     }
 }
