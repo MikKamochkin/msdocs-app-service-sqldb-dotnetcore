@@ -29,13 +29,13 @@
             @Html.AntiForgeryToken()
 
             <div class="form-group">
-                @Html.LabelFor(m => m.GroupId)
+                @Html.LabelFor(m => m.GroupId, "Student/Group")
                 @Html.DropDownListFor(m => m.GroupId, (SelectList)ViewBag.Groups, "Select Group", new { @class="form-control" })
                 @Html.ValidationMessageFor(m => m.GroupId, "", new { @class="text-danger" })
             </div>
 
             <div class="form-group">
-                @Html.LabelFor(m => m.TeacherId)
+                @Html.LabelFor(m => m.TeacherId, "Teacher")
                 @Html.DropDownListFor(m => m.TeacherId, (SelectList)ViewBag.Teachers, "— unassigned —", new { @class="form-control" })
                 @Html.ValidationMessageFor(m => m.TeacherId, "", new { @class="text-danger" })
             </div>

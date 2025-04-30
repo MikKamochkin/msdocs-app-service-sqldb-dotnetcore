@@ -54,11 +54,11 @@ namespace DotNetCoreSqlDb.Controllers
             var assignment = new Assignments
             {
                 StudentUnitCost     = 0f,
-                StudentUnitType     = DropdownOptions.PayUnitTypes.First().Value,
+                StudentUnitType     = "CAD",
                 StudentUnitBalance  = 0f,
-                StudentUnitDuration = float.Parse(DropdownOptions.LessonDurationTypes.First().Value),
+                StudentUnitDuration = 60f,
                 TeacherPayForUnit   = 0f,
-                TeacherPayUnitType  = DropdownOptions.PayUnitTypes.First().Value,
+                TeacherPayUnitType  = "CAD",
                 IsActive            = true
             };
             await PopulateDropdowns(assignment);
