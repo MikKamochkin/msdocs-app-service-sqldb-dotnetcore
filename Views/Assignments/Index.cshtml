@@ -65,7 +65,7 @@
             <td>@a.StudentUnitCost @a.StudentUnitType</td>
             <td>@a.StudentUnitBalance</td>
             <td>@a.StudentUnitDuration</td>
-            <td>@a.TeacherPayForUnit / @a.TeacherPayUnitType</td>
+            <td>@a.TeacherPayForUnit @a.TeacherPayUnitType</td>
             <td>@(a.IsActive ? "Yes" : "No")</td>
             <td>
                 <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-sm btn-info">
