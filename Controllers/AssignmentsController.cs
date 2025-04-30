@@ -153,6 +153,7 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.Groups        = new SelectList(
                                        await _context.Group
                                        .Where(g => g.IsActive)
+                                       .OrderBy(g => g.Name)
                                        .ToListAsync(),
                                        "Id", "Name",
                                        model.GroupId);
