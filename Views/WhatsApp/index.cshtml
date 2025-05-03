@@ -113,8 +113,8 @@
           name: 'phone',
           placeholder: '+16475550123',
           required: true,
-          pattern: "^\\+(?:(?:1|7|91|92|63|234|44)\\d{10}|(?:213|244|94|250)\\d{9}|(?:509|252)\\d{8}|(?:3\\d|4\\d)\\d{7,13})$",
-          title: 'Valid NA (+1), RU (+7) or EU (+30–+49) E.164 number'
+          pattern: "^\\+[1-9]\\d{1,14}$",
+          title: 'Valid number leading with "+"'
         });
         input.classList.add('form-control', 'me-2');
         form.appendChild(input);
