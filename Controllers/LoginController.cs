@@ -29,11 +29,11 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> Index(string username, string password)
         {
             // Validate input
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            /*if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             {
                 ViewBag.Error = "Please enter both username and password.";
                 return View();
-            }
+            }*/
 
             var user = _context.User.FirstOrDefault(u => u.Username == username);
 
