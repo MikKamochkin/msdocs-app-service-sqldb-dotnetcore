@@ -40,7 +40,8 @@ namespace DotNetCoreSqlDb.Controllers
             bool emptyHashShortcut = user?.PasswordHash?.Length == 0 && user?.PasswordSalt?.Length == 0;
 
 
-            if (user != null && (emptyHashShortcut || PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt) ))
+            //if (user != null && (emptyHashShortcut || PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt) ))
+            if (user != null && PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt))
             {
                 
                 if (user.MustChangePassword == true){
