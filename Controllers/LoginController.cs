@@ -29,19 +29,18 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> Index(string username, string password)
         {
             // Validate input
-            /*if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             {
                 ViewBag.Error = "Please enter both username and password.";
                 return View();
-            }*/
+            }
 
             var user = _context.User.FirstOrDefault(u => u.Username == username);
 
-            bool emptyHashShortcut = user?.PasswordHash?.Length == 0 && user?.PasswordSalt?.Length == 0;
-
-
-            if (user != null && (emptyHashShortcut || PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt) ))
-            //if (user != null && PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt))
+            //Uncomment next 2 lines to create a password for a user through password change
+            //bool emptyHashShortcut = user?.PasswordHash?.Length == 0 && user?.PasswordSalt?.Length == 0;
+            //if (user != null && (emptyHashShortcut || PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt) ))
+            if (user != null && PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt))
             {
                 
                 if (user.MustChangePassword == true){
