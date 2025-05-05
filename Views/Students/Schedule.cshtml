@@ -1,0 +1,98 @@
+@model List<DotNetCoreSqlDb.Models.Schedule>
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "My Schedule";
+    var existingJson = ViewBag.ExistingJson as string ?? "[]";
+    var timeZones    = ViewBag.TimeZones as List<SelectListItem>;
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<div class="form-inline mb-3">
+  <label class="mr-2">Time Zone</label>
+  <select id="timeZoneSelect" class="form-control">
+    @foreach (var tz in timeZones)
+    {
+        if (tz.Selected)
+        {
+            <option value="@tz.Value" selected>@tz.Text</option>
+        }
+        else
+        {
+            <option value="@tz.Value">@tz.Text</option>
+        }
+    }
+
+    
+  </select>
+</div>
+
+<table class="table table-bordered" id="entriesTable">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Time</th>
+      <th>Teacher</th>
+      <th>Status</th>
+      <th>Duration</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+@section Scripts {
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+  <script>
+    const DateTime = luxon.DateTime;
+
+    // 1) Parse the raw JSON from the server
+    const raw = @Html.Raw(existingJson);
+
+    // 2) Define our filter window in UTC
+    const nowUtc     = DateTime.utc();
+    const windowStart = nowUtc.minus({ days: 7 });
+    const windowEnd   = nowUtc.plus({ days: 14 });
+
+    // 3) Normalize & filter entries
+    let rows = raw
+      .map(r => ({
+        ...r,
+        DateTime: r.DateTime.endsWith('Z') ? r.DateTime : (r.DateTime + 'Z')
+      }))
+      .filter(r => {
+        const dt = DateTime.fromISO(r.DateTime, { zone: 'utc' });
+        return dt >= windowStart && dt <= windowEnd;
+      })
+      .sort((a, b) =>
+        DateTime.fromISO(a.DateTime).toMillis()
+        - DateTime.fromISO(b.DateTime).toMillis()
+      );
+
+    // 4) Render table on load and when TZ changes
+    $(renderTable);
+    $('#timeZoneSelect').on('change', renderTable);
+
+    function renderTable() {
+      const zone = $('#timeZoneSelect').val(); // e.g. "America/Toronto"
+      const tbody = $('#entriesTable tbody').empty();
+
+      rows.forEach(r => {
+        // Convert UTC → selected zone
+        const dtInZone = DateTime.fromISO(r.DateTime, { zone: 'utc' })
+                                 .setZone(zone);
+        const date = dtInZone.toFormat('yyyy-LL-dd');
+        const time = dtInZone.toFormat('HH:mm');
+
+        tbody.append(`
+          <tr>
+            <td>${date}</td>
+            <td>${time}</td>
+            <td>${r.TeacherName}</td>
+            <td>${r.Status}</td>
+            <td>${r.Duration}</td>
+          </tr>
+        `);
+      });
+    }
+  </script>
+}

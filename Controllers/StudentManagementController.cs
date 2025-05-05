@@ -240,6 +240,9 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 student.AccountingGroup = "A";
             }
+            var token = Guid.NewGuid().ToString();
+            HttpContext.Session.SetString("CreateStudentToken", token);
+            ViewBag.FormToken = token;
             return View(student);
         }
 
@@ -250,6 +253,17 @@ namespace DotNetCoreSqlDb.Controllers
             [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")]
             Student student)
         {
+            // 1) Validate your one-time token
+            var formToken    = Request.Form["FormToken"].ToString();
+            var sessionToken = HttpContext.Session.GetString("CreateStudentToken");
+            if (formToken != sessionToken)
+            {
+                // either a repeat-submit or invalid token -> drop it
+                return RedirectToAction(nameof(Index));
+            }
+            // consume it so it can’t be used again
+            HttpContext.Session.Remove("CreateStudentToken");
+
             // set created date
             student.CreatedDate = DateTime.Now;
 
@@ -271,7 +285,7 @@ namespace DotNetCoreSqlDb.Controllers
                 // 1) Save the new Student (and its Contacts)
                 student.ID = Guid.NewGuid();
                 _context.Add(student);
-                await _context.SaveChangesAsync();
+                //await _context.SaveChangesAsync();
 
                 var suffix   = string.IsNullOrWhiteSpace(student.ParentOrEmployer)
                    ? ""
@@ -287,7 +301,7 @@ namespace DotNetCoreSqlDb.Controllers
                     
                 };
                 _context.Group.Add(group);
-                await _context.SaveChangesAsync();
+                //await _context.SaveChangesAsync();
 
                 // 3) Link the student into that group
                 var composition = new StudentGroupComposition
@@ -298,6 +312,23 @@ namespace DotNetCoreSqlDb.Controllers
                     UseMyBalance = true      // or whatever default you prefer
                 };
                 _context.StudentGroupComposition.Add(composition);
+
+                PasswordHelper.CreatePasswordHash(
+                    student.Name,
+                    out byte[] passwordHash,
+                    out byte[] passwordSalt
+                );
+
+                var user = new User {
+                    ID                 = student.ID,
+                    Username           = student.Name,
+                    Role               = "student",    // or whatever default
+                    MustChangePassword = true,
+                    PasswordHash       = passwordHash,
+                    PasswordSalt       = passwordSalt
+                };
+                _context.User.Add(user);
+
 
                 // 4) Create a blank Assignments entry for the new group
                 /*var assignment = new Assignments

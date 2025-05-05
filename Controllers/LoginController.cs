@@ -35,10 +35,17 @@ namespace DotNetCoreSqlDb.Controllers
                 return View();
             }
 
-            // Look up the user in the database (for testing, passwords are in plain text)
-            var user = _context.User.FirstOrDefault(u => u.Username == username && u.Password == password);
-            if (user != null)
+            var user = _context.User.FirstOrDefault(u => u.Username == username);
+            if (user != null && PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt))
             {
+                
+                if (user.MustChangePassword == true){
+                    return RedirectToAction(
+                    actionName: "PasswordReset",
+                    controllerName: "AccountManagement",
+                    routeValues: new { userId = user.ID }
+                );}
+                
                 // Create a list of claims. In a later step, you can add additional claims for permissions.
                 var claims = new List<Claim>
                 {

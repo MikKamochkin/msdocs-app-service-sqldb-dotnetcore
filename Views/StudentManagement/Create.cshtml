@@ -39,6 +39,10 @@
         @using (Html.BeginForm()) 
         {
             @Html.AntiForgeryToken()
+
+            <input type="hidden" name="FormToken" value="@ViewBag.FormToken" />
+
+
             <div class="form-horizontal">
                 <h4>Student</h4>
                 <hr />
@@ -104,6 +108,8 @@
                         <input type="submit" value="Create" class="btn btn-primary" />
                     </div>
                 </div>
+
+                
             </div>
         }
 
@@ -266,13 +272,18 @@
                 editingContactIndex = null;
                 $("#contactModal").modal('hide');
             });
+        });
 
-            $("form").submit(function(e) {
-                if ($("#contactsSummary tbody tr").length === 0) {
-                    alert("Please add at least one contact.");
-                    e.preventDefault();
-                }
-            });
+        // Disable the submit button on a valid first click to prevent double-submits
+        $("form").on("submit", function(e) {
+            if ($("#contactsSummary tbody tr").length === 0) {
+                alert("Please add at least one contact.");
+                e.preventDefault();
+                return;
+            }
+
+            var $btn = $(this).find('input[type=submit], button[type=submit]');
+            $btn.prop('disabled', true).val('Creating…');
         });
     </script>
 }

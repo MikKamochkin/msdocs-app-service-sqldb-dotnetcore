@@ -36,5 +36,7 @@ namespace DotNetCoreSqlDb.Data
 
         public DbSet<DotNetCoreSqlDb.Models.WhatsAppVoiceMessages> WhatsAppVoiceMessages { get; set; } = default!;
 
+        public DbSet<DotNetCoreSqlDb.Models.WassengerApiLog> WassengerApiLog { get; set; } = default!;
+
     }
 }

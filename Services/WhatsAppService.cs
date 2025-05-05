@@ -4,6 +4,8 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure;
+using Azure.Core;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
 using Microsoft.EntityFrameworkCore;
@@ -52,12 +54,15 @@ namespace DotNetCoreSqlDb.Services
                 _logger.LogInformation("Calling /v1/numbers/exists with phone {Phone}", phone);
                 var resp = await _httpClient.PostAsync("/v1/numbers/exists", content);
                 var body = await resp.Content.ReadAsStringAsync();
+                await LogApiAsync($"POST /v1/numbers/exists → {payload}", body);
+                //_logger.LogInformation("Response: " + JsonDocument.Parse(body));
 
                 if (!resp.IsSuccessStatusCode)
                     return (false, false, body);
 
                 using var doc = JsonDocument.Parse(body);
                 var exists = doc.RootElement.GetProperty("exists").GetBoolean();
+                _logger.LogInformation("Response: " + doc);
                 return (true, exists, null);
             }
             catch (Exception ex)
@@ -83,6 +88,7 @@ namespace DotNetCoreSqlDb.Services
             _logger.LogInformation("Sending message {MessageId} to {Phone}", messageId, phone);
             var resp = await _httpClient.PostAsync("/v1/messages", content);
             var body = await resp.Content.ReadAsStringAsync();
+            await LogApiAsync($"POST /v1/messages → {payload}", body);
 
             if (resp.IsSuccessStatusCode)
             {
@@ -107,6 +113,17 @@ namespace DotNetCoreSqlDb.Services
         {
             var msg = await _context.WhatsAppVoiceMessages.FindAsync(messageId);
             return msg?.DeliveryStatus;
+        }
+
+        private async Task LogApiAsync(string request, string response)
+        {
+            var log = new WassengerApiLog {
+                Request = request,
+                Time = DateTime.UtcNow,
+                Response = response
+            };
+            _context.WassengerApiLog.Add(log);
+            await _context.SaveChangesAsync();
         }
     }
 }

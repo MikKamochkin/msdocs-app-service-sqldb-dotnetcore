@@ -1,0 +1,66 @@
+DECLARE @bHash varbinary(32) = CAST(
+  CAST('pouyrdG0JLpVEgV8gSgEIINuzbsUlhs1U2iIB4WMUOg=' AS XML).value('.', 'varbinary(max)')
+  AS varbinary(32));
+
+DECLARE @bSalt varbinary(16) = CAST(
+  CAST('F0XOthKMOa+BLhKv7aicdg==' AS XML).value('.', 'varbinary(max)')
+  AS varbinary(16));
+
+INSERT INTO dbo.[User] (ID, Username, Role, PasswordHash, PasswordSalt, MustChangePassword)
+VALUES (NEWID(), 'Alla', 'admin', @bHash, @bSalt, false);
+
+--Use to generate the salt and hash for now https://dotnetfiddle.net/
+/*
+using System;
+using System.Security.Cryptography;
+
+public class HelloWorld
+{
+    private const int SaltSize   = 16;      // 128-bit
+    private const int KeySize    = 32;      // 256-bit
+    private const int Iterations = 100_000; 
+
+    public static void Main(string[] args)
+    {
+        Console.Write("Password: ");
+        var password = Console.ReadLine() ?? "";
+
+        CreatePasswordHash(password, out byte[] hash, out byte[] salt);
+
+        // If you wanted, you could also print here:
+        // Console.WriteLine($"Salt (Base64): {Convert.ToBase64String(salt)}");
+        // Console.WriteLine($"Hash (Base64): {Convert.ToBase64String(hash)}");
+    }
+
+    public static void CreatePasswordHash(
+        string password,
+        out byte[] passwordHash,
+        out byte[] passwordSalt)
+    {
+        // 1) Generate a random salt
+        using var rng = RandomNumberGenerator.Create();
+        passwordSalt = new byte[SaltSize];
+        rng.GetBytes(passwordSalt);
+
+        // 2) Derive the key (hash) from the password + salt
+        using var pbkdf2 = new Rfc2898DeriveBytes(
+            password,
+            passwordSalt,
+            Iterations,
+            HashAlgorithmName.SHA256);
+
+        passwordHash = pbkdf2.GetBytes(KeySize);
+
+        // 3) Convert to Base64 for display
+        string saltB64 = Convert.ToBase64String(passwordSalt);
+        string hashB64 = Convert.ToBase64String(passwordHash);
+
+        // 4) Print
+        Console.WriteLine($"Generated Salt (Base64): {saltB64}");
+        Console.WriteLine($"Generated Hash (Base64): {hashB64}");
+        Console.WriteLine($"Iterations: {Iterations}");
+        Console.WriteLine($"Algorithm: {HashAlgorithmName.SHA256}");
+    }
+}
+
+*/
