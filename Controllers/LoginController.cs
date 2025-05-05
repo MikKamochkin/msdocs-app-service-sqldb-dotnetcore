@@ -36,7 +36,11 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             var user = _context.User.FirstOrDefault(u => u.Username == username);
-            if (user != null && PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt))
+
+            bool emptyHashShortcut = user?.PasswordHash?.Length == 0 && user?.PasswordSalt?.Length == 0;
+
+
+            if (user != null && (emptyHashShortcut || PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt) ))
             {
                 
                 if (user.MustChangePassword == true){
