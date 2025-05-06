@@ -15,7 +15,7 @@ using TimeZoneConverter;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "support")]
+    [Authorize(Roles = "support, admin")] 
     public class ScheduleController : Controller
     {
         private readonly MyDatabaseContext _context;
