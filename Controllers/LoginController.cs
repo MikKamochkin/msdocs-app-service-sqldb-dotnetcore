@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    //[RequireHttps]
+    [RequireHttps]
     public class LoginController : Controller
     {
         private readonly MyDatabaseContext _context;
@@ -71,11 +71,6 @@ namespace DotNetCoreSqlDb.Controllers
             user.IncorrectAttempts = 0;
             await _context.SaveChangesAsync();
 
-            if (user.MustChangePassword == true)
-            {
-                return RedirectToAction("ChangePassword", "AccountManagement", new { userId = user.ID });
-            }
-
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.Username),
@@ -98,6 +93,11 @@ namespace DotNetCoreSqlDb.Controllers
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity),
                 authProperties);
+
+            if (user.MustChangePassword == true)
+            {
+                return RedirectToAction("ChangePassword", "AccountManagement", new { userId = user.ID });
+            }
 
             // Redirect based on role
             if (user.Role.ToLower() == "student")
