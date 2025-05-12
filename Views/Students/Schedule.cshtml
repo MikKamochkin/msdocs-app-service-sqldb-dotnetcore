@@ -3,96 +3,221 @@
 @{
     ViewData["Title"] = "My Schedule";
     var existingJson = ViewBag.ExistingJson as string ?? "[]";
-    var timeZones    = ViewBag.TimeZones as List<SelectListItem>;
+    var timeZones    = ViewBag.TimeZones    as List<SelectListItem>;
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>@ViewData["Title"]</title>
 
-<h2>@ViewData["Title"]</h2>
+  <!-- Vendor CSS for sidebar styling -->
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css" />
 
-<div class="form-inline mb-3">
-  <label class="mr-2">Time Zone</label>
-  <select id="timeZoneSelect" class="form-control">
-    @foreach (var tz in timeZones)
-    {
-        if (tz.Selected)
-        {
-            <option value="@tz.Value" selected>@tz.Text</option>
-        }
-        else
-        {
-            <option value="@tz.Value">@tz.Text</option>
-        }
+  <!-- Page-specific overrides -->
+  <style>
+    body { margin: 0; }
+    .row.no-gutters {
+      display: flex;
+      align-items: stretch;         /* stretch sidebar to full height */
+    }
+    .admin-sidebar {
+      flex: 0 0 auto;
+      height: 100vh;                /* full viewport height */
+    }
+    .col-md-10 {
+      flex: 1 1 auto;
+      padding: 1rem;
     }
 
-    
-  </select>
-</div>
+    /* Sidebar buttons */
+    .icon-btn {
+      width: 3rem !important;
+      height: 3rem !important;
+      padding: 0 !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      margin-bottom: 0;
+    }
 
-<table class="table table-bordered" id="entriesTable">
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Time</th>
-      <th>Teacher</th>
-      <th>Status</th>
-      <th>Duration</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+    /* Narrow the table and left-align it */
+    #entriesTable {
+      width: auto !important;
+      margin-left: 0;
+      vertical-align: middle;
+    }
+
+    /* Highlight the “next” lesson row */
+    .next-row {
+      background-color: #e6f7ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="row no-gutters">
+    <div class="col-auto admin-sidebar">
+      <div class="sidebar-content">
+        <a asp-controller="Students" asp-action="Index"
+           class="btn btn-dark d-flex icon-btn" title="Student Management">
+          <i class="fas fa-user-graduate"></i>
+        </a>
+        <a asp-controller="Students" asp-action="Schedule"
+           class="btn btn-success d-flex icon-btn" title="Schedule">
+          <i class="hgi hgi-stroke hgi-calendar-03"></i>
+        </a>
+        <a asp-controller="Students" asp-action="Zoom"
+           class="btn btn-dark d-flex icon-btn" title="Zoom">
+          <i class="hgi hgi-stroke hgi-zoom"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="col-md-10">
+      <div class="header mb-3">
+        <h2>@ViewData["Title"]</h2>
+      </div>
+
+      <!-- 3) Time Zone on its own row, narrower -->
+      <div class="form-row mb-3">
+        <div class="form-group col-md-3">
+          <label for="timeZoneSelect">Time Zone <b><i class="fa-solid fa-arrow-down"></i></b></label>
+          <select id="timeZoneSelect" name="timeZoneOffset" class="form-control">
+            @foreach (var tz in timeZones)
+            {
+              if (tz.Selected)
+              {
+                <option value="@tz.Value" selected>@tz.Text</option>
+              }
+              else
+              {
+                <option value="@tz.Value">@tz.Text</option>
+              }
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- 2) Narrow, left-aligned table -->
+      <table class="table table-bordered" id="entriesTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Teacher</th>
+            <th>Status</th>
+            <th>Duration</th>
+            <th>Meeting</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 
 @section Scripts {
-  <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
-  <script>
-    const DateTime = luxon.DateTime;
+<script src="https://code.jquery.com/jquery-3.6.1.min.js"
+        integrity="sha256-+LdG5Fjnxd8h8JAoywV4P8pIY2q3FfvMZHO7+jT9BkE="
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+<script>
+  const DateTime = luxon.DateTime;
 
-    // 1) Parse the raw JSON from the server
-    const raw = @Html.Raw(existingJson);
+  // Zoom deep-link
+  const meetingId  = "7890699796";
+  const pwd        = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
+  const deepLink   = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
+  const webLink    = `https://us02web.zoom.us/j/${meetingId}?pwd=${pwd}`;
+  const detailsBase = '@Url.Action("Zoom", "Students")';
 
-    // 2) Define our filter window in UTC
-    const nowUtc     = DateTime.utc();
-    const windowStart = nowUtc.minus({ days: 7 });
-    const windowEnd   = nowUtc.plus({ days: 14 });
+  // Data setup
+  const raw         = @Html.Raw(existingJson);
+  const windowStart = DateTime.utc().minus({ days: 7 });
+  const windowEnd   = DateTime.utc().plus({ days: 14 });
+  const rows = raw
+    .map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
+    .filter(r => {
+      const dt = DateTime.fromISO(r.DateTime, { zone: 'utc' });
+      return dt >= windowStart && dt <= windowEnd;
+    })
+    .sort((a, b) =>
+      DateTime.fromISO(b.DateTime).toMillis() -
+      DateTime.fromISO(a.DateTime).toMillis()
+    );
 
-    // 3) Normalize & filter entries
-    let rows = raw
-      .map(r => ({
-        ...r,
-        DateTime: r.DateTime.endsWith('Z') ? r.DateTime : (r.DateTime + 'Z')
-      }))
-      .filter(r => {
-        const dt = DateTime.fromISO(r.DateTime, { zone: 'utc' });
-        return dt >= windowStart && dt <= windowEnd;
-      })
-      .sort((a, b) =>
-        DateTime.fromISO(a.DateTime).toMillis()
-        - DateTime.fromISO(b.DateTime).toMillis()
+  // Initial render & on-change
+  $(renderTable);
+  $('#timeZoneSelect').on('change', renderTable);
+
+  function renderTable() {
+    const zone     = $('#timeZoneSelect').val();
+    const nowUtc   = DateTime.utc();
+    const nowLocal = DateTime.now().setZone(zone);
+    const tbody    = $('#entriesTable tbody').empty();
+
+    // Find “next” lesson
+    const todayRows = rows.filter(r =>
+      DateTime.fromISO(r.DateTime, { zone: 'utc' })
+        .setZone(zone)
+        .hasSame(nowLocal, 'day')
+    );
+    let nextLessonId = null;
+    if (todayRows.length) {
+      nextLessonId = todayRows.reduce((earliest, cur) =>
+        DateTime.fromISO(cur.DateTime).toMillis() <
+        DateTime.fromISO(earliest.DateTime).toMillis() ? cur : earliest
+      ).Id;
+    } else {
+      const upcoming = rows.filter(r =>
+        DateTime.fromISO(r.DateTime, { zone: 'utc' }) > nowUtc
       );
-
-    // 4) Render table on load and when TZ changes
-    $(renderTable);
-    $('#timeZoneSelect').on('change', renderTable);
-
-    function renderTable() {
-      const zone = $('#timeZoneSelect').val(); // e.g. "America/Toronto"
-      const tbody = $('#entriesTable tbody').empty();
-
-      rows.forEach(r => {
-        // Convert UTC → selected zone
-        const dtInZone = DateTime.fromISO(r.DateTime, { zone: 'utc' })
-                                 .setZone(zone);
-        const date = dtInZone.toFormat('yyyy-LL-dd');
-        const time = dtInZone.toFormat('HH:mm');
-
-        tbody.append(`
-          <tr>
-            <td>${date}</td>
-            <td>${time}</td>
-            <td>${r.TeacherName}</td>
-            <td>${r.Status}</td>
-            <td>${r.Duration}</td>
-          </tr>
-        `);
-      });
+      if (upcoming.length) {
+        nextLessonId = upcoming.reduce((nearest, cur) =>
+          DateTime.fromISO(cur.DateTime).toMillis() <
+          DateTime.fromISO(nearest.DateTime).toMillis() ? cur : nearest
+        ).Id;
+      }
     }
-  </script>
+
+    // Render rows, tagging the “next” one
+    rows.forEach(r => {
+      const dtInZone = DateTime.fromISO(r.DateTime, { zone: 'utc' }).setZone(zone);
+      const date     = dtInZone.toFormat('yyyy-LL-dd');
+      const time     = dtInZone.toFormat('HH:mm');
+      const isNext   = r.Id === nextLessonId;
+
+      tbody.append(`
+        <tr class="${isNext ? 'next-row' : ''}">
+          <td>${date}</td>
+          <td>${time}</td>
+          <td>${r.TeacherName}</td>
+          <td>${r.Status}</td>
+          <td>${r.Duration}</td>
+          <td>${
+            isNext
+              ? `<a href="${deepLink}"
+                    class="btn btn-primary btn-md join-btn ml-2"
+                    data-id="${r.Id}">Join lesson</a>
+                 <a href="${detailsBase}/${r.Id}"
+                    class="btn btn-dark btn-md ml-1"
+                    title="Lesson details">
+                   <i class="fa-solid fa-circle-info text-light"></i>
+                 </a>`
+              : ``
+          }</td>
+        </tr>
+      `);
+    });
+  }
+
+  // Zoom-link fallback
+  $(document).on('click', '.join-btn', function(e) {
+    e.preventDefault();
+    window.location.href = deepLink;
+    setTimeout(() => window.location.href = webLink, 500);
+  });
+</script>
 }
+</body>
+</html>

@@ -2,26 +2,30 @@
 using DotNetCoreSqlDb.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Azure.Identity;
-using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using DotNetCoreSqlDb.Services;
+using DotNetCoreSqlDb.Settings;  // ← NEW
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using System.Net.Http.Headers;
 using DotNetCoreSqlDb.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-/*builder.Configuration.AddAzureKeyVault(
-        new Uri("https://tslvault.vault.azure.net/"),
-        new DefaultAzureCredential());*/
-
+/* ───── 1.  Load Azure Key Vault (already present) ───── */
 var vaultUri = new Uri("https://tslvault.vault.azure.net/");
 
 if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS")))
 {
-    // only in non‑CI environments
+    // only in non-CI environments
     builder.Configuration.AddAzureKeyVault(vaultUri, new DefaultAzureCredential());
 }
 
-// Add database context and cache
+/* ───── 2.  Strongly-typed Email settings + service ──── */
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("Email"));
+
+builder.Services.AddTransient<IEmailSender, MailKitEmailSender>();
+
+/* ───── 3.  Database context + cache (unchanged) ─────── */
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddDbContext<MyDatabaseContext>(options =>
@@ -39,27 +43,22 @@ else
     });
 }
 
-// Program.cs (anywhere you already have builder)
-
-var WassengerApiKey = builder.Configuration["WASSENGER_API_KEY"];
-
+/* ───── 4.  Wassenger (existing) ─────────────────────── */
+var WassengerApiKey         = builder.Configuration["WASSENGER_API_KEY"];
 var WassengerExpectedSecret = builder.Configuration["WASSENGER_WEBHOOK_EXPECTED_SECRET"];
 
-
-// Add services to the container.
+/* ───── 5.  MVC / auth / SignalR / session (unchanged) ─ */
 builder.Services.AddControllersWithViews();
 
-// Add cookie authentication services.
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/Login/Index";       // Redirect here if not authenticated.
-        options.LogoutPath = "/Login/Logout";       // Path to logout.
-        options.AccessDeniedPath = "/Home/AccessDenied"; // Optional: path for denied access.
-        options.ExpireTimeSpan = TimeSpan.FromHours(24); // Cookie expiration time.
-        options.SlidingExpiration = true; // After every valid request the cookie's lifetime is "slid" forward, once every 12 hours
+        options.LoginPath          = "/Login/Index";
+        options.LogoutPath         = "/Login/Logout";
+        options.AccessDeniedPath   = "/Home/AccessDenied";
+        options.ExpireTimeSpan     = TimeSpan.FromHours(24);
+        options.SlidingExpiration  = true;
     });
-
 
 builder.Services.AddSignalR();
 
@@ -72,7 +71,6 @@ builder.Services.AddHttpClient("Wassenger", client =>
 });
 builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
 
-// Add App Service logging
 builder.Logging.AddAzureWebAppDiagnostics();
 
 builder.Services.AddSession(options =>
@@ -82,14 +80,12 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+/* ───── 6.  Pipeline (unchanged) ────────────────────── */
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days.
     app.UseHsts();
 }
 
@@ -97,10 +93,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-
 app.UseSession();
-
-// IMPORTANT: Add authentication middleware before authorization.
 app.UseAuthentication();
 app.UseAuthorization();
 

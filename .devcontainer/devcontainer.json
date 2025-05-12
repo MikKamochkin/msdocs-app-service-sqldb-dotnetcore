@@ -5,6 +5,10 @@
 	"service": "app",
 	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 	"remoteUser": "root",
+
+	"remoteEnv": {
+    	"Email__Password": "YOUR_LOCAL_SMTP_PASSWORD"
+  	},
   
 	// ─── Install both azd (Azure Dev CLI) and azure-cli ────────────────────
 	"features": {

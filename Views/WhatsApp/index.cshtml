@@ -170,15 +170,19 @@
 
   // helper to validate numbers via our API
   async function validateNumber(phone) {
-    try {
+    for (let i = 0; i < 10; i++) {
       const res = await fetch(`/WhatsApp/ValidateContact?phone=${encodeURIComponent(phone)}`);
+      if (res.status === 503) {
+        await new Promise(r => setTimeout(r, 200 * (i+1)));
+        continue;
+      }
       if (!res.ok) return false;
-      const data = await res.json();
-      return data.valid === true && data.exists === true;
-    } catch {
-      return false;
+      const { valid, exists } = await res.json();
+      return valid && exists;
     }
+    return false;
   }
+
 
   // send & then rely on SignalR for status updates
   async function sendAndTrack(evt, id) {

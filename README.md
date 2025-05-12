@@ -80,3 +80,274 @@ Because the Linux .NET container in App Service doesn't come with the .NET SDK, 
 ## Getting help
 
 If you're working with this project and running into issues, please post in [Issues](/issues).
+
+```
+msdocs-app-service-sqldb-dotnetcore
+├─ .config
+│  └─ dotnet-tools.json
+├─ .devcontainer
+│  ├─ Dockerfile
+│  ├─ README.md
+│  ├─ devcontainer.json
+│  ├─ docker-compose.yml
+│  └─ mssql
+│     ├─ installSQLtools.sh
+│     ├─ postCreateCommand.sh
+│     └─ setup.sql
+├─ ActionTimerFilter.cs
+├─ Azure vault api secrets.txt
+├─ ChangingDbInstructions.txt
+├─ Controllers
+│  ├─ AccountManagementController.cs
+│  ├─ AssignmentsController.cs
+│  ├─ GroupsController.cs
+│  ├─ HomeController.cs
+│  ├─ LoginController.cs
+│  ├─ ScheduleController.cs
+│  ├─ StudentManagementController.cs
+│  ├─ StudentsController.cs
+│  ├─ TodosController.cs
+│  ├─ WebhookController.cs
+│  └─ WhatsAppController.cs
+├─ Data
+│  └─ MyDatabaseContext.cs
+├─ DevContainerInstructions.txt
+├─ DotNetCoreSqlDb.csproj
+├─ DotNetCoreSqlDb.sln
+├─ Helpers
+│  ├─ DropdownOptions.cs
+│  ├─ PasswordHelper.cs
+│  └─ TimeZoneMapping.cs
+├─ Hubs
+│  └─ WhatsAppHub.cs
+├─ LICENSE.md
+├─ Migrations
+│  ├─ 20240621154946_InitialCreate.Designer.cs
+│  ├─ 20240621154946_InitialCreate.cs
+│  ├─ 20250318205151_addstudenttable.Designer.cs
+│  ├─ 20250318205151_addstudenttable.cs
+│  ├─ 20250318210746_AddStudentTableFix.Designer.cs
+│  ├─ 20250318210746_AddStudentTableFix.cs
+│  ├─ 20250318212637_addedcoltotodo.Designer.cs
+│  ├─ 20250318212637_addedcoltotodo.cs
+│  ├─ 20250320040516_changedemailstonotrequired.Designer.cs
+│  ├─ 20250320040516_changedemailstonotrequired.cs
+│  ├─ 20250320041430_addedsocialmediastostudents.Designer.cs
+│  ├─ 20250320041430_addedsocialmediastostudents.cs
+│  ├─ 20250320230107_AddContactTable.Designer.cs
+│  ├─ 20250320230107_AddContactTable.cs
+│  ├─ 20250323232226_AddNotesAndRemoveOngoingFromStudent.Designer.cs
+│  ├─ 20250323232226_AddNotesAndRemoveOngoingFromStudent.cs
+│  ├─ 20250324041647_AddSourceToStudentModel.Designer.cs
+│  ├─ 20250324041647_AddSourceToStudentModel.cs
+│  ├─ 20250324051346_AddStudentTimeZone.Designer.cs
+│  ├─ 20250324051346_AddStudentTimeZone.cs
+│  ├─ 20250325180509_AddUserTable.Designer.cs
+│  ├─ 20250325180509_AddUserTable.cs
+│  ├─ 20250325191443_AddAccountingGroupToStudentTable.Designer.cs
+│  ├─ 20250325191443_AddAccountingGroupToStudentTable.cs
+│  ├─ 20250326044832_ChangedIdsToGuid.Designer.cs
+│  ├─ 20250326044832_ChangedIdsToGuid.cs
+│  ├─ 20250327024451_changedAccountingGroupToNonNullable.Designer.cs
+│  ├─ 20250327024451_changedAccountingGroupToNonNullable.cs
+│  ├─ 20250327032939_checkmarkvaluesnonnullable.Designer.cs
+│  ├─ 20250327032939_checkmarkvaluesnonnullable.cs
+│  ├─ 20250331020321_AddStatusToStudent.Designer.cs
+│  ├─ 20250331020321_AddStatusToStudent.cs
+│  ├─ 20250405220931_ChangedUserToUsername.Designer.cs
+│  ├─ 20250405220931_ChangedUserToUsername.cs
+│  ├─ 20250405221539_ChangedUserToUsernameV2.Designer.cs
+│  ├─ 20250405221539_ChangedUserToUsernameV2.cs
+│  ├─ 20250409033514_AddStudentScheduleTables.Designer.cs
+│  ├─ 20250409033514_AddStudentScheduleTables.cs
+│  ├─ 20250418225048_changedteacheridtonullableinassignments.Designer.cs
+│  ├─ 20250418225048_changedteacheridtonullableinassignments.cs
+│  ├─ 20250418225933_MakeTeacherNullable.Designer.cs
+│  ├─ 20250418225933_MakeTeacherNullable.cs
+│  ├─ 20250418231534_groupentryfixinassignments.cs.Designer.cs
+│  ├─ 20250418231534_groupentryfixinassignments.cs.cs
+│  ├─ 20250419065424_makeassignmentsrefnullableinschedule.Designer.cs
+│  ├─ 20250419065424_makeassignmentsrefnullableinschedule.cs
+│  ├─ 20250421213718_AddWhatsAppTable.Designer.cs
+│  ├─ 20250421213718_AddWhatsAppTable.cs
+│  ├─ 20250421232050_addedwassengermessageid.Designer.cs
+│  ├─ 20250421232050_addedwassengermessageid.cs
+│  ├─ 20250421233054_addednametowhatsapp.Designer.cs
+│  ├─ 20250421233054_addednametowhatsapp.cs
+│  ├─ 20250423181522_addIsActiveToGroups.Designer.cs
+│  ├─ 20250423181522_addIsActiveToGroups.cs
+│  ├─ 20250424211354_changedteacherpaytypetostring.Designer.cs
+│  ├─ 20250424211354_changedteacherpaytypetostring.cs
+│  ├─ 20250424215803_madegroupnullableinassignments.Designer.cs
+│  ├─ 20250424215803_madegroupnullableinassignments.cs
+│  ├─ 20250424220022_madegroupnullableinassignments2.Designer.cs
+│  ├─ 20250424220022_madegroupnullableinassignments2.cs
+│  ├─ 20250428200500_AddDeliveryStatusToWhatsApp.Designer.cs
+│  ├─ 20250428200500_AddDeliveryStatusToWhatsApp.cs
+│  ├─ 20250502025133_AddHashesToUser.Designer.cs
+│  ├─ 20250502025133_AddHashesToUser.cs
+│  ├─ 20250502060155_addedMustChangePassword.Designer.cs
+│  ├─ 20250502060155_addedMustChangePassword.cs
+│  ├─ 20250505004911_CreatedApiLog.Designer.cs
+│  ├─ 20250505004911_CreatedApiLog.cs
+│  ├─ 20250505010825_WassengerApiLogFix.Designer.cs
+│  ├─ 20250505010825_WassengerApiLogFix.cs
+│  └─ MyDatabaseContextModelSnapshot.cs
+├─ Models
+│  ├─ Assignments.cs
+│  ├─ Contact.cs
+│  ├─ ErrorViewModel.cs
+│  ├─ Group.cs
+│  ├─ Notes.cs
+│  ├─ Schedule.cs
+│  ├─ Student.cs
+│  ├─ StudentGroupComposition.cs
+│  ├─ Teacher.cs
+│  ├─ Todo.cs
+│  ├─ User.cs
+│  ├─ WassengerApiLog.cs
+│  └─ WhatsAppVoiceMessages.cs
+├─ Program.cs
+├─ Properties
+│  ├─ launchSettings.json
+│  ├─ serviceDependencies.json
+│  └─ serviceDependencies.local.json
+├─ Queries
+│  └─ InsertIntoUser
+├─ README.md
+├─ Services
+│  ├─ IEmailSender.cs
+│  ├─ IWhatsAppService.cs
+│  ├─ MailKitEmailSender.cs
+│  └─ WhatsAppService.cs
+├─ Settings
+│  └─ EmailSettings.cs
+├─ Views
+│  ├─ AccountManagement
+│  │  ├─ ChangeUsername.cshtml
+│  │  └─ PasswordReset.cshtml
+│  ├─ Assignments
+│  │  ├─ Create.cshtml
+│  │  ├─ Details.cshtml
+│  │  ├─ Edit.cshtml
+│  │  ├─ Index.cshtml
+│  │  └─ Manage.cshtml
+│  ├─ Groups
+│  │  ├─ Create.cshtml
+│  │  ├─ Edit.cshtml
+│  │  └─ Index.cshtml
+│  ├─ Home
+│  │  ├─ AccessDenied.cshtml
+│  │  ├─ Index.cshtml
+│  │  └─ Privacy.cshtml
+│  ├─ Login
+│  │  └─ Index.cshtml
+│  ├─ Schedule
+│  │  ├─ Create.cshtml
+│  │  ├─ Edit.cshtml
+│  │  ├─ Index.cshtml
+│  │  └─ Manage.cshtml
+│  ├─ Shared
+│  │  ├─ Error.cshtml
+│  │  ├─ _Layout.cshtml
+│  │  ├─ _Layout.cshtml.css
+│  │  └─ _ValidationScriptsPartial.cshtml
+│  ├─ StudentManagement
+│  │  ├─ Create.cshtml
+│  │  ├─ Delete.cshtml
+│  │  ├─ Details.cshtml
+│  │  ├─ Edit.cshtml
+│  │  └─ Index.cshtml
+│  ├─ Students
+│  │  ├─ Index.cshtml
+│  │  ├─ Schedule.cshtml
+│  │  └─ Zoom.cshtml
+│  ├─ Todos
+│  │  ├─ Create.cshtml
+│  │  ├─ Delete.cshtml
+│  │  ├─ Details.cshtml
+│  │  ├─ Edit.cshtml
+│  │  └─ Index.cshtml
+│  ├─ WhatsApp
+│  │  └─ index.cshtml
+│  ├─ _ViewImports.cshtml
+│  └─ _ViewStart.cshtml
+├─ appsettings.Development.json
+├─ appsettings.json
+├─ msdocs-app-service-sqldb-dotnetcore
+├─ todo.txt
+└─ wwwroot
+   ├─ css
+   │  └─ site.css
+   ├─ favicon.ico
+   ├─ js
+   │  └─ site.js
+   └─ lib
+      ├─ bootstrap
+      │  ├─ LICENSE
+      │  └─ dist
+      │     ├─ css
+      │     │  ├─ bootstrap-grid.css
+      │     │  ├─ bootstrap-grid.css.map
+      │     │  ├─ bootstrap-grid.min.css
+      │     │  ├─ bootstrap-grid.min.css.map
+      │     │  ├─ bootstrap-grid.rtl.css
+      │     │  ├─ bootstrap-grid.rtl.css.map
+      │     │  ├─ bootstrap-grid.rtl.min.css
+      │     │  ├─ bootstrap-grid.rtl.min.css.map
+      │     │  ├─ bootstrap-reboot.css
+      │     │  ├─ bootstrap-reboot.css.map
+      │     │  ├─ bootstrap-reboot.min.css
+      │     │  ├─ bootstrap-reboot.min.css.map
+      │     │  ├─ bootstrap-reboot.rtl.css
+      │     │  ├─ bootstrap-reboot.rtl.css.map
+      │     │  ├─ bootstrap-reboot.rtl.min.css
+      │     │  ├─ bootstrap-reboot.rtl.min.css.map
+      │     │  ├─ bootstrap-utilities.css
+      │     │  ├─ bootstrap-utilities.css.map
+      │     │  ├─ bootstrap-utilities.min.css
+      │     │  ├─ bootstrap-utilities.min.css.map
+      │     │  ├─ bootstrap-utilities.rtl.css
+      │     │  ├─ bootstrap-utilities.rtl.css.map
+      │     │  ├─ bootstrap-utilities.rtl.min.css
+      │     │  ├─ bootstrap-utilities.rtl.min.css.map
+      │     │  ├─ bootstrap.css
+      │     │  ├─ bootstrap.css.map
+      │     │  ├─ bootstrap.min.css
+      │     │  ├─ bootstrap.min.css.map
+      │     │  ├─ bootstrap.rtl.css
+      │     │  ├─ bootstrap.rtl.css.map
+      │     │  ├─ bootstrap.rtl.min.css
+      │     │  └─ bootstrap.rtl.min.css.map
+      │     └─ js
+      │        ├─ bootstrap.bundle.js
+      │        ├─ bootstrap.bundle.js.map
+      │        ├─ bootstrap.bundle.min.js
+      │        ├─ bootstrap.bundle.min.js.map
+      │        ├─ bootstrap.esm.js
+      │        ├─ bootstrap.esm.js.map
+      │        ├─ bootstrap.esm.min.js
+      │        ├─ bootstrap.esm.min.js.map
+      │        ├─ bootstrap.js
+      │        ├─ bootstrap.js.map
+      │        ├─ bootstrap.min.js
+      │        └─ bootstrap.min.js.map
+      ├─ jquery
+      │  ├─ LICENSE.txt
+      │  └─ dist
+      │     ├─ jquery.js
+      │     ├─ jquery.min.js
+      │     └─ jquery.min.map
+      ├─ jquery-validation
+      │  ├─ LICENSE.md
+      │  └─ dist
+      │     ├─ additional-methods.js
+      │     ├─ additional-methods.min.js
+      │     ├─ jquery.validate.js
+      │     └─ jquery.validate.min.js
+      └─ jquery-validation-unobtrusive
+         ├─ LICENSE.txt
+         ├─ jquery.validate.unobtrusive.js
+         └─ jquery.validate.unobtrusive.min.js
+
+```

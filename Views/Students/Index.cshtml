@@ -1,58 +1,194 @@
 @model DotNetCoreSqlDb.Models.Student
-
 @{
     ViewData["Title"] = "My Information";
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+</head>
+<body>
+    <div class="row no-gutters">
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "Students")" class="btn btn-success d-flex icon-btn" title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                <a href="@Url.Action("Schedule", "Students")" class="btn btn-dark d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
+                <a href="@Url.Action("Zoom", "Students")" class="btn btn-dark d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-zoom"></i>
+                </a>
+            </div>
+        </div>
 
-<h2>My Information</h2>
+        <div class="col-md-10">
+            <div class="header">
+                <h2><b>My Profile</b></h2>
+            </div>
 
-<div>
-    <h4>Student Details</h4>
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>Name</dt>
-        <dd>@Html.DisplayFor(model => model.Name)</dd>
-        <dt>Parent/Employer</dt>
-        <dd>@Html.DisplayFor(model => model.ParentOrEmployer)</dd>
-        <dt>Main Notes</dt>
-        <dd>@Html.DisplayFor(model => model.MainNotes)</dd>
-        <dt>Created Date</dt>
-        <dd>@Html.DisplayFor(model => model.CreatedDate)</dd>
-        <dt>Source</dt>
-        <dd>@Html.DisplayFor(model => model.Source)</dd>
-        <dt>Time Zone</dt>
-        <dd>@Html.DisplayFor(model => model.TimeZoneId)</dd>
-    </dl>
-</div>
+            <div>
+                <!--<h4>Student Details</h4>-->
+                <hr />
+                <dl class="dl-horizontal">
+                    <dt>Name</dt>
+                    <dd>@Html.DisplayFor(model => model.Name)</dd>
+                    <!--<dt>Parent/Employer</dt>
+                    <dd>@Html.DisplayFor(model => model.ParentOrEmployer)</dd>-->
+                    <!--<dt>Main Notes</dt>
+                    <dd>@Html.DisplayFor(model => model.MainNotes)</dd>-->
+                    <!--<dt>Created Date</dt>
+                    <dd>@Html.DisplayFor(model => model.CreatedDate)</dd>-->
+                    <!--<dt>Source</dt>
+                    <dd>@Html.DisplayFor(model => model.Source)</dd>-->
+                    <!--<dt>Time Zone</dt>
+                    <dd>@Html.DisplayFor(model => model.TimeZoneId)</dd>-->
+                </dl>
+            </div>
 
-<h4>Contact Information</h4>
-@if(Model.Contacts != null && Model.Contacts.Any())
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Type</th>
-                <th>Value</th>
-                <th>Invitation</th>
-                <th>Emergency</th>
-                <th>Money</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach(var contact in Model.Contacts)
+            <h4><b>Contact Information</b></h4>
+            @if (Model.Contacts != null && Model.Contacts.Any())
             {
-                <tr>
-                    <td>@Html.DisplayFor(m => contact.Type)</td>
-                    <td>@Html.DisplayFor(m => contact.Value)</td>
-                    <td>@(contact.Invitation == true ? "✔" : "")</td>
-                    <td>@(contact.Emergency == true ? "✔" : "")</td>
-                    <td>@(contact.Money == true ? "✔" : "")</td>
-                </tr>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Invitation</th>
+                            <th>Emergency</th>
+                            <th>Money</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var contact in Model.Contacts)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(m => contact.Type)</td>
+                                <td>@Html.DisplayFor(m => contact.Value)</td>
+                                <td>@(contact.Invitation ? "✔" : "")</td>
+                                <td>@(contact.Emergency ? "✔" : "")</td>
+                                <td>@(contact.Money ? "✔" : "")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             }
-        </tbody>
-    </table>
-}
-else
-{
-    <p>No contact information available.</p>
-}
+            else
+            {
+                <p>No contact information available.</p>
+            }
+        </div>
+    </div>
+
+    <button class="w3-button w3-xlarge open-btn" onclick="openRightMenu()">&#9776;</button>
+
+    <div id="rightMenu"
+         class="w3-sidebar w3-bar-block w3-card w3-animate-right"
+         style="display:none;">
+        <button onclick="closeRightMenu()"
+                class="w3-bar-item w3-button w3-large close-btn">
+            Close Settings &times;
+        </button>
+        <a asp-controller="AccountManagement"
+           asp-action="ChangeUsername"
+           asp-route-userId="@Model.ID"
+           class="w3-bar-item w3-button"
+           title="Change Username">
+            Change Username
+        </a>
+        <a asp-controller="AccountManagement"
+           asp-action="PasswordReset"
+           asp-route-userId="@Model.ID"
+           class="w3-bar-item w3-button"
+           title="Change Password">
+            Change Password
+        </a>
+    </div>
+
+    <script>
+        function openRightMenu() {
+            document.getElementById("rightMenu").style.display = "block";
+        }
+
+        function closeRightMenu() {
+            document.getElementById("rightMenu").style.display = "none";
+        }
+    </script>
+
+</body>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css">
+    <style>
+        /* 1) Your header flex */
+        .header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.0em;
+          background: #ffffff;
+        }
+        .header h2 {
+          margin: 0;
+        }
+
+        /* 2) Sidebar spans full height */
+        #rightMenu {
+          position: fixed;
+          top: 0;
+          bottom: 0;
+          right: 0;
+          width: 250px;        /* or whatever width you like */
+          overflow: auto;      /* scroll if too tall */
+          padding-top: 3.5em;  /* push links down */
+          z-index: 1001;       /* above open button */
+        }
+
+        /* 3) Close button sits at header’s vertical level */
+        #rightMenu .close-btn {
+          position: absolute;
+          top: 0.75rem;        /* match open button vertical */
+          right: 0.75rem;      /* align insets */
+        }
+
+        /* 4) Push all other links down below the header */
+        #rightMenu .w3-bar-item:not(.close-btn) {
+          margin-top: 0;
+        }
+        #rightMenu .w3-bar-item {
+          margin-bottom: 0.0em;
+        }
+        #rightMenu .w3-bar-item:last-of-type {
+          margin-bottom: 0;
+        }
+
+        /* 5) Open button */
+        .open-btn {
+          position: fixed;
+          top: 0.75rem;        /* same as close */
+          right: 0.75rem;
+          z-index: 1000;       /* below the sidebar when open */
+        }
+
+        /* 6) Layout fix */
+        body {
+          margin: 0;
+        }
+        .row.no-gutters {
+          display: flex;
+        }
+        .admin-sidebar {
+          flex: 0 0 auto;
+        }
+        .col-md-10 {
+          flex: 1 1 auto;
+          padding: 1rem;
+        }
+    </style>
+</head>
+</html>

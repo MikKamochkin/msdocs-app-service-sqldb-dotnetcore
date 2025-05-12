@@ -1,37 +1,56 @@
+<!-- Views/Login/Index.cshtml -->
 @{
     ViewData["Title"] = "Login";
 }
 
 <div class="loading-overlay">
-    <div class="loading-spinner"></div>
+  <div class="loading-spinner"></div>
 </div>
 
 <div class="login-container">
-    <h2>Login</h2>
-    <form asp-controller="Login" asp-action="Index" method="post" id="loginForm">
-        @Html.AntiForgeryToken()
-        <div class="form-group">
-            <label for="username">Username:</label>
-            <input type="text" class="form-control" name="username" id="username" placeholder="Enter your username" />
-        </div>
-        <div class="form-group">
-            <label for="password">Password:</label>
-            <input type="password" class="form-control" name="password" id="password" placeholder="Enter your password" />
-        </div>
-        <div class="form-group">
-            <button type="submit" class="btn btn-primary">Login</button>
-        </div>
-        @if(ViewBag.Error != null)
-        {
-            <div class="alert">@ViewBag.Error</div>
-        }
-    </form>
+  <h2>Login</h2>
+  <form asp-controller="Login" asp-action="Index" method="post" id="loginForm">
+    @Html.AntiForgeryToken()
+
+    <div class="form-group">
+      <label for="username">Username:</label>
+      <input type="text" class="form-control" name="username" id="username"
+             placeholder="Enter your username" />
+    </div>
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" class="form-control" name="password" id="password"
+             placeholder="Enter your password" />
+    </div>
+
+    <div class="form-group">
+      <button type="submit" class="btn btn-primary">Login</button>
+    </div>
+
+    @if (ViewBag.ShowForgotPassword == true)
+    {
+      <div class="form-group">
+        <a asp-controller="AccountManagement"
+           asp-action="ForgotPassword"
+           asp-route-userId="@ViewBag.ForgotUserId"
+           class="btn btn-link">
+          Forgot your password?
+        </a>
+      </div>
+    }
+
+    @if (ViewBag.Error != null)
+    {
+      <div class="alert alert-danger">@ViewBag.Error</div>
+    }
+  </form>
 </div>
 
 @section Scripts {
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', function() {
-            document.querySelector('.loading-overlay').classList.add('active');
-        });
-    </script>
+  <script>
+    document.getElementById('loginForm')
+            .addEventListener('submit', () =>
+              document.querySelector('.loading-overlay')
+                      .classList.add('active'));
+  </script>
 }

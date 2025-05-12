@@ -29,5 +29,8 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Role")]
         [Required]
         public required string Role { get; set; }
+
+        [Required]
+        public required int IncorrectAttempts { get; set; } = 0;
     }
 }

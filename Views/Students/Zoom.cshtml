@@ -1,0 +1,91 @@
+@model DotNetCoreSqlDb.Models.Student
+@{
+    ViewData["Title"] = "Zoom";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css" />
+    <style>
+        body {
+            margin: 0;
+        }
+        .row.no-gutters {
+            display: flex;
+            height: 100vh; /* full viewport height */
+        }
+        .admin-sidebar {
+            flex: 0 0 auto;
+        }
+        .col-md-10 {
+            flex: 1 1 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="row no-gutters">
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "Students")" class="btn btn-dark d-flex icon-btn" title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                <a href="@Url.Action("Schedule", "Students")" class="btn btn-dark d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
+                <a href="@Url.Action("Zoom", "Students")" class="btn btn-success d-flex icon-btn" title="Zoom">
+                    <i class="hgi hgi-stroke hgi-zoom"></i>
+                </a>
+            </div>
+        </div>
+        <div class="col-md-10">
+            <div>
+                <a id="zoom-link" class="btn btn-primary zoom-btn" href="https://us02web.zoom.us/j/7890699796?pwd=eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09">
+                    Join Zoom Meeting
+                </a>
+                <br />
+                <br />
+                <b>Meeting ID: </b> 789 069 9796
+                <br />
+                <b>Passcode: </b> 662638
+                <br>
+                <br>
+                <button id="copy-zoom" type="button" class="btn-info btn-sm">
+                    Copy Zoom link to clipboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Deep-link into Zoom app if installed
+        const meetingId = "7890699796";
+        const pwd       = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
+        const deepLink  = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
+
+        // Handle Join button click
+        document.getElementById("zoom-link").addEventListener("click", e => {
+            e.preventDefault();
+            window.location.href = deepLink;
+            setTimeout(() => {
+                window.location.href = e.currentTarget.href;
+            }, 500);
+        });
+
+        // Handle Copy to Clipboard
+        document.getElementById("copy-zoom").addEventListener("click", () => {
+            const url = document.getElementById("zoom-link").href;
+            navigator.clipboard.writeText(url)
+                .then(() => alert("Copied to clipboard:\n" + url))
+                .catch(err => alert("Failed to copy:\n" + err));
+        });
+    </script>
+</body>
+</html>

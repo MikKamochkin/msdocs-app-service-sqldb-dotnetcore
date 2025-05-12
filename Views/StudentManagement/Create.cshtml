@@ -109,6 +109,12 @@
                     </div>
                 </div>
 
+                @if(ViewBag.Error != null)
+                {
+                    <br>
+                    <div class="alert alert-danger">@ViewBag.Error</div>
+                }
+
                 
             </div>
         }

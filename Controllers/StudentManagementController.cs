@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using DotNetCoreSqlDb.Services;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -14,12 +15,19 @@ namespace DotNetCoreSqlDb.Controllers
     {
         private readonly MyDatabaseContext _context;
         private readonly ILogger<StudentManagementController> _logger;
+        private readonly IEmailSender _mailer;
 
-        public StudentManagementController(MyDatabaseContext context,  ILogger<StudentManagementController> logger)
+        public StudentManagementController(
+            MyDatabaseContext context,
+            ILogger<StudentManagementController> logger,
+            IEmailSender mailer)
         {
             _context = context;
-            _logger = logger;
+            _logger  = logger;
+            _mailer  = mailer;
         }
+
+        
 
         // GET: Students
         public async Task<IActionResult> Index(string sortOrder)
@@ -313,21 +321,105 @@ namespace DotNetCoreSqlDb.Controllers
                 };
                 _context.StudentGroupComposition.Add(composition);
 
+                Random rnd = new Random();
+                string defaultPassword = rnd.Next(100000,1000000) + "";
+                //Random rnd = new Random();
+                //int rndAppend = rnd.Next(0, 1000);
+
                 PasswordHelper.CreatePasswordHash(
-                    student.Name,
+                    defaultPassword,
                     out byte[] passwordHash,
                     out byte[] passwordSalt
                 );
+                
+                //bool exists = await _context.User.AnyAsync(u => u.Username == student.Name + rndAppend);
+
+                // 1) Seed Random once
+                
+                string candidate;
+                bool exists;
+                int tries = 0;
+                const int maxTries = 899;
+
+                string clean = new string(
+                        student.Name
+                            .Where(c => !char.IsWhiteSpace(c))
+                            .ToArray()
+                    );
+                // 2) Loop *after* generating the candidate
+                do
+                {
+                    int usernameSuffix = rnd.Next(100, 1000);
+                    
+
+                    candidate = $"{clean}{usernameSuffix}";
+                    
+                    exists = await _context.User
+                        .AnyAsync(u => u.Username == candidate);
+
+                    if(++tries >= maxTries)
+                    {
+                        ViewBag.Error = "Could not generate a unique username for this user.";
+                        break;
+                        //return View();
+                        //throw new InvalidOperationException("Could not generate a unique username.");
+                    }
+                    // (Optional) you could also keep a counter and bail out after N attempts
+                } 
+                // keep trying *while* it already exists
+                while (exists);
 
                 var user = new User {
                     ID                 = student.ID,
-                    Username           = student.Name,
+                    Username           = candidate,
                     Role               = "student",    // or whatever default
                     MustChangePassword = true,
                     PasswordHash       = passwordHash,
-                    PasswordSalt       = passwordSalt
+                    PasswordSalt       = passwordSalt,
+                    IncorrectAttempts = 0
+                    
                 };
                 _context.User.Add(user);
+
+                var primaryEmail = student.Contacts?
+                    .FirstOrDefault(c => c.Type.Equals("email", StringComparison.OrdinalIgnoreCase))
+                    ?.Value;
+
+                
+                if (!string.IsNullOrWhiteSpace(primaryEmail))
+                 {
+                     try
+                     {
+                         var html = $"""
+                             <h2>Bienvenue {student.Name} !</h2>
+                             <p>Your temporary credentials at <strong>TorontoFrench.com</strong>.</p>
+                             <p>
+                                 <strong>Username :</strong> {candidate}<br/>
+                                 <strong>Temporary Password :</strong> {defaultPassword}
+                             </p>
+                             <p>You will have to change your password (and optionally username) upon your first login.</p>
+                             """;
+
+                            /*await _mailer.SendAsync(
+                             to:       primaryEmail,
+                             //from: "Toronto French",
+                             subject:  "Your credentials at Toronto French",
+                             htmlBody: html);*/
+
+                             await _mailer.SendAsync(
+                             to:       "torontofrench05@gmail.com",
+                             //from: "Toronto French",
+                             subject:  "Your credentials at Toronto French",
+                             htmlBody: html);
+                             
+                     }
+                     catch (Exception ex)
+                     {
+                         _logger.LogError(ex,
+                             "Failed to send welcome e-mail to student {StudentId}", student.ID);
+                         // swallow → the user is created even if mail fails
+                     }
+                 }
 
 
                 // 4) Create a blank Assignments entry for the new group
@@ -347,9 +439,35 @@ namespace DotNetCoreSqlDb.Controllers
                 _context.Assignments.Add(assignment);
                 */
                 // 5) Persist composition + assignment
-                await _context.SaveChangesAsync();
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (DbUpdateException ex)
+                {
+                    if (ex.InnerException != null && ex.InnerException.Message.Contains("IX_User_Username"))
+                    {
+                        // SQL Server threw a duplicate username constraint error
+                        ViewBag.Error = "Could not generate a unique username for this user.";
 
-                return RedirectToAction(nameof(Index));
+                        // Repopulate dropdowns and return the Create view again
+                        ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+                        ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+                        ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
+                        ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
+                        var newToken = Guid.NewGuid().ToString();
+                        HttpContext.Session.SetString("CreateStudentToken", newToken);
+                        ViewBag.FormToken = newToken;
+                        return View(student);
+                    }
+                    else
+                    {
+                        // Some other database error → rethrow it
+                        throw;
+                    }
+                }
+
             }
 
             // if we hit errors, repopulate the dropdowns and show the form again

@@ -38,5 +38,18 @@ namespace DotNetCoreSqlDb.Data
 
         public DbSet<DotNetCoreSqlDb.Models.WassengerApiLog> WassengerApiLog { get; set; } = default!;
 
+
+        // method defines model-level constraints like unique indexes
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Enforce unique usernames in the database
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Username)
+                .IsUnique();
+
+        }
+
     }
 }

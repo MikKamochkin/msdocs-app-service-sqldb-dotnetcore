@@ -11,6 +11,8 @@ using DotNetCoreSqlDb.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net;
+
 
 namespace DotNetCoreSqlDb.Services
 {
@@ -49,27 +51,35 @@ namespace DotNetCoreSqlDb.Services
         {
             var payload = JsonSerializer.Serialize(new { phone });
             using var content = new StringContent(payload, Encoding.UTF8, "application/json");
-            try
+
+            const int maxTries = 10;
+            for (int attempt = 1; attempt <= maxTries; attempt++)
             {
-                _logger.LogInformation("Calling /v1/numbers/exists with phone {Phone}", phone);
                 var resp = await _httpClient.PostAsync("/v1/numbers/exists", content);
                 var body = await resp.Content.ReadAsStringAsync();
                 await LogApiAsync($"POST /v1/numbers/exists → {payload}", body);
-                //_logger.LogInformation("Response: " + JsonDocument.Parse(body));
 
-                if (!resp.IsSuccessStatusCode)
-                    return (false, false, body);
+                if (resp.StatusCode == HttpStatusCode.ServiceUnavailable)
+                {
+                    // Wait a bit longer each time
+                    await Task.Delay(200 * attempt);
+                    continue;
+                }
 
-                using var doc = JsonDocument.Parse(body);
-                var exists = doc.RootElement.GetProperty("exists").GetBoolean();
-                _logger.LogInformation("Response: " + doc);
-                return (true, exists, null);
+                if (resp.IsSuccessStatusCode)
+                {
+                    using var doc = JsonDocument.Parse(body);
+                    return (true,
+                            doc.RootElement.GetProperty("exists").GetBoolean(),
+                            null);
+                }
+
+                // 400 or other errors → treat as “invalid number”
+                return (true, false, null);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error validating contact");
-                return (false, false, ex.Message);
-            }
+
+            // still offline after retries
+            return (false, false, "WhatsApp session offline; please try again soon");
         }
 
         public async Task SendAsync(Guid messageId, string phone)
