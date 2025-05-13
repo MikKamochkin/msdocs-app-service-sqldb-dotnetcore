@@ -24,15 +24,20 @@ namespace DotNetCoreSqlDb.Controllers
             _logger = logger;
         }
 
-        // GET: /AccountManagement/PasswordReset?userId=…
-        //[AllowAnonymous]
+        // GET: /AccountManagement/ChangePassword?userId=…
         [HttpGet]
-        public IActionResult ChangePassword(Guid userId)
+        public async Task<IActionResult> ChangePassword(Guid userId)
         {
             // we’ll need this in the form’s hidden field
             ViewBag.UserId = userId;
+
+            // NEW ─ determine if this is a forced-change scenario
+            var user = await _context.User.FirstOrDefaultAsync(u => u.ID == userId);
+            ViewBag.RequireChange = user?.MustChangePassword ?? false;
+
             return View();
         }
+
 
         // POST: /AccountManagement/PasswordReset
         //[AllowAnonymous]
