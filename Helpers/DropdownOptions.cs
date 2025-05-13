@@ -45,8 +45,8 @@ public static class DropdownOptions
 
     public static List<SelectListItem> ScheduleStatusTypes => new List<SelectListItem>
     {
-        new SelectListItem { Text = "Planned", Value = "Planned" },
-        new SelectListItem { Text = "Happened", Value = "Happened" },
+        new SelectListItem { Text = "Scheduled", Value = "Scheduled" },
+        new SelectListItem { Text = "Taken", Value = "Taken" },
         new SelectListItem { Text = "Cancelled", Value = "Cancelled" },
         new SelectListItem { Text = "Deleted", Value = "Deleted" }
     };

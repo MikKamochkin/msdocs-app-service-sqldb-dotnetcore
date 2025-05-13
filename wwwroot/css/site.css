@@ -129,6 +129,7 @@ body {
 /* Main content area should take up available space */
 .container.body-content {
   flex: 1;
+  background: #f5f5f5;
 }
 
 /* Footer styling */
@@ -325,6 +326,74 @@ span.ms-2.small {
   display: inline-flex;
   justify-content: center;
   align-items: center;
+}
+
+.forgot-password-container {
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 30px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.forgot-password-container h2 {
+  color: #2c3e50;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.forgot-password-container .form-group {
+  margin-bottom: 20px;
+}
+
+.forgot-password-container label {
+  display: block;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.forgot-password-container .form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.forgot-password-container .form-check-input:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.forgot-password-container .btn-primary {
+  width: 100%;
+  padding: 12px;
+  background-color: #3498db;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.forgot-password-container .btn-primary:hover {
+  background-color: #2980b9;
+}
+
+.forgot-password-container .alert {
+  margin-top: 20px;
+  padding: 12px;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  color: #721c24;
+  text-align: center;
 }
 
 /* make the date picker indicator cover the entire input */
