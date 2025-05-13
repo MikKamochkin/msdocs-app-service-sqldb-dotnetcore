@@ -10,7 +10,7 @@ using DotNetCoreSqlDb.Services;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "support, admin")]
+    [Authorize(Roles = "support, admin, assistant")]
     public class StudentManagementController : Controller
     {
         private readonly MyDatabaseContext _context;
