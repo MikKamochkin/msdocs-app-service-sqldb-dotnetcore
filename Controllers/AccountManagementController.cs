@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "support")]
     public class AccountManagementController : Controller
     {
         private readonly MyDatabaseContext _context;

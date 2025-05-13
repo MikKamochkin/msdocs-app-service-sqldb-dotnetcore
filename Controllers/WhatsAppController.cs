@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "support, admin")]
     public class WhatsAppController : Controller
     {
         private readonly IWhatsAppService _svc;
