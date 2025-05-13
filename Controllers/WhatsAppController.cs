@@ -15,17 +15,14 @@ namespace DotNetCoreSqlDb.Controllers
         public WhatsAppController(IWhatsAppService svc) => _svc = svc;
 
         public async Task<IActionResult> Index() => View(await _svc.GetAllMessagesAsync());
-        
+
         [HttpGet]
         public async Task<IActionResult> ValidateContact(string phone)
         {
             var (valid, exists, err) = await _svc.ValidateContactAsync(phone);
-            return valid
-                ? Json(new { valid = true, exists })
-                : StatusCode(StatusCodes.Status503ServiceUnavailable,
-                            new { valid = false, error = err });
+            return valid ? Json(new { valid = true, exists })
+                         : StatusCode(500, new { valid = false, error = err });
         }
-
 
         [HttpPost]
         public async Task<IActionResult> Send(Guid id, string phone)

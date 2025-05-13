@@ -49,22 +49,21 @@ namespace DotNetCoreSqlDb.Services
 
         public async Task<(bool Valid, bool Exists, string? Error)> ValidateContactAsync(string phone)
         {
-            const int maxTries = 10;
+            var payload = JsonSerializer.Serialize(new { phone });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
 
+            const int maxTries = 10;
             for (int attempt = 1; attempt <= maxTries; attempt++)
             {
-                // 🔑 NEW – create fresh payload + content on every loop
-                var payload  = JsonSerializer.Serialize(new { phone });
-                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
-
                 var resp = await _httpClient.PostAsync("/v1/numbers/exists", content);
                 var body = await resp.Content.ReadAsStringAsync();
                 await LogApiAsync($"POST /v1/numbers/exists → {payload}", body);
 
                 if (resp.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
-                    await Task.Delay(200 * attempt);          // back-off
-                    continue;                                 // retry with **new** content
+                    // Wait a bit longer each time
+                    await Task.Delay(200 * attempt);
+                    continue;
                 }
 
                 if (resp.IsSuccessStatusCode)
@@ -72,17 +71,16 @@ namespace DotNetCoreSqlDb.Services
                     using var doc = JsonDocument.Parse(body);
                     return (true,
                             doc.RootElement.GetProperty("exists").GetBoolean(),
-                            null);                            // ✔︎ got an answer
+                            null);
                 }
 
-                // 400-series → number format OK but doesn’t exist in WhatsApp
+                // 400 or other errors → treat as “invalid number”
                 return (true, false, null);
             }
 
-            // Still unavailable after retries
+            // still offline after retries
             return (false, false, "WhatsApp session offline; please try again soon");
         }
-
 
         public async Task SendAsync(Guid messageId, string phone)
         {
