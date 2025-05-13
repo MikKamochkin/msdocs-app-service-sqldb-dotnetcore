@@ -246,6 +246,10 @@ namespace DotNetCoreSqlDb.Controllers
                             <strong>Temporary Password :</strong> {tempPass}
                         </p>
                         <p>You will have to change your password (and optionally username) upon your first login.</p>
+                        <p>
+                            Click here to log in: 
+                            <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
+                        </p>
                         """;
 
                     await _mailer.SendAsync(
@@ -439,6 +443,10 @@ namespace DotNetCoreSqlDb.Controllers
                                  <strong>Temporary Password :</strong> {defaultPassword}
                              </p>
                              <p>You will have to change your password (and optionally username) upon your first login.</p>
+                             <p>
+                                 Click here to log in: 
+                                 <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
+                             </p>
                              """;
 
                             /*await _mailer.SendAsync(
