@@ -246,7 +246,7 @@ namespace DotNetCoreSqlDb.Controllers
                     """;
 
                 await _mailer.SendAsync(
-                    to:       "torontofrench05@gmail.com",
+                    to:       "michael.kamochkin@gmail.com",
                     subject:  "Password Reset Request",
                     htmlBody: html);
             }

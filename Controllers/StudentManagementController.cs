@@ -115,17 +115,17 @@ namespace DotNetCoreSqlDb.Controllers
 
             if (!ModelState.IsValid)
             {
-                ViewBag.ContactTypes = DropdownOptions.ContactTypes;
-                ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+                ViewBag.ContactTypes         = DropdownOptions.ContactTypes;
+                ViewBag.SourceTypes          = DropdownOptions.SourceTypes;
                 ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-                ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
+                ViewBag.Timezones            = TimeZoneMapping.GetTimeZones();
                 return View(updatedStudent);
             }
 
-            // Load existing student (with contacts) from DB.
             var existingStudent = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == id);
+
             if (existingStudent == null)
                 return NotFound();
 
@@ -133,62 +133,34 @@ namespace DotNetCoreSqlDb.Controllers
             if (!isPrivileged && existingStudent.AccountingGroup != "S")
                 return Forbid();
 
-            // Update scalar properties.
-            existingStudent.Name = updatedStudent.Name;
-            existingStudent.ParentOrEmployer = updatedStudent.ParentOrEmployer;
-            existingStudent.MainNotes = updatedStudent.MainNotes;
-            existingStudent.Source = updatedStudent.Source;
-            existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
+            // --- scalar updates ---
+            existingStudent.Name            = updatedStudent.Name;
+            existingStudent.ParentOrEmployer= updatedStudent.ParentOrEmployer;
+            existingStudent.MainNotes       = updatedStudent.MainNotes;
+            existingStudent.Source          = updatedStudent.Source;
+            existingStudent.TimeZoneId      = updatedStudent.TimeZoneId;
             existingStudent.AccountingGroup = isPrivileged ? updatedStudent.AccountingGroup : "S";
 
-
-            var suffix   = string.IsNullOrWhiteSpace(existingStudent.ParentOrEmployer)
-                   ? ""
-                   : " – " + existingStudent.ParentOrEmployer;
+            // --- rename solo groups ---
+            var suffix = string.IsNullOrWhiteSpace(existingStudent.ParentOrEmployer) ? "" : " – " + existingStudent.ParentOrEmployer;
             var studentNamePlusParent = existingStudent.Name + suffix;
 
-
-            // Find all the GroupIds where this student appears
-            /*var soloGroupIds = await _context.StudentGroupComposition
-                .Where(sgc => sgc.StudentId == id)          // all compositions for this student
-                .GroupBy(sgc => sgc.GroupId)                // group them by GroupId
-                .Where(g => g.Count() == 1)                 // keep only groups with exactly one member
-                .Select(g => g.Key)                         // select the GroupId
-                .ToListAsync();
-
-            // 2) Load those groups
             var soloGroups = await _context.Group
-                .Where(g => soloGroupIds.Contains(g.Id))
+                .Where(g => g.StudentGroupCompositions.Count() == 1 &&
+                            g.StudentGroupCompositions.Any(c => c.StudentId == id))
                 .ToListAsync();
 
-            // 3) Rename them
-            //_logger.LogInformation($"Found {studentNamePlusParent} student IDs");
             foreach (var g in soloGroups)
-                g.Name = studentNamePlusParent;*/
-
-            var soloGroups = await _context.Group
-                .Where(g =>
-                    g.StudentGroupCompositions.Count() == 1
-                    && g.StudentGroupCompositions.Any(c => c.StudentId == id))
-                .ToListAsync();
-
-            // Rename each one
-            foreach (var g in soloGroups)
-            {
                 g.Name = studentNamePlusParent;
-            }
 
-            // Synchronize the Contacts collection.
+            // --- sync contacts ---
             if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
             {
-                // Process each posted contact.
                 foreach (var contact in updatedStudent.Contacts)
                 {
-                    // Treat as new if ID is Guid.Empty or equals the all-zero string.
                     if (contact.ID == Guid.Empty || contact.ID.ToString() == "00000000-0000-0000-0000-000000000000")
                     {
-                        // Assign new ID and mark as Added.
-                        contact.ID = Guid.NewGuid();
+                        contact.ID        = Guid.NewGuid();
                         contact.StudentID = existingStudent.ID;
                         _context.Entry(contact).State = EntityState.Added;
                         existingStudent.Contacts.Add(contact);
@@ -198,29 +170,96 @@ namespace DotNetCoreSqlDb.Controllers
                         var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == contact.ID);
                         if (existingContact != null)
                         {
-                            existingContact.Type = contact.Type;
-                            existingContact.Value = contact.Value;
+                            existingContact.Type       = contact.Type;
+                            existingContact.Value      = contact.Value;
                             existingContact.Invitation = contact.Invitation;
-                            existingContact.Emergency = contact.Emergency;
-                            existingContact.Money = contact.Money;
+                            existingContact.Emergency  = contact.Emergency;
+                            existingContact.Money      = contact.Money;
                         }
                     }
                 }
-                // Remove any contacts that were removed on the UI.
-                var postedContactIds = updatedStudent.Contacts
-                                        .Where(c => c.ID != Guid.Empty && c.ID.ToString() != "00000000-0000-0000-0000-000000000000")
-                                        .Select(c => c.ID)
-                                        .ToList();
-                var contactsToRemove = existingStudent.Contacts
-                                        .Where(c => c.ID != Guid.Empty && !postedContactIds.Contains(c.ID))
-                                        .ToList();
-                foreach (var c in contactsToRemove)
-                {
+
+                var postedIds = updatedStudent.Contacts
+                    .Where(c => c.ID != Guid.Empty && c.ID.ToString() != "00000000-0000-0000-0000-000000000000")
+                    .Select(c => c.ID)
+                    .ToList();
+
+                var toRemove = existingStudent.Contacts
+                    .Where(c => c.ID != Guid.Empty && !postedIds.Contains(c.ID))
+                    .ToList();
+
+                foreach (var c in toRemove)
                     _context.Entry(c).State = EntityState.Deleted;
+            }
+
+            // --- NEW: create user if missing ---
+            bool userExists = await _context.User.AnyAsync(u => u.ID == existingStudent.ID);
+            if (!userExists)
+            {
+                var rnd       = new Random();
+                var tempPass  = rnd.Next(100000, 1000000).ToString();
+
+                PasswordHelper.CreatePasswordHash(tempPass, out byte[] hash, out byte[] salt);
+
+                const int maxTries = 899;
+                int tries = 0;
+                string clean = new string(existingStudent.Name.Where(c => !char.IsWhiteSpace(c)).ToArray());
+                string candidate;
+                bool candidateExists;
+                do
+                {
+                    int suffixNum = rnd.Next(100, 1000);
+                    candidate = $"{clean}{suffixNum}";
+                    candidateExists = await _context.User.AnyAsync(u => u.Username == candidate);
+                }
+                while (candidateExists && ++tries < maxTries);
+
+                if (tries >= maxTries)
+                {
+                    ViewBag.Error = "Could not generate a unique username for this user.";
+                    ViewBag.ContactTypes         = DropdownOptions.ContactTypes;
+                    ViewBag.SourceTypes          = DropdownOptions.SourceTypes;
+                    ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
+                    ViewBag.Timezones            = TimeZoneMapping.GetTimeZones();
+                    return View(updatedStudent);
+                }
+
+                var newUser = new User
+                {
+                    ID                = existingStudent.ID,
+                    Username          = candidate,
+                    Role              = "student",
+                    MustChangePassword= true,
+                    PasswordHash      = hash,
+                    PasswordSalt      = salt,
+                    IncorrectAttempts = 0
+                };
+                _context.User.Add(newUser);
+
+                try
+                {
+                    var html = $"""
+                        <h2>Bienvenue {existingStudent.Name} !</h2>
+                        <p>Your temporary credentials at <strong>TorontoFrench.com</strong>.</p>
+                        <p>
+                            <strong>Username :</strong> {candidate}<br/>
+                            <strong>Temporary Password :</strong> {tempPass}
+                        </p>
+                        <p>You will have to change your password (and optionally username) upon your first login.</p>
+                        """;
+
+                    await _mailer.SendAsync(
+                        to:      "michael.kamochkin@gmail.com",
+                        subject: "Your credentials at Toronto French",
+                        htmlBody: html);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send welcome e-mail to student {StudentId}", existingStudent.ID);
                 }
             }
-            // If no contacts were submitted, leave existing contacts unchanged.
 
+            // --- persist ---
             try
             {
                 await _context.SaveChangesAsync();
@@ -232,8 +271,10 @@ namespace DotNetCoreSqlDb.Controllers
                 else
                     throw;
             }
+
             return RedirectToAction(nameof(Index));
         }
+
 
         // GET: Students/Create
         public IActionResult Create()
@@ -407,7 +448,7 @@ namespace DotNetCoreSqlDb.Controllers
                              htmlBody: html);*/
 
                              await _mailer.SendAsync(
-                             to:       "torontofrench05@gmail.com",
+                             to:       "michael.kamochkin@gmail.com",
                              //from: "Toronto French",
                              subject:  "Your credentials at Toronto French",
                              htmlBody: html);
