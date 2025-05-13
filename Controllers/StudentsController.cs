@@ -36,10 +36,17 @@ namespace DotNetCoreSqlDb.Controllers
             // Find the student record associated with this user
             var student = await _context.Student
                 .Include(s => s.Contacts)
+                //.Include(s => s.User)
                 .FirstOrDefaultAsync(s => s.ID.ToString() == userId);
 
             if (student == null)
                 return NotFound();
+
+            var studentId = Guid.Parse(userId);
+            ViewBag.Username = await _context.User
+                                    .Where(u => u.ID == studentId)
+                                    .Select(u => u.Username)
+                                    .FirstOrDefaultAsync();
 
             return View(student);
         }
