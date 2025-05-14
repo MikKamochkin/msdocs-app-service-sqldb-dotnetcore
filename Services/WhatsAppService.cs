@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -11,8 +12,6 @@ using DotNetCoreSqlDb.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Net;
-
 
 namespace DotNetCoreSqlDb.Services
 {
@@ -47,13 +46,20 @@ namespace DotNetCoreSqlDb.Services
             return await _context.WhatsAppVoiceMessages.ToListAsync();
         }
 
+        /// <summary>
+        /// Validate whether <paramref name="phone"/> is a WhatsApp number.
+        /// Bypasses validation after 10 consecutive 503 responses and treats the
+        /// number as valid to allow message-sending to continue.
+        /// </summary>
         public async Task<(bool Valid, bool Exists, string? Error)> ValidateContactAsync(string phone)
         {
             var payload = JsonSerializer.Serialize(new { phone });
             using var content = new StringContent(payload, Encoding.UTF8, "application/json");
 
-            const int maxTries = 10;
-            for (int attempt = 1; attempt <= maxTries; attempt++)
+            const int maxAttempts = 10;
+            int consecutive503 = 0;
+
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
                 var resp = await _httpClient.PostAsync("/v1/numbers/exists", content);
                 var body = await resp.Content.ReadAsStringAsync();
@@ -61,10 +67,28 @@ namespace DotNetCoreSqlDb.Services
 
                 if (resp.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
-                    // Wait a bit longer each time
+                    consecutive503++;
+
+                    // After 10 consecutive 503s, bypass validation.
+                    if (consecutive503 >= 10)
+                    {
+                        await LogApiAsync(
+                            $"BYPASS number validation ({phone})",
+                            "Bypassed after 10 consecutive 503 responses");
+
+                        _logger.LogWarning(
+                            "Bypassing number validation for {Phone} after {Attempts} consecutive 503s",
+                            phone, consecutive503);
+
+                        return (true, /* Exists: assume true */ true, null);
+                    }
+
+                    // Wait longer each time before retrying.
                     await Task.Delay(200 * attempt);
                     continue;
                 }
+
+                consecutive503 = 0;   // reset: got a non-503 response
 
                 if (resp.IsSuccessStatusCode)
                 {
@@ -74,11 +98,11 @@ namespace DotNetCoreSqlDb.Services
                             null);
                 }
 
-                // 400 or other errors → treat as “invalid number”
+                // 4xx or other 5xx → treat as “number invalid”
                 return (true, false, null);
             }
 
-            // still offline after retries
+            // Still offline after retries (but didn’t hit 10 consecutive 503s)
             return (false, false, "WhatsApp session offline; please try again soon");
         }
 
@@ -127,9 +151,10 @@ namespace DotNetCoreSqlDb.Services
 
         private async Task LogApiAsync(string request, string response)
         {
-            var log = new WassengerApiLog {
-                Request = request,
-                Time = DateTime.UtcNow,
+            var log = new WassengerApiLog
+            {
+                Request  = request,
+                Time     = DateTime.UtcNow,
                 Response = response
             };
             _context.WassengerApiLog.Add(log);
