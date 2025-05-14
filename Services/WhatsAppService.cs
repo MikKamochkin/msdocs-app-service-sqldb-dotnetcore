@@ -68,7 +68,7 @@ namespace DotNetCoreSqlDb.Services
                 if (resp.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
                     consecutive503++;
-
+    
                     // After 10 consecutive 503s, bypass validation.
                     if (consecutive503 >= 10)
                     {

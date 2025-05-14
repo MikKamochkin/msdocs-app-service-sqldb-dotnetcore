@@ -12,10 +12,9 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using TimeZoneConverter;
 
-
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "support")] 
+    [Authorize(Roles = "support")]
     public class ScheduleController : Controller
     {
         private readonly MyDatabaseContext _context;
@@ -51,27 +50,19 @@ namespace DotNetCoreSqlDb.Controllers
             // 4) Status dropdown
             ViewBag.Statuses = DropdownOptions.ScheduleStatusTypes;
 
-            // 4.1) **Duration dropdown** (new)
+            // 4.1) Duration dropdown (new)
             ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes;
 
-            /*ViewBag.TimeZones = TimeZoneMapping.PreferredTimeZones
-                .OrderBy(k=>k.Key)
-                .Select(kvp => new SelectListItem {
-                    Value = kvp.Key.ToString(),
-                    Text = kvp.Value,
-                    Selected = kvp.Key == -5
-                })
-                .ToList();*/
-            //ViewBag.TimeZones = TimeZoneMapping.GetTimeZones();
+            // 5) Time zones
             var timeZones = TimeZoneMapping.GetTimeZones();
-            var defaultZone = TZConvert.WindowsToIana("Eastern Standard Time");
+            var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
             foreach (var tz in timeZones)
             {
-                tz.Selected = tz.Value == defaultZone;
+                tz.Selected = tz.Value == defaultZoneIana;
             }
             ViewBag.TimeZones = timeZones;
 
-            // 5) Groups (i.e. students) for that teacher
+            // 6) Groups (i.e. students) for that teacher
             List<SelectListItem> groupItems = new();
             if (teacherId.HasValue)
             {
@@ -97,26 +88,37 @@ namespace DotNetCoreSqlDb.Controllers
             }
             ViewBag.Groups = groupItems;
 
-            // 6) Load existing schedule entries for that teacher + date
+            // 7) Load existing schedule entries for that teacher + date via UTC range
             var existing = new List<Schedule>();
             if (teacherId.HasValue)
             {
+                // Convert selected date (local) bounds into UTC
+                var windowsZoneId = TZConvert.IanaToWindows(defaultZoneIana);
+                var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
+
+                var localStart = selectedDate;          // 00:00 local
+                var localEnd   = selectedDate.AddDays(1); // next midnight
+
+                var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, tzInfo);
+                var endUtc   = TimeZoneInfo.ConvertTimeToUtc(localEnd,   tzInfo);
+
                 existing = await _context.Schedule
                     .Include(s => s.Assignment!)
                         .ThenInclude(a => a.Group!)
                     .Where(s =>
                         s.Assignment!.TeacherId == teacherId &&
-                        s.DateTime.Date             == selectedDate
+                        s.DateTime >= startUtc &&
+                        s.DateTime <  endUtc
                     )
                     .OrderBy(s => s.DateTime)
                     .ToListAsync();
             }
 
-            // Flatten into JSON payload with group name & duration
+            // Flatten into JSON payload with UTC ISO strings
             var flat = existing.Select(r => new {
                 r.Id,
                 r.AssignmentId,
-                DateTime  = r.DateTime.ToString("o"),
+                DateTime  = r.DateTime.ToUniversalTime().ToString("o"),
                 r.Status,
                 r.Duration,
                 GroupName = r.Assignment!.Group!.Name
@@ -138,7 +140,7 @@ namespace DotNetCoreSqlDb.Controllers
             List<Guid>? toDelete,
             int timeZoneOffset)
         {
-            // 1) remove any flagged-for-deletion rows
+            // 1) Remove any flagged-for-deletion rows
             if (toDelete != null)
             {
                 foreach (var id in toDelete)
@@ -149,14 +151,16 @@ namespace DotNetCoreSqlDb.Controllers
                 }
             }
 
+            // 2) Convert any local DateTime to UTC before saving
             foreach (var row in schedules)
             {
-                if (row.DateTime.Kind == DateTimeKind.Utc)
+                if (row.DateTime.Kind == DateTimeKind.Local)
                 {
-                    row.DateTime = row.DateTime.ToLocalTime();
+                    row.DateTime = row.DateTime.ToUniversalTime();
                 }
             }
-            // 2) upsert the rest
+
+            // 3) Upsert the rest
             foreach (var row in schedules)
             {
                 if (row.Id == Guid.Empty)
@@ -172,7 +176,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             await _context.SaveChangesAsync();
 
-            // redirect back to the same teacher/date
+            // Redirect back to the same teacher/date
             return RedirectToAction(nameof(Manage), new {
                 teacherId,
                 date = selectedDate.ToString("yyyy-MM-dd")

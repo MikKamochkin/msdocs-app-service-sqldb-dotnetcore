@@ -104,23 +104,62 @@ namespace DotNetCoreSqlDb.Controllers
             return View(scheduleEntries);
         }
 
+        // GET: /Students/Zoom
         public async Task<IActionResult> Zoom()
         {
-            // Get the current user's ID from their claims
-            var userId = User.FindFirst("UserID")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            /* ----------------------------------------------------------
+            1. Identify the logged-in student
+            ---------------------------------------------------------- */
+            var userIdClaim = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userIdClaim, out var studentId))
                 return NotFound();
 
-            // Find the student record associated with this user
+            /* ----------------------------------------------------------
+            2. Work out which lesson is relevant to the Zoom page
+                –  the *soonest* lesson that has not finished more
+                than 3 h ago (same join-window the view expects)
+            ---------------------------------------------------------- */
+            var nowUtc = DateTime.UtcNow;
+
+            // all groups this student belongs to
+            var groupIds = await _context.StudentGroupComposition
+                .Where(c => c.StudentId == studentId)
+                .Select(c => c.GroupId)
+                .Distinct()
+                .ToListAsync();
+
+            // pick the next/ongoing lesson
+            var targetLesson = await _context.Schedule
+                .Include(s => s.Assignment)
+                    .ThenInclude(a => a.Teacher)
+                .Where(s =>
+                    groupIds.Contains(s.Assignment!.GroupId) &&
+                    s.DateTime >= nowUtc.AddMinutes(-180))      // within 3 h behind → future
+                .OrderBy(s => s.DateTime)                       // soonest first
+                .FirstOrDefaultAsync();
+
+            /* ----------------------------------------------------------
+            3. Surface the lesson’s start time for the Razor view
+                (ISO-8601 so Luxon can parse it unchanged)
+                – empty string means “always enable the button”.
+            ---------------------------------------------------------- */
+            ViewBag.LessonUtc = targetLesson != null
+                ? DateTime.SpecifyKind(targetLesson.DateTime, DateTimeKind.Utc)
+                        .ToUniversalTime()        // make sure it’s really UTC
+                        .ToString("o")            // ISO = “…Z”
+                : string.Empty;
+
+            ViewBag.LessonDuration = targetLesson?.Duration;
+            /* ----------------------------------------------------------
+            4. Pass the Student model itself (the view still needs it)
+            ---------------------------------------------------------- */
             var student = await _context.Student
                 .Include(s => s.Contacts)
-                .FirstOrDefaultAsync(s => s.ID.ToString() == userId);
+                .FirstOrDefaultAsync(s => s.ID == studentId);
 
-            if (student == null)
-                return NotFound();
-
-            return View(student);
+            return student == null ? NotFound() : View(student);
         }
+
 
         /*public async Task<IActionResult> Calendar()
         {return View();}*/

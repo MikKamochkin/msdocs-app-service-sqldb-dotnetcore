@@ -114,7 +114,6 @@
     }
   </style>
 </head>
-<body>
   <!-- NAV -->
   <header>
     <div class="header-container">
@@ -187,43 +186,58 @@
 @* ---------- SCRIPTS ---------- *@
 @section Scripts {
 <script src="https://code.jquery.com/jquery-3.6.1.min.js"
-        integrity="sha256-+LdG5Fjnxd8h8JAoywV4P8pIY2q3FfvMZHO7+jT9BkE=" crossorigin="anonymous"></script>
+        integrity="sha256-+LdG5Fjnxd8h8JAoywV4P8pIY2q3FfvMZHO7+jT9BkE="
+        crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
 
 <script>
 (() => {
   const { DateTime } = luxon;
-  const meetingId   = "7890699796";
-  const pwd         = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
-  const deepLink    = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
-  const webLink     = `https://us02web.zoom.us/j/${meetingId}?pwd=${pwd}`;
-  const detailsBase = '@Url.Action("Zoom","Students")';
-  const minsBefore  = 15, minsAfter = 180;
 
-  const raw  = @Html.Raw(existingJson);
+  /* ───────── CONSTANTS (match Zoom page) ───────── */
+  const minsBefore = 15;           // allow join 15 min before start
+  const minsAfter  = 15;           // …and 15 min after the lesson ENDS
+  const meetingId  = "7890699796";
+  const pwd        = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
+  const deepLink   = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
+  const webLink    = `https://us02web.zoom.us/j/${meetingId}?pwd=${pwd}`;
+  const detailsBase = '@Url.Action("Zoom","Students")';
+
+  /* ───────── DATA ───────── */
+  const raw = @Html.Raw(existingJson);
   const rows = raw
     .map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
-    .sort((a,b)=> DateTime.fromISO(b.DateTime) - DateTime.fromISO(a.DateTime)); // newest→oldest
+    .sort((a,b)=> DateTime.fromISO(b.DateTime) - DateTime.fromISO(a.DateTime)); // newest → oldest
 
   $(renderTable);
   $('#timeZoneSelect').on('change', renderTable);
 
+  /* ============================================================
+     1.  RENDER TABLE
+     2.  Decide which row is “next-row” highlight
+     3.  Enable / disable “Join lesson” buttons with the SAME
+         timing window used on Zoom.cshtml:
+         start − 15 min  ≤  NOW  ≤  start + duration + 15 min
+  ============================================================ */
   function renderTable(){
     const zone     = $('#timeZoneSelect').val();
     const nowUtc   = DateTime.utc();
     const nowLocal = nowUtc.setZone(zone);
     const tbody    = $('#entriesTable tbody').empty();
 
-    /* ---------- determine highlight row ---------- */
+    /* ---------- choose row to highlight ---------- */
     let highlightId = null;
     rows.forEach(r => {
-      const dtUtc   = DateTime.fromISO(r.DateTime);
-      const diffMin = dtUtc.diff(nowUtc,'minutes').minutes;
-      const isToday = dtUtc.setZone(zone).hasSame(nowLocal,'day');
-      if (!highlightId && isToday && diffMin <= minsBefore && diffMin >= -minsAfter)
-        highlightId = r.Id;
+      const startUtc = DateTime.fromISO(r.DateTime);
+      const diffMin  = startUtc.diff(nowUtc,'minutes').minutes;   // +ve = future
+      const windowEnd = -(Number(r.Duration) + minsAfter);        // negative minutes after END
+      const isToday  = startUtc.setZone(zone).hasSame(nowLocal,'day');
+
+      if (!highlightId && isToday && diffMin <= minsBefore && diffMin >= windowEnd)
+        highlightId = r.Id;                                       // active/ongoing lesson
     });
     if (!highlightId){
+      /* otherwise highlight nearest future lesson */
       let bestAhead = null;
       rows.forEach(r => {
         const diffMin = DateTime.fromISO(r.DateTime).diff(nowUtc,'minutes').minutes;
@@ -233,24 +247,28 @@
       if (bestAhead) highlightId = bestAhead.id;
     }
 
-    /* ---------- render rows ---------- */
+    /* ---------- render each <tr> ---------- */
     rows.forEach(r => {
-      const dtUtc   = DateTime.fromISO(r.DateTime);
-      const dtLocal = dtUtc.setZone(zone);
-      const diffMin = dtUtc.diff(nowUtc,'minutes').minutes;
-      const isToday = dtLocal.hasSame(nowLocal,'day');
+      const startUtc  = DateTime.fromISO(r.DateTime);
+      const diffMin   = startUtc.diff(nowUtc,'minutes').minutes;
+      const windowEnd = -(Number(r.Duration) + minsAfter);
+      const startLocal= startUtc.setZone(zone);
+      const isToday   = startLocal.hasSame(nowLocal,'day');
 
       let actionHtml = '';
       if (isToday){
-        if (diffMin > minsBefore)                actionHtml = buildBtn('disabled', r.Id);
-        else if (diffMin < -minsAfter)           actionHtml = '';
-        else                                     actionHtml = buildBtn('enabled',  r.Id);
+        if (diffMin > minsBefore)               // too early
+          actionHtml = buildBtn('disabled', r.Id);
+        else if (diffMin < windowEnd)           // too late (>15 min after end)
+          actionHtml = '';
+        else                                    // within join-window
+          actionHtml = buildBtn('enabled', r.Id);
       }
 
       tbody.append(`
         <tr class="${r.Id === highlightId ? 'next-row' : ''}">
-          <td data-label="Date">${dtLocal.toFormat('yyyy-LL-dd')}</td>
-          <td data-label="Time">${dtLocal.toFormat('hh:mm a')}</td>
+          <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
+          <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
           <td data-label="Teacher">${r.TeacherName}</td>
           <td data-label="Status">${r.Status}</td>
           <td data-label="Duration">${r.Duration}&nbsp;min</td>
@@ -259,6 +277,7 @@
     });
   }
 
+  /* ---------- helpers ---------- */
   function buildBtn(state,id){
     const cls = state==='disabled'
       ? 'btn btn-primary btn-md join-btn ml-2 disabled-btn'
@@ -273,6 +292,7 @@
       </a>`;
   }
 
+  /* open Zoom + browser fallback */
   $(document).on('click','.join-btn',function(e){
     if ($(this).hasClass('disabled-btn')) return;
     e.preventDefault();
@@ -282,13 +302,3 @@
 })();
 </script>
 }
-
-  <!-- NAV burger script -->
-  <script>
-    document.querySelector('.burger').addEventListener('click', e=>{
-      e.currentTarget.classList.toggle('active');
-      document.querySelector('.nav-links').classList.toggle('active');
-    });
-  </script>
-</body>
-</html>

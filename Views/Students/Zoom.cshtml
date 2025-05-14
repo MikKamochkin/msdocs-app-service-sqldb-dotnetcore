@@ -1,6 +1,14 @@
 @model DotNetCoreSqlDb.Models.Student
 @{
     ViewData["Title"] = "Zoom";
+
+    /*  The controller must set the lesson’s UTC start-time so the view knows
+        when the student may join, e.g.
+
+        var nextLessonUtc = lesson.DateTime;            // a DateTime (UTC)
+        ViewBag.LessonUtc = nextLessonUtc.ToString("o");   // ISO-8601 “round-trip”
+    */
+    var lessonUtcIso = ViewBag.LessonUtc as string ?? "";   // ""  = always-enabled fallback
 }
 
 <!DOCTYPE html>
@@ -10,134 +18,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>@ViewData["Title"]</title>
 
-  <!-- <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css" /> -->
+  <link  rel="stylesheet"
+         href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" />
 
   <style>
     /* ---------- RESET ---------- */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin:0; padding:0; box-sizing:border-box; }
 
     /* ---------- PAGE BACKGROUND ---------- */
-    body {
-      font-family: Helvetica, sans-serif;
-      /*background: linear-gradient(to bottom right, #b2e7ff, #ffffff);*/
-      background: #e8ecfc;
-      min-height: 100vh;
+    body{
+      font-family:Helvetica,Arial,sans-serif;
+      background:#e8ecfc;
+      min-height:100vh;
     }
 
     /* ---------- NAVBAR ---------- */
-    header {
-      background-color: #6981ec;
-      color: #fff;
-      padding: 10px 0;
-      min-height: 60px;
-      position: relative;
+    header{
+      background:#6981ec; color:#fff; padding:10px 0; min-height:60px; position:relative;
     }
-    .header-container {
-      max-width: 1250px;
-      margin: 0 auto;
-      overflow: hidden;
-    }
-    #logo {
-      float: left;
-      font-size: 1.5em;
-      color: #ffffff;
-      padding-top: 5px;
-    }
+    .header-container{ max-width:1250px; margin:0 auto; overflow:hidden; }
+    #logo{ float:left; font-size:1.5em; color:#fff; padding-top:5px; }
 
-    /* ---------- DESKTOP NAV (40 % FROM VIEWPORT LEFT) ---------- */
-    nav {
-      position: absolute;
-      left: 25vw;
-      top: 50%;
-      transform: translateY(-50%);
+    nav{ position:absolute; left:25vw; top:50%; transform:translateY(-50%); }
+    .nav-links{ list-style:none; margin:0; padding:0; }
+    .nav-links li{ display:inline-block; margin-left:20px; }
+    .nav-links li a{
+      color:#000; text-decoration:none; padding:10px 15px; display:inline-block;
+      transition:background-color .3s;
     }
-    .nav-links {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .nav-links li        { display: inline-block; margin-left: 20px; }
-    .nav-links li a {
-      color: #000000;
-      text-decoration: none;
-      padding: 10px 15px;
-      display: inline-block;
-      transition: background-color 0.3s;
-    }
-    .nav-links li a:hover         { background-color: #ced6ff; scale: 110%; border-radius: 10%; }
-    .nav-links li a.active-page   { background-color: #ffffff; border-radius: 10%; }
-    .nav-links li a.inactive-page { background-color: rgb(255,255,255); border-radius: 10%; }
+    .nav-links li a:hover{ background:#ced6ff; scale:110%; border-radius:10%; }
+    .nav-links li a.active-page,
+    .nav-links li a.inactive-page{ background:#fff; border-radius:10%; }
 
-    /* burger (hidden on desktop) */
-    .burger { display: none; cursor: pointer; margin-left: 15px; }
-    .burger div {
-      width: 25px; height: 3px;
-      background-color: #fff;
-      margin: 5px;
-      transition: transform 0.3s, background-color 0.3s;
-    }
+    .burger{ display:none; cursor:pointer; margin-left:15px; }
+    .burger div{ width:25px; height:3px; background:#fff; margin:5px; transition:.3s; }
 
-    /* ---------- MOBILE NAV OVERRIDES ---------- */
-    @@media screen and (max-width: 768px) {
-      nav {
-        position: relative;
-        left: 0;
-        top: 0;
-        transform: none;
-        margin-top: 10px;
+    /* ---------- MOBILE NAV ---------- */
+    @@media(max-width:768px){
+      nav{ position:relative; left:0; top:0; transform:none; margin-top:10px; }
+      .nav-links{
+        display:none; width:100%; text-align:center; position:absolute;
+        background:#333; top:60px; left:0; z-index:1;
       }
-      .nav-links {
-        display: none;
-        width: 100%;
-        text-align: center;
-        position: absolute;
-        background-color: #333;
-        top: 60px; left: 0;
-        z-index: 1;
-      }
-      .nav-links.active { display: block; }
-      .nav-links li { display: block; margin: 10px 0; }
-      .burger { display: block; float: right; margin-top: 15px; }
-      .burger.active .line1 { transform: rotate(45deg) translate(-5px, 6px); }
-      .burger.active .line2 { opacity: 0; }
-      .burger.active .line3 { transform: rotate(-45deg) translate(-5px, -6px); }
+      .nav-links.active{ display:block; }
+      .nav-links li{ display:block; margin:10px 0; }
+      .burger{ display:block; float:right; margin-top:15px; }
+      .burger.active .line1{ transform:rotate(45deg) translate(-5px,6px); }
+      .burger.active .line2{ opacity:0; }
+      .burger.active .line3{ transform:rotate(-45deg) translate(-5px,-6px); }
     }
 
-    /* ---------- CARD / CONTENT LAYOUT ---------- */
-    .content-wrapper {
-      max-width: 900px;
-      margin: 80px auto 40px; /* leave room for header */
-      padding: 0 20px;
-      text-align: center;     /* centre cards */
+    /* ---------- CARD / CONTENT ---------- */
+    .content-wrapper{ max-width:900px; margin:80px auto 40px; padding:0 20px; text-align:center; }
+    .card{
+      background:#fff; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.1);
+      padding:1.5rem 2rem; margin:0 auto 2rem; max-width:300px;
     }
 
-    /* Re-usable polished card */
-    .card {
-      background: #ffffff;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      padding: 1.5rem 2rem;
-      margin: 0 auto 2rem;
-      display: inline-block;   /* shrink width to content */
-      max-width: 420px;        /* cap for readability */
-    }
-
-    /* Zoom buttons */
+    /* ----- Zoom buttons ----- */
     .zoom-btn,
-    #copy-zoom {
-      display: inline-block;   /* prevents full-width expansion */
-      width: auto;             /* natural width */
-      max-width: 260px;        /* safety cap */
-      white-space: nowrap;     /* keep text on one line */
+    #copy-zoom{
+      display:inline-block;
+      white-space:nowrap;
+      max-width:260px;
       margin-left: auto;
-      margin-right: auto;
-    }
-    .zoom-btn      { margin-bottom: 1.5rem; }
-    #copy-zoom     { margin-top: 0.5rem; }
+      margin-right: auto;}
+    .zoom-btn      { margin-bottom:1.5rem; }
+    #copy-zoom     { margin-top:.5rem; }
 
-    /* small-screen tweaks */
-    @@media screen and (max-width: 600px) {
-      .card { padding: 1rem 1.25rem; max-width: 90%; }
+    /* ----- “disabled” styling identical to Schedule page ----- */
+    .disabled-btn,
+    .disabled-btn:hover,
+    .disabled-btn:active,
+    .disabled-btn:focus{
+      pointer-events:none; background:#6c757d !important; border-color:#6c757d !important;
+      opacity:.65; color:#fff;
+    }
+
+    @@media(max-width:600px){
+      .card{ padding:1rem 1.25rem; max-width:90%; }
     }
   </style>
 </head>
@@ -175,10 +134,9 @@
 
   <!-- ZOOM JOIN SECTION -->
   <div class="content-wrapper">
-    <div class="card">
-      <br>
-      <a id="zoom-link"
-         class="btn btn-primary zoom-btn"
+    <div id="zoom-card" class="card">
+      <br />
+      <a id="zoom-link" class="btn btn-primary zoom-btn"
          href="https://us02web.zoom.us/j/7890699796?pwd=eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09">
          Join&nbsp;Zoom&nbsp;Meeting
       </a>
@@ -188,38 +146,98 @@
       <button id="copy-zoom" type="button" class="btn btn-info btn-sm">
         Copy&nbsp;Zoom&nbsp;link&nbsp;to&nbsp;clipboard
       </button>
-      <br>
-      <br>
+      <br /><br />
     </div>
+    <div id="no-class-message" class="card">
+      <b>You do not have any classes scheduled today.</b>
+    </div>
+    @*<div id="class-ended-message" class="card">
+      <b>Your class already ended. Your next class is scheduled for: @ViewBag.LessonUtc</b>
+    </div>*@
   </div>
 
   <!-- ---------- SCRIPTS ---------- -->
+  <script src="https://code.jquery.com/jquery-3.6.1.min.js"
+          integrity="sha256-+LdG5Fjnxd8h8JAoywV4P8pIY2q3FfvMZHO7+jT9BkE="
+          crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+
   <script>
-    /* burger toggle (mobile) */
-    document.querySelector('.burger').addEventListener('click', e => {
+    /* ---------- NAV burger (mobile) ---------- */
+    document.querySelector('.burger').addEventListener('click', e=>{
       e.currentTarget.classList.toggle('active');
       document.querySelector('.nav-links').classList.toggle('active');
     });
 
-    /* Deep-link into Zoom app if installed */
-    const meetingId = "7890699796";
-    const pwd       = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
-    const deepLink  = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
+    /* ---------- Zoom-button timing logic (same rules as Schedule page) ---------- */
+    (() => {
+      const { DateTime } = luxon;
 
-    /* Join button */
-    document.getElementById("zoom-link").addEventListener("click", e => {
-      e.preventDefault();
-      window.location.href = deepLink;
-      setTimeout(() => { window.location.href = e.currentTarget.href; }, 500);
-    });
+      /* Meeting constants */
+      const meetingId  = "7890699796";
+      const pwd        = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
+      const deepLink   = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
+      const webLink    = `https://us02web.zoom.us/j/${meetingId}?pwd=${pwd}`;
 
-    /* Copy to clipboard */
-    document.getElementById("copy-zoom").addEventListener("click", () => {
-      const url = document.getElementById("zoom-link").href;
-      navigator.clipboard.writeText(url)
-        .then(() => alert("Copied to clipboard:\n" + url))
-        .catch(err => alert("Failed to copy:\n" + err));
-    });
+      /* When does this lesson start (UTC)?  Supplied by controller. */
+      const lessonUtcIso = "@lessonUtcIso";      // empty string => always-enabled
+      if (!lessonUtcIso) { wireUpActiveButton(); return; }  // fail-safe
+
+      const lessonUtc   = DateTime.fromISO(lessonUtcIso);
+      const nowUtc      = DateTime.utc();
+
+      /* same rules as Schedule page */
+      const minsBefore  = 15;
+      const minsAfter   = 15;
+      const diffMin     = lessonUtc.diff(nowUtc, "minutes").minutes;
+      const duration = Number(@(ViewBag.LessonDuration));
+
+
+      const userZone    = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const isToday     = lessonUtc.setZone(userZone)
+                                   .hasSame(DateTime.local().setZone(userZone), "day");
+
+      const zoomBtn     = document.getElementById("zoom-link");
+      const copyBtn     = document.getElementById("copy-zoom");
+      const zoomCard    = document.getElementById("zoom-card");
+      const noClassMessage = document.getElementById("no-class-message");
+
+      /* ───────── decide what to show ───────── */
+      if (!isToday || diffMin < -(duration+minsAfter)) {
+        zoomCard.remove();                                   // >3 h after OR different day
+        return;
+      }
+      else{
+        noClassMessage.remove();
+      }
+
+      if (diffMin > minsBefore) {
+        /* Too early ⇒ disabled */
+        zoomBtn.classList.add("disabled-btn");
+        zoomBtn.setAttribute("aria-disabled", "true");
+        copyBtn.classList.add("disabled-btn");
+        copyBtn.setAttribute("aria-disabled", "true");
+        return;
+      }
+
+      /* Within join window ⇒ active */
+      wireUpActiveButton();
+
+      function wireUpActiveButton(){
+        zoomBtn.addEventListener("click", e=>{
+          e.preventDefault();
+          window.location.href = deepLink;            // open Zoom app if installed
+          setTimeout(()=> window.location.href = webLink, 500);   // fall-back to browser
+        });
+      }
+
+      /* Copy-to-clipboard (active regardless of timing if card visible) */
+      copyBtn.addEventListener("click", ()=>{
+        navigator.clipboard.writeText(zoomBtn.href)
+          .then(()=> alert("Copied to clipboard:\n" + zoomBtn.href))
+          .catch(err=> alert("Failed to copy:\n" + err));
+      });
+    })();
   </script>
 </body>
 </html>
