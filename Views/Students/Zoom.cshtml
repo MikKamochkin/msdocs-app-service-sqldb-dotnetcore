@@ -179,9 +179,19 @@
       const deepLink   = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
       const webLink    = `https://us02web.zoom.us/j/${meetingId}?pwd=${pwd}`;
 
+      const zoomBtn     = document.getElementById("zoom-link");
+      const copyBtn     = document.getElementById("copy-zoom");
+      const zoomCard    = document.getElementById("zoom-card");
+      const noClassMessage = document.getElementById("no-class-message");
+      
       /* When does this lesson start (UTC)?  Supplied by controller. */
       const lessonUtcIso = "@lessonUtcIso";      // empty string => always-enabled
-      if (!lessonUtcIso) { wireUpActiveButton(); return; }  // fail-safe
+      if (!lessonUtcIso)
+      {
+        //wireUpActiveButton();
+        zoomCard.remove();
+        return;
+      }  // fail-safe
 
       const lessonUtc   = DateTime.fromISO(lessonUtcIso);
       const nowUtc      = DateTime.utc();
@@ -197,10 +207,7 @@
       const isToday     = lessonUtc.setZone(userZone)
                                    .hasSame(DateTime.local().setZone(userZone), "day");
 
-      const zoomBtn     = document.getElementById("zoom-link");
-      const copyBtn     = document.getElementById("copy-zoom");
-      const zoomCard    = document.getElementById("zoom-card");
-      const noClassMessage = document.getElementById("no-class-message");
+
 
       /* ───────── decide what to show ───────── */
       if (!isToday || diffMin < -(duration+minsAfter)) {

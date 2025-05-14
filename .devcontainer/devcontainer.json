@@ -5,6 +5,9 @@
 	"service": "app",
 	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 	"remoteUser": "root",
+	"mounts": [
+    "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind"
+  	],
 
 	"remoteEnv": {
     	"Email__Password": "YOUR_LOCAL_SMTP_PASSWORD"
