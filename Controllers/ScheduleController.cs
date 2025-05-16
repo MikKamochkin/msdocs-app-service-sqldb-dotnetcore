@@ -41,9 +41,11 @@ namespace DotNetCoreSqlDb.Controllers
             // 3) Build 15‑minute time slots
             ViewBag.Times = Enumerable.Range(0, 24 * 4)
                 .Select(i => TimeSpan.FromMinutes(i * 15))
-                .Select(ts => new SelectListItem {
+                .Select(ts => new SelectListItem
+                {
                     Value = ts.ToString(@"hh\:mm"),
-                    Text  = ts.ToString(@"hh\:mm")
+                    Text = ts.ToString(@"hh\:mm"),
+                    Selected = ts == TimeSpan.FromHours(9)
                 })
                 .ToList();
 
@@ -51,7 +53,14 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.Statuses = DropdownOptions.ScheduleStatusTypes;
 
             // 4.1) Duration dropdown (new)
-            ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes;
+            //ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes;
+            ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes
+                .Select(item => new SelectListItem {
+                    Text = item.Text,
+                    Value = item.Value,
+                    Selected = item.Value == "60"
+                })
+                .ToList();
 
             // 5) Time zones
             var timeZones = TimeZoneMapping.GetTimeZones();
