@@ -13,6 +13,9 @@ namespace DotNetCoreSqlDb.Models
         [Required]
         public required string Name { get; set; }
 
+        [DisplayName("TimeZone")]
+        public string? TimeZoneId { get; set;}
+
         // Navigation property
         public virtual ICollection<Assignments> Assignments { get; set; } = new List<Assignments>();
     }

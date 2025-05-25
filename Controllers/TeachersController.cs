@@ -44,6 +44,27 @@ namespace DotNetCoreSqlDb.Controllers
 
             var teacherId = Guid.Parse(userId);
 
+            var timeZones = TimeZoneMapping.GetTimeZones();
+            var defaultZone = TZConvert.WindowsToIana("Eastern Standard Time");
+            var teachersTimezone = await _context.Teacher
+                .Where(s => s.Id == teacherId)
+                .Select(s => s.TimeZoneId)
+                .FirstOrDefaultAsync();
+
+            foreach (var tz in timeZones)
+            {
+                if (teachersTimezone != null)
+                {
+                    tz.Selected = tz.Value == teachersTimezone;
+                }
+                else
+                {
+                    tz.Selected = tz.Value == defaultZone;
+                }
+
+            }
+            ViewBag.TimeZones = timeZones;
+
             return View(teacher);
         }
 
@@ -82,9 +103,14 @@ namespace DotNetCoreSqlDb.Controllers
             // 5) Supply your time-zone list again
             var timeZones = TimeZoneMapping.GetTimeZones();
             var defaultZone = TZConvert.WindowsToIana("Eastern Standard Time");
+            var studentsTimezone = await _context.Teacher
+                .Where(s => s.Id == teacherId)
+                .Select(s => s.TimeZoneId)
+                .FirstOrDefaultAsync();
+
             foreach (var tz in timeZones)
             {
-                tz.Selected = tz.Value == defaultZone;
+                tz.Selected = tz.Value == studentsTimezone;
             }
             ViewBag.TimeZones = timeZones;
 
@@ -97,31 +123,30 @@ namespace DotNetCoreSqlDb.Controllers
         {
             // 1) Identify the logged-in student
             var userIdClaim = User.FindFirst("UserID")?.Value;
-            if (!Guid.TryParse(userIdClaim, out var studentId))
+            if (!Guid.TryParse(userIdClaim, out var teacherId))
                 return NotFound();
 
             // 2) Fetch the student model (needed for the view)
-            var student = await _context.Student
-                                .Include(s => s.Contacts)
-                                .FirstOrDefaultAsync(s => s.ID == studentId);
-            if (student == null)
+            var teacher = await _context.Teacher               
+                                .FirstOrDefaultAsync(s => s.Id == teacherId);
+
+            if (teacher == null)
                 return NotFound();
 
             // 3) Find all group IDs this student belongs to
-            var groupIds = await _context.StudentGroupComposition
+            /*var groupIds = await _context.StudentGroupComposition
                                 .Where(c => c.StudentId == studentId)
                                 .Select(c => c.GroupId)
                                 .Distinct()
-                                .ToListAsync();
+                                .ToListAsync();*/
 
             // 4) Pick the next/ongoing lesson (within 3h behind → future)
             // TODO: fix nowutc.addhours(-3)
             var nowUtc = DateTime.UtcNow;
             var targetLesson = await _context.Schedule
                 .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Teacher)
                 .Where(s =>
-                    groupIds.Contains(s.Assignment!.GroupId) &&
+                    s.Id == teacherId &&
                     s.DateTime >= nowUtc.AddHours(-3))
                 .OrderBy(s => s.DateTime)
                 .FirstOrDefaultAsync();
@@ -139,28 +164,50 @@ namespace DotNetCoreSqlDb.Controllers
                                     .Include(z => z.Schedule)
                                     .FirstOrDefaultAsync(z => z.ScheduleId == targetLesson.Id);
 
-                ViewBag.ZoomLink       = zoomMeeting?.JoinUrl;
-                ViewBag.MeetingId      = zoomMeeting?.MeetingId;
-                ViewBag.MeetingPassword= zoomMeeting?.MeetingPassword;
+                ViewBag.ZoomLink = zoomMeeting?.JoinUrl;
+                ViewBag.MeetingId = zoomMeeting?.MeetingId;
+                ViewBag.MeetingPassword = zoomMeeting?.MeetingPassword;
             }
             else
             {
                 // no upcoming lesson
-                ViewBag.LessonUtc       = string.Empty;
-                ViewBag.LessonDuration  = null;
-                ViewBag.ZoomLink        = null;
-                ViewBag.MeetingId       = null;
+                ViewBag.LessonUtc = string.Empty;
+                ViewBag.LessonDuration = null;
+                ViewBag.ZoomLink = null;
+                ViewBag.MeetingId = null;
                 ViewBag.MeetingPassword = null;
             }
 
             // 7) Finally, render the view with your student model
-            return View(student);
+            return View(teacher);
+        }
+        
+        [HttpPost]
+        public async Task<IActionResult> SaveTimeZone([FromBody] TimeZoneUpdateModel model)
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var teacherId))
+                return NotFound();
+
+            var teacher = await _context.Teacher.FirstOrDefaultAsync(s => s.Id == teacherId);
+            if (teacher == null)
+                return NotFound();
+
+            teacher.TimeZoneId = model.TimeZoneId;
+            await _context.SaveChangesAsync();
+
+            return Ok();
+        }
+
+        public class TimeZoneUpdateModel
+        {
+            public string TimeZoneId { get; set; }
         }
 
 
 
         /*public async Task<IActionResult> Calendar()
         {return View();}*/
-        
+
     }
 }

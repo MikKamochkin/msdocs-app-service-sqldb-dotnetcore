@@ -1,4 +1,4 @@
-@model DotNetCoreSqlDb.Models.Student
+@model DotNetCoreSqlDb.Models.Teacher
 @{
     ViewData["Title"] = "Zoom";
 
@@ -113,17 +113,17 @@
       <nav>
         <ul class="nav-links">
           <li>
-            <a asp-controller="Students" asp-action="Schedule" title="Schedule">
+            <a asp-controller="Teachers" asp-action="Schedule" title="Schedule">
               <i class="hgi hgi-stroke hgi-calendar-03"></i>
             </a>
           </li>
           <li>
-            <a asp-controller="Students" asp-action="Zoom" title="Zoom" class="active-page">
+            <a asp-controller="Teachers" asp-action="Zoom" title="Zoom" class="active-page">
               <i class="hgi hgi-stroke hgi-zoom"></i>
             </a>
           </li>
           <li>
-            <a asp-controller="Students" asp-action="Index" title="Account">
+            <a asp-controller="Teachers" asp-action="Index" title="Account">
               <i class="fas fa-user-graduate"></i>
             </a>
           </li>

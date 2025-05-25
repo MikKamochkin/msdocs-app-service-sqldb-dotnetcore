@@ -1,6 +1,7 @@
 @model DotNetCoreSqlDb.Models.Teacher
 @{
     ViewData["Title"] = "My Information";
+    var timeZones = ViewBag.TimeZones as List<SelectListItem>;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -106,6 +107,34 @@
     }
     .table tbody tr:nth-child(even){ background:#fafbff; }
 
+    .time-zone .selector {
+      vertical-align: middle;
+      /*background:#fff;
+      color:#000000;
+      border-radius: 25%;
+      padding:.5rem 1rem;*/
+      padding-left: 0.02rem;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+      border: 1px solid #6981ec;
+      border-radius: 6px;
+      background: #fff;
+      color: #000000;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: all .25s;
+    }
+
+    .time-zone .label {
+      vertical-align: middle;
+      /*background:#fff;
+      color:#000000;
+      border-radius: 25%;
+      padding:.5rem 1rem;*/
+      padding-top: 0.5rem;
+
+    }
+
     /* ---------- RESPONSIVE PROFILE ---------- */
     @@media(max-width:600px){
       .profile-section{ padding:1rem 1.25rem; }
@@ -164,25 +193,40 @@
         <h2><b>My Profile</b></h2>
 
         <!-- SETTINGS BUTTONS -->
-        <div class="settings-actions">
+        @*<div class="settings-actions">
           <a asp-controller="AccountManagement"
              asp-action="ChangeUsername"
              asp-route-userId="@Model.Id">
-            Change&nbsp;Username
+            Change Username
           </a>
           <a asp-controller="AccountManagement"
              asp-action="ChangePassword"
              asp-route-userId="@Model.Id">
-            Change&nbsp;Password
+            Change Password
           </a>
-        </div>
+        </div>*@
       </div>
       <hr />
       <dl class="dl-horizontal">
         <dt>Name</dt>
         <dd>@Html.DisplayFor(m => m.Name)</dd>
-        <dt>Username</dt>
-        <dd>@ViewBag.Username</dd>
+        @*<dt>Username</dt>
+        <dd>@ViewBag.Username</dd>*@
+
+        <form id="timezoneForm">
+          @Html.AntiForgeryToken()
+          <div class="time-zone">
+            <dt class="label">Default time</dt>
+            <dd>
+              <select id="timeZoneSelect" name="timeZoneId" class="selector col-md-3.5">
+                @foreach (var tz in timeZones)
+                {
+                  <option value="@tz.Value" selected="@tz.Selected">@tz.Text</option>
+                }
+              </select>
+            </dd>
+          </div>
+        </form>
       </dl>
     </div>
   </div>
@@ -193,6 +237,27 @@
     document.querySelector('.burger').addEventListener('click', e => {
       e.currentTarget.classList.toggle('active');
       document.querySelector('.nav-links').classList.toggle('active');
+    });
+
+
+    document.getElementById('timeZoneSelect').addEventListener('change', function () {
+      const selectedTimeZone = this.value;
+
+      fetch('@Url.Action("SaveTimeZone", "Teachers")', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+        },
+        body: JSON.stringify({ timeZoneId: selectedTimeZone })
+      })
+        .then(response => {
+          if (!response.ok) throw new Error('Failed to save');
+          console.log("Time zone updated!");
+        })
+        .catch(error => {
+          console.error('Error updating time zone:', error);
+        });
     });
   </script>
 </body>
