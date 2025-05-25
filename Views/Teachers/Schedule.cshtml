@@ -1,0 +1,304 @@
+@model List<DotNetCoreSqlDb.Models.Schedule>
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "My Schedule";
+    var existingJson  = ViewBag.ExistingJson as string ?? "[]";
+    var timeZones     = ViewBag.TimeZones    as List<SelectListItem>;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>@ViewData["Title"]</title>
+
+  <style>
+    /* ---------- RESET ---------- */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* ---------- PAGE BACKGROUND ---------- */
+    body{
+      font-family: Helvetica, sans-serif;
+      /*background: linear-gradient(to bottom right, #b2e7ff, #ffffff);*/
+      background: #e8ecfc;
+      min-height: 100vh;
+    }
+
+    /* ---------- HEADER / NAV ---------- */
+    header{
+      background:#6981ec; color:#fff; padding:10px 0; min-height:60px; position:relative;
+    }
+    .header-container{ max-width:1250px; margin:0 auto; overflow:hidden; }
+    #logo{ float:left; font-size:1.5em; color:#fff; padding-top:5px; }
+
+    nav{ position:absolute; left:25vw; top:50%; transform:translateY(-50%); }
+    .nav-links{ list-style:none; margin:0; padding:0; }
+    .nav-links li{ display:inline-block; margin-left:20px; }
+    .nav-links li a{
+      color:#000; text-decoration:none; padding:10px 15px; display:inline-block;
+      transition:background-color .3s;
+    }
+    .nav-links li a:hover{ background:#ced6ff; scale:110%; border-radius:10%; }
+    .nav-links li a.active-page,
+    .nav-links li a.inactive-page{ background:#fff; border-radius:10%; }
+
+    .burger{ display:none; cursor:pointer; margin-left:15px; }
+    .burger div{ width:25px; height:3px; background:#fff; margin:5px; transition:.3s; }
+
+    /* ---------- MOBILE NAV ---------- */
+    @@media(max-width:768px){
+      nav{ position:relative; left:0; top:0; transform:none; margin-top:10px; }
+      .nav-links{
+        display:none; width:100%; text-align:center; position:absolute;
+        background:#333; top:60px; left:0; z-index:1;
+      }
+      .nav-links.active{ display:block; }
+      .nav-links li{ display:block; margin:10px 0; }
+      .burger{ display:block; float:right; margin-top:15px; }
+      .burger.active .line1{ transform:rotate(45deg) translate(-5px,6px); }
+      .burger.active .line2{ opacity:0; }
+      .burger.active .line3{ transform:rotate(-45deg) translate(-5px,-6px); }
+    }
+
+    /* ---------- MAIN WRAPPER ---------- */
+    .content-wrapper{ max-width:1100px; margin:80px auto 40px; padding:0 20px; }
+
+    /* ---------- SCHEDULE CARD ---------- */
+    .schedule-card{
+      background:#fff; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.1);
+      padding:1.5rem 2rem;
+    }
+
+    /* controls row (tz selector) */
+    .controls{ display:flex; align-items:center; flex-wrap:wrap; gap:.5rem; justify-content:center; }
+    .controls label{ margin:0; font-weight:bold; }
+    .controls select{
+      max-width:260px; width:100%; padding:.4rem .6rem; border:1px solid #ccc; border-radius:4px;
+    }
+
+    /* ---------- TABLE ---------- */
+    #entriesTable{
+      width:100%; border-collapse:collapse; margin-top:1.25rem; font-size:.95rem;
+    }
+    #entriesTable thead th{
+      background:#e9efff; color:#333; font-weight:600;
+      padding:.75rem 1rem; text-align:left; border-bottom:1px solid #d4d9ff;
+    }
+    #entriesTable tbody td{
+      padding:.65rem 1rem; border-bottom:1px solid #f0f0f0; color:#444; word-wrap:break-word;
+    }
+    #entriesTable tbody tr:nth-child(even){ background:#fafbff; }
+
+    /* highlight next lesson */
+    .next-row td{ background:#fff3cd; font-weight:bold; }
+
+    /* disabled join button */
+    .disabled-btn,
+    .disabled-btn:hover,
+    .disabled-btn:active,
+    .disabled-btn:focus{
+      pointer-events:none; background:#6c757d !important; border-color:#6c757d !important;
+      opacity:.65; color:#fff;
+    }
+
+    /* ---------- MOBILE TABLE ---------- */
+    @@media(max-width:600px){
+      #entriesTable thead{ display:none; }
+      #entriesTable tbody td{
+        display:block; width:100%; text-align:right; padding-left:50%; position:relative;
+      }
+      #entriesTable tbody td::before{
+        content:attr(data-label); position:absolute; left:1rem;
+        width:calc(50% - 1rem); text-align:left; font-weight:600; color:#666;
+      }
+    }
+  </style>
+</head>
+  <!-- NAV -->
+  <header>
+    <div class="header-container">
+      <div id="logo">@ViewData["Title"]</div>
+
+      <nav>
+        <ul class="nav-links">
+          <li>
+            <a asp-controller="Teachers" asp-action="Schedule" title="Schedule" class="active-page">
+              <i class="hgi hgi-stroke hgi-calendar-03"></i>
+            </a>
+          </li>
+          <li>
+            <a asp-controller="Teachers" asp-action="Zoom" title="Zoom">
+              <i class="hgi hgi-stroke hgi-zoom"></i>
+            </a>
+          </li>
+          <li>
+            <a asp-controller="Teachers" asp-action="Index" title="Account">
+              <i class="fas fa-user-graduate"></i>
+            </a>
+          </li>
+        </ul>
+
+        <div class="burger">
+          <div class="line1"></div><div class="line2"></div><div class="line3"></div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- SCHEDULE CARD -->
+  <div class="content-wrapper">
+    <div class="schedule-card">
+      <!-- CONTROLS -->
+      <div class="controls">
+        <label for="timeZoneSelect">Time&nbsp;Zone:</label>
+        <select id="timeZoneSelect" name="timeZoneOffset">
+          @foreach (var tz in timeZones)
+          {
+            if (tz.Selected)
+            {
+              <option value="@tz.Value" selected>@tz.Text</option>
+            }
+            else
+            {
+              <option value="@tz.Value">@tz.Text</option>
+            }
+          }
+        </select>
+      </div>
+
+      <!-- TABLE -->
+      <table id="entriesTable">
+        <colgroup>
+          <col style="width:10%" /><col style="width:10%" /><col style="width:14%" />
+          <col style="width:12%" /><col style="width:12%" /><col style="width:18%" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Date</th><th>Time</th><th>Student</th>
+            <th>Status</th><th>Duration</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+@* ---------- SCRIPTS ---------- *@
+@section Scripts {
+<script src="https://code.jquery.com/jquery-3.6.1.min.js"
+        integrity="sha256-+LdG5Fjnxd8h8JAoywV4P8pIY2q3FfvMZHO7+jT9BkE="
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+
+<script>
+(() => {
+  const { DateTime } = luxon;
+
+  /* ───────── CONSTANTS (match Zoom page) ───────── */
+  const minsBefore = 1;           // allow join 1 min before start
+  const minsAfter  = 15;           // …and 15 min after the lesson ENDS
+  const meetingId  = "7890699796";
+  const pwd        = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
+  const deepLink   = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
+  const webLink    = `https://us02web.zoom.us/j/${meetingId}?pwd=${pwd}`;
+  const detailsBase = '@Url.Action("Zoom","Students")';
+
+  /* ───────── DATA ───────── */
+  const raw = @Html.Raw(existingJson);
+  const rows = raw
+    .map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
+    .sort((a,b)=> DateTime.fromISO(b.DateTime) - DateTime.fromISO(a.DateTime)); // newest → oldest
+
+  $(renderTable);
+  $('#timeZoneSelect').on('change', renderTable);
+
+  /* ============================================================
+     1.  RENDER TABLE
+     2.  Decide which row is “next-row” highlight
+     3.  Enable / disable “Join lesson” buttons with the SAME
+         timing window used on Zoom.cshtml:
+         start − 15 min  ≤  NOW  ≤  start + duration + 15 min
+  ============================================================ */
+  function renderTable(){
+    const zone     = $('#timeZoneSelect').val();
+    const nowUtc   = DateTime.utc();
+    const nowLocal = nowUtc.setZone(zone);
+    const tbody    = $('#entriesTable tbody').empty();
+
+    /* ---------- choose row to highlight ---------- */
+    let highlightId = null;
+    rows.forEach(r => {
+      const startUtc = DateTime.fromISO(r.DateTime);
+      const diffMin  = startUtc.diff(nowUtc,'minutes').minutes;   // +ve = future
+      const windowEnd = -(Number(r.Duration) + minsAfter);        // negative minutes after END
+      const isToday  = startUtc.setZone(zone).hasSame(nowLocal,'day');
+
+      if (!highlightId && isToday && diffMin <= minsBefore && diffMin >= windowEnd)
+        highlightId = r.Id;                                       // active/ongoing lesson
+    });
+    if (!highlightId){
+      /* otherwise highlight nearest future lesson */
+      let bestAhead = null;
+      rows.forEach(r => {
+        const diffMin = DateTime.fromISO(r.DateTime).diff(nowUtc,'minutes').minutes;
+        if (diffMin > 0 && (!bestAhead || diffMin < bestAhead.diff))
+          bestAhead = { id:r.Id, diff:diffMin };
+      });
+      if (bestAhead) highlightId = bestAhead.id;
+    }
+
+    /* ---------- render each <tr> ---------- */
+    rows.forEach(r => {
+      const startUtc  = DateTime.fromISO(r.DateTime);
+      const diffMin   = startUtc.diff(nowUtc,'minutes').minutes;
+      const windowEnd = -(Number(r.Duration) + minsAfter);
+      const startLocal= startUtc.setZone(zone);
+      const isToday   = startLocal.hasSame(nowLocal,'day');
+
+      let actionHtml = '';
+      if (isToday){
+        if (diffMin > minsBefore)               // too early
+          actionHtml = buildBtn('disabled', r.Id);
+        else if (diffMin < windowEnd)           // too late (>15 min after end)
+          actionHtml = '';
+        else                                    // within join-window
+          actionHtml = buildBtn('enabled', r.Id);
+      }
+
+      tbody.append(`
+        <tr class="${r.Id === highlightId ? 'next-row' : ''}">
+          <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
+          <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
+          <td data-label="Teacher">${r.StudentName}</td>
+          <td data-label="Status">${r.Status}</td>
+          <td data-label="Duration">${r.Duration}&nbsp;min</td>
+          <td data-label="Actions">${actionHtml}</td>
+        </tr>`);
+    });
+  }
+
+  /* ---------- helpers ---------- */
+  function buildBtn(state,id){
+    const cls = state==='disabled'
+      ? 'btn btn-primary btn-md join-btn ml-2 disabled-btn'
+      : 'btn btn-primary btn-md join-btn ml-2';
+    const extra = state==='disabled' ? 'aria-disabled="true" tabindex="-1"' : '';
+    return `
+      <a href="${deepLink}" class="${cls}" data-id="${id}" ${extra}>
+        <strong>Join&nbsp;lesson</strong>
+      </a>
+      <a href="${detailsBase}/${id}" class="btn btn-info btn-md ml-3" title="Lesson details">
+        <i class="fa-solid fa-circle-info text-light"></i>
+      </a>`;
+  }
+
+  /* open Zoom + browser fallback */
+  $(document).on('click','.join-btn',function(e){
+    if ($(this).hasClass('disabled-btn')) return;
+    e.preventDefault();
+    window.location.href = deepLink;
+    setTimeout(()=>window.location.href = webLink, 500);
+  });
+})();
+</script>
+}

@@ -104,9 +104,13 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 return RedirectToAction("Schedule", "Students");
             }
-            else if (user.Role.ToLower() == "admin" || user.Role.ToLower() == "assistant" || user.Role.ToLower() == "support")  
+            else if (user.Role.ToLower() == "admin" || user.Role.ToLower() == "assistant" || user.Role.ToLower() == "support")
             {
                 return RedirectToAction("Index", "StudentManagement");
+            }
+            else if (user.Role.ToLower() == "teacher")
+            {
+                return RedirectToAction("Schedule", "Teachers");
             }
             else
             {

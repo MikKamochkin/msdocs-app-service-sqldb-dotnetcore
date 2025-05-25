@@ -23,7 +23,7 @@ namespace DotNetCoreSqlDb.Controllers
             return View();
         }
 
-        public IActionResult AccessDenied(string returnUrl = null)
+        public IActionResult AccessDenied(string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
             return View();

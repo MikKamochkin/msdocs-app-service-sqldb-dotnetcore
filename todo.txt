@@ -1,5 +1,7 @@
-default username = name + random number 0-999
-on first login, force to choose new username, ensure uniqueness
+run timer every 5 mins on hour-1 (xx:04 xx:09 ...xx:54 xx:59),
+call assignMeetingAsync with window of now - now + 2 for scheduled lesson start time
+only activate button in ui when lesson exists, not 15 mins before as it is now.
+still end class at starttime + duration + 15 mins.
 
 
 

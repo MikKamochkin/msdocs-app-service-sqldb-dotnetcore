@@ -39,8 +39,8 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.SelectedDate = selectedDate.ToString("yyyy-MM-dd");
 
             // 3) Build 15‑minute time slots
-            ViewBag.Times = Enumerable.Range(0, 24 * 4)
-                .Select(i => TimeSpan.FromMinutes(i * 15))
+            ViewBag.Times = Enumerable.Range(0, 24 * 12)
+                .Select(i => TimeSpan.FromMinutes(i * 5))
                 .Select(ts => new SelectListItem
                 {
                     Value = ts.ToString(@"hh\:mm"),

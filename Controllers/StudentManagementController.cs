@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using DotNetCoreSqlDb.Services;
+using FuzzySharp;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -23,11 +24,11 @@ namespace DotNetCoreSqlDb.Controllers
             IEmailSender mailer)
         {
             _context = context;
-            _logger  = logger;
-            _mailer  = mailer;
+            _logger = logger;
+            _mailer = mailer;
         }
 
-        
+
 
         // GET: Students
         public async Task<IActionResult> Index(string sortOrder)
@@ -115,10 +116,10 @@ namespace DotNetCoreSqlDb.Controllers
 
             if (!ModelState.IsValid)
             {
-                ViewBag.ContactTypes         = DropdownOptions.ContactTypes;
-                ViewBag.SourceTypes          = DropdownOptions.SourceTypes;
+                ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+                ViewBag.SourceTypes = DropdownOptions.SourceTypes;
                 ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-                ViewBag.Timezones            = TimeZoneMapping.GetTimeZones();
+                ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
                 return View(updatedStudent);
             }
 
@@ -134,11 +135,11 @@ namespace DotNetCoreSqlDb.Controllers
                 return Forbid();
 
             // --- scalar updates ---
-            existingStudent.Name            = updatedStudent.Name;
-            existingStudent.ParentOrEmployer= updatedStudent.ParentOrEmployer;
-            existingStudent.MainNotes       = updatedStudent.MainNotes;
-            existingStudent.Source          = updatedStudent.Source;
-            existingStudent.TimeZoneId      = updatedStudent.TimeZoneId;
+            existingStudent.Name = updatedStudent.Name;
+            existingStudent.ParentOrEmployer = updatedStudent.ParentOrEmployer;
+            existingStudent.MainNotes = updatedStudent.MainNotes;
+            existingStudent.Source = updatedStudent.Source;
+            existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
             existingStudent.AccountingGroup = isPrivileged ? updatedStudent.AccountingGroup : "S";
 
             // --- rename solo groups ---
@@ -160,7 +161,7 @@ namespace DotNetCoreSqlDb.Controllers
                 {
                     if (contact.ID == Guid.Empty || contact.ID.ToString() == "00000000-0000-0000-0000-000000000000")
                     {
-                        contact.ID        = Guid.NewGuid();
+                        contact.ID = Guid.NewGuid();
                         contact.StudentID = existingStudent.ID;
                         _context.Entry(contact).State = EntityState.Added;
                         existingStudent.Contacts.Add(contact);
@@ -170,11 +171,11 @@ namespace DotNetCoreSqlDb.Controllers
                         var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == contact.ID);
                         if (existingContact != null)
                         {
-                            existingContact.Type       = contact.Type;
-                            existingContact.Value      = contact.Value;
+                            existingContact.Type = contact.Type;
+                            existingContact.Value = contact.Value;
                             existingContact.Invitation = contact.Invitation;
-                            existingContact.Emergency  = contact.Emergency;
-                            existingContact.Money      = contact.Money;
+                            existingContact.Emergency = contact.Emergency;
+                            existingContact.Money = contact.Money;
                         }
                     }
                 }
@@ -196,8 +197,8 @@ namespace DotNetCoreSqlDb.Controllers
             bool userExists = await _context.User.AnyAsync(u => u.ID == existingStudent.ID);
             if (!userExists)
             {
-                var rnd       = new Random();
-                var tempPass  = rnd.Next(100000, 1000000).ToString();
+                var rnd = new Random();
+                var tempPass = rnd.Next(100000, 1000000).ToString();
 
                 PasswordHelper.CreatePasswordHash(tempPass, out byte[] hash, out byte[] salt);
 
@@ -217,21 +218,21 @@ namespace DotNetCoreSqlDb.Controllers
                 if (tries >= maxTries)
                 {
                     ViewBag.Error = "Could not generate a unique username for this user.";
-                    ViewBag.ContactTypes         = DropdownOptions.ContactTypes;
-                    ViewBag.SourceTypes          = DropdownOptions.SourceTypes;
+                    ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+                    ViewBag.SourceTypes = DropdownOptions.SourceTypes;
                     ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-                    ViewBag.Timezones            = TimeZoneMapping.GetTimeZones();
+                    ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
                     return View(updatedStudent);
                 }
 
                 var newUser = new User
                 {
-                    ID                = existingStudent.ID,
-                    Username          = candidate,
-                    Role              = "student",
-                    MustChangePassword= true,
-                    PasswordHash      = hash,
-                    PasswordSalt      = salt,
+                    ID = existingStudent.ID,
+                    Username = candidate,
+                    Role = "student",
+                    MustChangePassword = true,
+                    PasswordHash = hash,
+                    PasswordSalt = salt,
                     IncorrectAttempts = 0
                 };
                 _context.User.Add(newUser);
@@ -253,7 +254,7 @@ namespace DotNetCoreSqlDb.Controllers
                         """;
 
                     await _mailer.SendAsync(
-                        to:      "michael.kamochkin@gmail.com",
+                        to: "michael.kamochkin@gmail.com",
                         subject: "Your credentials at Toronto French",
                         htmlBody: html);
                 }
@@ -281,6 +282,7 @@ namespace DotNetCoreSqlDb.Controllers
 
 
         // GET: Students/Create
+        [HttpGet]
         public IActionResult Create()
         {
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
@@ -307,7 +309,7 @@ namespace DotNetCoreSqlDb.Controllers
             Student student)
         {
             // 1) Validate your one-time token
-            var formToken    = Request.Form["FormToken"].ToString();
+            var formToken = Request.Form["FormToken"].ToString();
             var sessionToken = HttpContext.Session.GetString("CreateStudentToken");
             if (formToken != sessionToken)
             {
@@ -316,6 +318,18 @@ namespace DotNetCoreSqlDb.Controllers
             }
             // consume it so it can’t be used again
             HttpContext.Session.Remove("CreateStudentToken");
+
+            /*var allNames = await _context.Student.Select(s => s.Name).ToListAsync();
+
+            bool needsWarning = allNames.Contains(student.Name);
+
+            if (needsWarning)
+            {
+                // carry warning to TempData
+                TempData["WarningMessage"] =
+                    "A student with a very similar name already exists. Are you sure?";
+                //return View(student);
+            }*/
 
             // set created date
             student.CreatedDate = DateTime.Now;
@@ -340,7 +354,7 @@ namespace DotNetCoreSqlDb.Controllers
                 _context.Add(student);
                 //await _context.SaveChangesAsync();
 
-                var suffix   = string.IsNullOrWhiteSpace(student.ParentOrEmployer)
+                var suffix = string.IsNullOrWhiteSpace(student.ParentOrEmployer)
                    ? ""
                    : " – " + student.ParentOrEmployer;
                 var studentNamePlusParent = student.Name + suffix;
@@ -348,10 +362,10 @@ namespace DotNetCoreSqlDb.Controllers
                 // 2) Create a Group just for this student
                 var group = new Group
                 {
-                    Id   = Guid.NewGuid(),
+                    Id = Guid.NewGuid(),
                     Name = studentNamePlusParent,
-                    IsActive = true            
-                    
+                    IsActive = true
+
                 };
                 _context.Group.Add(group);
                 //await _context.SaveChangesAsync();
@@ -359,15 +373,15 @@ namespace DotNetCoreSqlDb.Controllers
                 // 3) Link the student into that group
                 var composition = new StudentGroupComposition
                 {
-                    Id           = Guid.NewGuid(),
-                    GroupId      = group.Id,
-                    StudentId    = student.ID,
+                    Id = Guid.NewGuid(),
+                    GroupId = group.Id,
+                    StudentId = student.ID,
                     UseMyBalance = true      // or whatever default you prefer
                 };
                 _context.StudentGroupComposition.Add(composition);
 
                 Random rnd = new Random();
-                string defaultPassword = rnd.Next(100000,1000000) + "";
+                string defaultPassword = rnd.Next(100000, 1000000) + "";
                 //Random rnd = new Random();
                 //int rndAppend = rnd.Next(0, 1000);
 
@@ -376,11 +390,11 @@ namespace DotNetCoreSqlDb.Controllers
                     out byte[] passwordHash,
                     out byte[] passwordSalt
                 );
-                
+
                 //bool exists = await _context.User.AnyAsync(u => u.Username == student.Name + rndAppend);
 
                 // 1) Seed Random once
-                
+
                 string candidate;
                 bool exists;
                 int tries = 0;
@@ -395,14 +409,14 @@ namespace DotNetCoreSqlDb.Controllers
                 do
                 {
                     int usernameSuffix = rnd.Next(100, 1000);
-                    
+
 
                     candidate = $"{clean}{usernameSuffix}";
-                    
+
                     exists = await _context.User
                         .AnyAsync(u => u.Username == candidate);
 
-                    if(++tries >= maxTries)
+                    if (++tries >= maxTries)
                     {
                         ViewBag.Error = "Could not generate a unique username for this user.";
                         break;
@@ -410,19 +424,20 @@ namespace DotNetCoreSqlDb.Controllers
                         //throw new InvalidOperationException("Could not generate a unique username.");
                     }
                     // (Optional) you could also keep a counter and bail out after N attempts
-                } 
+                }
                 // keep trying *while* it already exists
                 while (exists);
 
-                var user = new User {
-                    ID                 = student.ID,
-                    Username           = candidate,
-                    Role               = "student",    // or whatever default
+                var user = new User
+                {
+                    ID = student.ID,
+                    Username = candidate,
+                    Role = "student",    // or whatever default
                     MustChangePassword = true,
-                    PasswordHash       = passwordHash,
-                    PasswordSalt       = passwordSalt,
+                    PasswordHash = passwordHash,
+                    PasswordSalt = passwordSalt,
                     IncorrectAttempts = 0
-                    
+
                 };
                 _context.User.Add(user);
 
@@ -430,12 +445,12 @@ namespace DotNetCoreSqlDb.Controllers
                     .FirstOrDefault(c => c.Type.Equals("email", StringComparison.OrdinalIgnoreCase))
                     ?.Value;
 
-                
+
                 if (!string.IsNullOrWhiteSpace(primaryEmail))
-                 {
-                     try
-                     {
-                         var html = $"""
+                {
+                    try
+                    {
+                        var html = $"""
                              <h2>Bienvenue {student.Name} !</h2>
                              <p>Your temporary credentials at <strong>TorontoFrench.com</strong>.</p>
                              <p>
@@ -449,26 +464,26 @@ namespace DotNetCoreSqlDb.Controllers
                              </p>
                              """;
 
-                            /*await _mailer.SendAsync(
-                             to:       primaryEmail,
-                             //from: "Toronto French",
-                             subject:  "Your credentials at Toronto French",
-                             htmlBody: html);*/
+                        /*await _mailer.SendAsync(
+                         to:       primaryEmail,
+                         //from: "Toronto French",
+                         subject:  "Your credentials at Toronto French",
+                         htmlBody: html);*/
 
-                             await _mailer.SendAsync(
-                             to:       "michael.kamochkin@gmail.com",
-                             //from: "Toronto French",
-                             subject:  "Your credentials at Toronto French",
-                             htmlBody: html);
-                             
-                     }
-                     catch (Exception ex)
-                     {
-                         _logger.LogError(ex,
-                             "Failed to send welcome e-mail to student {StudentId}", student.ID);
-                         // swallow → the user is created even if mail fails
-                     }
-                 }
+                        await _mailer.SendAsync(
+                        to: "michael.kamochkin@gmail.com",
+                        //from: "Toronto French",
+                        subject: "Your credentials at Toronto French",
+                        htmlBody: html);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex,
+                            "Failed to send welcome e-mail to student {StudentId}", student.ID);
+                        // swallow → the user is created even if mail fails
+                    }
+                }
 
 
                 // 4) Create a blank Assignments entry for the new group
@@ -520,10 +535,10 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             // if we hit errors, repopulate the dropdowns and show the form again
-            ViewBag.ContactTypes         = DropdownOptions.ContactTypes;
-            ViewBag.SourceTypes          = DropdownOptions.SourceTypes;
+            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
             ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-            ViewBag.Timezones            = TimeZoneMapping.GetTimeZones();
+            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
             return View(student);
         }
 
@@ -548,5 +563,38 @@ namespace DotNetCoreSqlDb.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+        [Authorize(Roles = "admin, support, assistant")]
+        [HttpGet]
+        public async Task<JsonResult> CheckDuplicate(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return Json(new { duplicate = false, closeMatches = new string[0] });
+
+            // Pull all names into memory (can optimize later with indexed subset if needed)
+            var allNames = await _context.Student
+                                .Select(s => s.Name)
+                                .ToListAsync();
+
+            // Do fuzzy comparison in C#
+            var threshold = 75;  // adjust as needed
+            var matches = allNames
+                .Select(existing => new {
+                    Name = existing,
+                    Score = Fuzz.TokenSetRatio(existing, name)
+                })
+                .Where(x => x.Score >= threshold)
+                .OrderByDescending(x => x.Score)
+                .Take(5)
+                .Select(x => x.Name)
+                .ToList();
+
+            return Json(new {
+                duplicate = matches.Any(),
+                closeMatches = matches
+            });
+        }
+
+        
     }
 }

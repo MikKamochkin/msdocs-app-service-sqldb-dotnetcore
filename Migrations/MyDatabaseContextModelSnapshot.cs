@@ -348,6 +348,51 @@ namespace DotNetCoreSqlDb.Migrations
                     b.ToTable("WhatsAppVoiceMessages");
                 });
 
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.ZoomMeetings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("Duration")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsBusy")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("JoinUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MeetingId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MeetingPassword")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ScheduleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UUid")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ZoomId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScheduleId");
+
+                    b.ToTable("ZoomMeetings");
+                });
+
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Assignments", b =>
                 {
                     b.HasOne("DotNetCoreSqlDb.Models.Group", "Group")
@@ -415,6 +460,15 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Navigation("Group");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.ZoomMeetings", b =>
+                {
+                    b.HasOne("DotNetCoreSqlDb.Models.Schedule", "Schedule")
+                        .WithMany()
+                        .HasForeignKey("ScheduleId");
+
+                    b.Navigation("Schedule");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Assignments", b =>

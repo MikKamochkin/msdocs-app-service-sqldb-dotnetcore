@@ -1,0 +1,74 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.Teacher>
+
+@{
+    ViewData["Title"] = "Students List";
+}
+
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
+    {
+        <div class="col-auto admin-sidebar">
+            <div class="sidebar-header">
+                <i class="hgi hgi-stroke hgi-croissant"></i>
+            </div>
+            <div class="sidebar-content">
+                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-dark d-flex icon-btn" title="Student Management">
+                    <i class="fas fa-user-graduate"></i>
+                </a>
+                
+                <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Manage Groups">
+                    <i class="fas fa-users"></i>
+                </a>
+
+                <a href="@Url.Action("Manage", "Schedule")" class="btn btn-dark d-flex icon-btn" title="Schedule">
+                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                </a>
+                <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-dark d-flex icon-btn" title="WhatsApp">
+                    <i class="hgi hgi-stroke hgi-message-01"></i>
+                </a>
+                <a href="@Url.Action("Index", "Assignments")" class="btn btn-dark icon-btn" title="Assignments">
+                    <i class="fas fa-tasks"></i>
+                </a>
+                <a href="@Url.Action("Index", "TeacherManagement")" class="btn btn-success icon-btn" title="Teachers">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                </a>
+                
+            </div>
+        </div>
+        <div class="col-md-10">
+            <h2>Teacher List</h2>
+
+            <p>
+                <a href="@Url.Action("Create")" class="btn btn-primary">Create New Teacher</a>
+            </p>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            Name
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                            @*<td>
+                                <a href="@Url.Action("Details", new { id = item.ID })"><i class="fa-solid fa-circle-info btn-lg text-dark"></i></a>
+                            </td>*@
+                            <td>
+                                <a href="@Url.Action("Details", new { id = item.Id })"><i class="fa-solid fa-circle-info btn-lg text-dark"></i></a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+}

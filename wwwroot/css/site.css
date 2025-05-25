@@ -396,6 +396,15 @@ span.ms-2.small {
   text-align: center;
 }
 
+.zoom-lessons .free-row{
+  background-color: #e6ffe6; /* Light green */
+}
+
+.zoom-lessons .busy-row{
+  background-color: #ff7f7f; /* Light green */
+}
+
+
 /* make the date picker indicator cover the entire input */
 #selectedDate {
   position: relative;       /* ensure indicator can be absolutely positioned */
@@ -432,4 +441,3 @@ span.ms-2.small {
         padding-left: 15px; /* Reset padding on mobile */
     }
 }
-

@@ -46,6 +46,9 @@ else
 /* ───── 4.  Wassenger (existing) ─────────────────────── */
 var WassengerApiKey         = builder.Configuration["WASSENGER_API_KEY"];
 var WassengerExpectedSecret = builder.Configuration["WASSENGER_WEBHOOK_EXPECTED_SECRET"];
+var ZoomClientId = builder.Configuration["ZoomClientId"];
+var ZoomClientSecret = builder.Configuration["ZoomClientSecret"];
+var ZoomAccountId = builder.Configuration["ZoomAccountId"];
 
 /* ───── 5.  MVC / auth / SignalR / session (unchanged) ─ */
 builder.Services.AddControllersWithViews();
@@ -70,6 +73,10 @@ builder.Services.AddHttpClient("Wassenger", client =>
         new AuthenticationHeaderValue("Bearer", builder.Configuration["WASSENGER-API-KEY"]);
 });
 builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
+builder.Services.AddScoped<IZoomApiService, ZoomApiService>();
+builder.Services.AddScoped<IZoomMeetingService, ZoomMeetingService>();
+
+builder.Services.AddHostedService<TimedHostedService>();
 
 builder.Logging.AddAzureWebAppDiagnostics();
 

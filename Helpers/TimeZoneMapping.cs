@@ -12,7 +12,7 @@ public static class TimeZoneMapping
         { "UTC-11",                       "UTC-10" },  // UTC−11
         { "Hawaiian Standard Time",       "UTC-9" },                         // UTC−10
         { "Alaskan Standard Time",        "UTC-8" },                        // UTC−9
-        { "Pacific Standard Time",        "Vancouver Los Angeles" },                     // UTC−8
+        { "Pacific Standard Time",        "Vancouver / Los Angeles" },                     // UTC−8
         { "Mountain Standard Time",       "Calgary" },                         // UTC−7
         { "Central Standard Time",        "Chicago" },                         // UTC−6
         { "Eastern Standard Time",        "Toronto / New-York" },                         // UTC−5
@@ -22,7 +22,7 @@ public static class TimeZoneMapping
         { "UTC",                          "London" },                                            // UTC±0
         { "Romance Standard Time",        "Paris" },                  // UTC+1
         { "E. Europe Standard Time",      "Belgrade" },               // UTC+2
-        { "Russian Standard Time",        "Moscow / St. Petersburg / Kyiv" },                   // UTC+3
+        { "Russian Standard Time",        "Moscow / Kyiv" },                   // UTC+3
         { "Arabian Standard Time",        "UTC+4" },                     // UTC+4
         { "Pakistan Standard Time",       "UTC+5" },                        // UTC+5
         { "Central Asia Standard Time",   "UTC+6" },                     // UTC+6

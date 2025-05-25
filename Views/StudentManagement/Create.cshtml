@@ -25,7 +25,12 @@
                 <a href="@Url.Action("Index", "Whatsapp")" class="btn btn-dark d-flex icon-btn" title="WhatsApp">
                     <i class="hgi hgi-stroke hgi-message-01"></i>
                 </a>
-                <a href="@Url.Action("Index", "Assignments")"       class="btn btn-dark icon-btn" title="Assignments"><i class="fas fa-tasks"></i></a>
+                <a href="@Url.Action("Index", "Assignments")" class="btn btn-dark icon-btn" title="Assignments">
+                    <i class="fas fa-tasks"></i>
+                </a>
+                <a href="@Url.Action("Index", "TeacherManagement")" class="btn btn-dark icon-btn" title="Teachers">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                </a>
             </div>
         </div>
     }
@@ -168,6 +173,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <script type="text/javascript">
+
+        const warning = '@TempData["WarningMessage"]';
         // Global counters/variables:
         var contactCount = 0;
         var editingContactIndex = null;
@@ -281,15 +288,47 @@
         });
 
         // Disable the submit button on a valid first click to prevent double-submits
-        $("form").on("submit", function(e) {
+        $("form").on("submit", async function (e) {
+
+            /* 0️⃣  – Guard: at least one contact */
             if ($("#contactsSummary tbody tr").length === 0) {
                 alert("Please add at least one contact.");
                 e.preventDefault();
                 return;
             }
 
-            var $btn = $(this).find('input[type=submit], button[type=submit]');
-            $btn.prop('disabled', true).val('Creating…');
+            /* 1️⃣  – If we already confirmed once, let it go through */
+            if ($("#SkipDuplicateCheck").val() === "true")
+                return;      // normal post, no duplicate check
+
+            /* 2️⃣  – Ask the server if the name exists */
+            e.preventDefault();          // halt the real submit
+
+            const name = $("#Name").val();
+            const url  = '@Url.Action("CheckDuplicate", "StudentManagement")'
+                    + '?name=' + encodeURIComponent(name);
+
+            const res  = await fetch(url,
+                { headers: { "Accept": "application/json" } });
+
+            if (!res.ok) {                       // 404, 401, 500, …
+                alert("Unable to validate the name. Try again later.");
+                return;
+            }
+            const data = await res.json();
+
+            /* 3️⃣  – Duplicate?  Show confirm(); otherwise post immediately */
+            if (data.duplicate) {
+                const names = data.closeMatches?.join(", ") || "(no names)";
+                if (!confirm("A student with a very similar name already exists: " + names + ". Create anyway?")) {
+                    return; // user canceled
+                }
+            }
+
+            /* 4️⃣  – Either not duplicate or the user accepted */
+            $("#SkipDuplicateCheck").val("true");   // tell the server to skip
+            $(this).off("submit")                   // prevent recursion
+                .submit();                       // fire the real post
         });
     </script>
 }

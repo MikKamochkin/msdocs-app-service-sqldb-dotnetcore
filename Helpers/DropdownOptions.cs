@@ -53,6 +53,7 @@ public static class DropdownOptions
 
     public static List<SelectListItem> LessonDurationTypes => new List<SelectListItem>
     {
+        new SelectListItem { Text = "1 minute (for testing)", Value = "1" },
         new SelectListItem { Text = "15 minutes", Value = "15" },
         new SelectListItem { Text = "30 minutes", Value = "30" },
         new SelectListItem { Text = "45 minutes", Value = "45" },

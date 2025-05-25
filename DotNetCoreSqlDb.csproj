@@ -7,6 +7,7 @@
     <UserSecretsId>4a92d050-dcd1-4646-a1de-106ec04c1f02</UserSecretsId>
     <RazorCompileOnBuild>true</RazorCompileOnBuild>
     <RazorCompileOnPublish>true</RazorCompileOnPublish>
+    <NoWarn>$(NoWarn);CS8981</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +29,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="8.0.6" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.2" />
     <PackageReference Include="TimeZoneConverter" Version="7.0.0" />
+    <PackageReference Include="FuzzySharp" Version="2.0.0" />
   </ItemGroup>
 
 </Project>

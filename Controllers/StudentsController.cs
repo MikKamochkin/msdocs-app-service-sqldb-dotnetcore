@@ -72,6 +72,7 @@ namespace DotNetCoreSqlDb.Controllers
                     .ThenInclude(a => a.Teacher)
                 .Where(s => groupIds.Contains(s.Assignment!.GroupId))
                 .OrderByDescending(s => s.DateTime)
+                .Take(15)
                 .ToListAsync();
             
 
@@ -94,9 +95,14 @@ namespace DotNetCoreSqlDb.Controllers
             // 5) Supply your time-zone list again
             var timeZones = TimeZoneMapping.GetTimeZones();
             var defaultZone = TZConvert.WindowsToIana("Eastern Standard Time");
+            var studentsTimezone = await _context.Student
+                .Where(s => s.ID == studentId)
+                .Select(s => s.TimeZoneId)
+                .FirstOrDefaultAsync();
+                
             foreach (var tz in timeZones)
             {
-                tz.Selected = tz.Value == defaultZone;
+                tz.Selected = tz.Value == studentsTimezone;
             }
             ViewBag.TimeZones = timeZones;
 
@@ -107,58 +113,68 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: /Students/Zoom
         public async Task<IActionResult> Zoom()
         {
-            /* ----------------------------------------------------------
-            1. Identify the logged-in student
-            ---------------------------------------------------------- */
+            // 1) Identify the logged-in student
             var userIdClaim = User.FindFirst("UserID")?.Value;
             if (!Guid.TryParse(userIdClaim, out var studentId))
                 return NotFound();
 
-            /* ----------------------------------------------------------
-            2. Work out which lesson is relevant to the Zoom page
-                –  the *soonest* lesson that has not finished more
-                than 3 h ago (same join-window the view expects)
-            ---------------------------------------------------------- */
-            var nowUtc = DateTime.UtcNow;
+            // 2) Fetch the student model (needed for the view)
+            var student = await _context.Student
+                                .Include(s => s.Contacts)
+                                .FirstOrDefaultAsync(s => s.ID == studentId);
+            if (student == null)
+                return NotFound();
 
-            // all groups this student belongs to
+            // 3) Find all group IDs this student belongs to
             var groupIds = await _context.StudentGroupComposition
-                .Where(c => c.StudentId == studentId)
-                .Select(c => c.GroupId)
-                .Distinct()
-                .ToListAsync();
+                                .Where(c => c.StudentId == studentId)
+                                .Select(c => c.GroupId)
+                                .Distinct()
+                                .ToListAsync();
 
-            // pick the next/ongoing lesson
+            // 4) Pick the next/ongoing lesson (within 3h behind → future)
+            // TODO: fix nowutc.addhours(-3)
+            var nowUtc = DateTime.UtcNow;
             var targetLesson = await _context.Schedule
                 .Include(s => s.Assignment)
                     .ThenInclude(a => a.Teacher)
                 .Where(s =>
                     groupIds.Contains(s.Assignment!.GroupId) &&
-                    s.DateTime >= nowUtc.AddMinutes(-180))      // within 3 h behind → future
-                .OrderBy(s => s.DateTime)                       // soonest first
+                    s.DateTime >= nowUtc.AddHours(-3))
+                .OrderBy(s => s.DateTime)
                 .FirstOrDefaultAsync();
 
-            /* ----------------------------------------------------------
-            3. Surface the lesson’s start time for the Razor view
-                (ISO-8601 so Luxon can parse it unchanged)
-                – empty string means “always enable the button”.
-            ---------------------------------------------------------- */
-            ViewBag.LessonUtc = targetLesson != null
-                ? DateTime.SpecifyKind(targetLesson.DateTime, DateTimeKind.Utc)
-                        .ToUniversalTime()        // make sure it’s really UTC
-                        .ToString("o")            // ISO = “…Z”
-                : string.Empty;
+            // 5) Surface the lesson’s start time + duration
+            if (targetLesson != null)
+            {
+                ViewBag.LessonUtc = DateTime.SpecifyKind(targetLesson.DateTime, DateTimeKind.Utc)
+                                        .ToUniversalTime()
+                                        .ToString("o");
+                ViewBag.LessonDuration = targetLesson.Duration;
 
-            ViewBag.LessonDuration = targetLesson?.Duration;
-            /* ----------------------------------------------------------
-            4. Pass the Student model itself (the view still needs it)
-            ---------------------------------------------------------- */
-            var student = await _context.Student
-                .Include(s => s.Contacts)
-                .FirstOrDefaultAsync(s => s.ID == studentId);
+                // 6) Only now look up the ZoomMeeting by ScheduleId
+                var zoomMeeting = await _context.ZoomMeetings
+                                    .Include(z => z.Schedule)
+                                    .FirstOrDefaultAsync(z => z.ScheduleId == targetLesson.Id);
 
-            return student == null ? NotFound() : View(student);
+                ViewBag.ZoomLink       = zoomMeeting?.JoinUrl;
+                ViewBag.MeetingId      = zoomMeeting?.MeetingId;
+                ViewBag.MeetingPassword= zoomMeeting?.MeetingPassword;
+            }
+            else
+            {
+                // no upcoming lesson
+                ViewBag.LessonUtc       = string.Empty;
+                ViewBag.LessonDuration  = null;
+                ViewBag.ZoomLink        = null;
+                ViewBag.MeetingId       = null;
+                ViewBag.MeetingPassword = null;
+            }
+
+            // 7) Finally, render the view with your student model
+            return View(student);
         }
+
 
 
         /*public async Task<IActionResult> Calendar()

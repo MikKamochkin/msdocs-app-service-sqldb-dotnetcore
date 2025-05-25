@@ -150,7 +150,7 @@
     <div class="schedule-card">
       <!-- CONTROLS -->
       <div class="controls">
-        <label for="timeZoneSelect">Time&nbsp;Zone:</label>
+        <label for="timeZoneSelect">Time Zone:</label>
         <select id="timeZoneSelect" name="timeZoneOffset">
           @foreach (var tz in timeZones)
           {
@@ -195,7 +195,7 @@
   const { DateTime } = luxon;
 
   /* ───────── CONSTANTS (match Zoom page) ───────── */
-  const minsBefore = 15;           // allow join 15 min before start
+  const minsBefore = 1;           // allow join 15 min before start
   const minsAfter  = 15;           // …and 15 min after the lesson ENDS
   const meetingId  = "7890699796";
   const pwd        = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
@@ -285,7 +285,7 @@
     const extra = state==='disabled' ? 'aria-disabled="true" tabindex="-1"' : '';
     return `
       <a href="${deepLink}" class="${cls}" data-id="${id}" ${extra}>
-        <strong>Join&nbsp;lesson</strong>
+        <strong>Join lesson</strong>
       </a>
       <a href="${detailsBase}/${id}" class="btn btn-info btn-md ml-3" title="Lesson details">
         <i class="fa-solid fa-circle-info text-light"></i>

@@ -9,7 +9,7 @@ namespace DotNetCoreSqlDb.Data
 {
     public class MyDatabaseContext : DbContext
     {
-        public MyDatabaseContext (DbContextOptions<MyDatabaseContext> options)
+        public MyDatabaseContext(DbContextOptions<MyDatabaseContext> options)
             : base(options)
         {
         }
@@ -32,11 +32,13 @@ namespace DotNetCoreSqlDb.Data
 
         public DbSet<DotNetCoreSqlDb.Models.Schedule> Schedule { get; set; } = default!;
 
-        public DbSet<DotNetCoreSqlDb.Models.StudentGroupComposition> StudentGroupComposition { get; set; } = default!;    
+        public DbSet<DotNetCoreSqlDb.Models.StudentGroupComposition> StudentGroupComposition { get; set; } = default!;
 
         public DbSet<DotNetCoreSqlDb.Models.WhatsAppVoiceMessages> WhatsAppVoiceMessages { get; set; } = default!;
 
         public DbSet<DotNetCoreSqlDb.Models.WassengerApiLog> WassengerApiLog { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.ZoomMeetings> ZoomMeetings { get; set; } = default!;
 
 
         // method defines model-level constraints like unique indexes
@@ -50,6 +52,11 @@ namespace DotNetCoreSqlDb.Data
                 .IsUnique();
 
         }
+        
+
+        /*[DbFunction("DIFFERENCE", IsBuiltIn = true)]
+        public static int Difference(string s1, string s2) => throw new NotSupportedException();   // never executed*/
+        
 
     }
 }
