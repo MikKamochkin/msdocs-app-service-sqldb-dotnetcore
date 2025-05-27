@@ -106,7 +106,8 @@ namespace DotNetCoreSqlDb.Services
                 var payload = new
                 {
                     topic,
-                    type = 1,               // instant
+                    type = 2,
+                    start_time = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                     settings = new
                     {
                         waiting_room = false,
