@@ -118,69 +118,65 @@ namespace DotNetCoreSqlDb.Controllers
             return View(scheduleEntries);
         }
 
-        // GET: /Students/Zoom
+        // GET: /Teachers/Zoom
         public async Task<IActionResult> Zoom()
         {
-            // 1) Identify the logged-in student
+            // 1) Identify the logged-in teacher
             var userIdClaim = User.FindFirst("UserID")?.Value;
             if (!Guid.TryParse(userIdClaim, out var teacherId))
                 return NotFound();
 
-            // 2) Fetch the student model (needed for the view)
-            var teacher = await _context.Teacher               
-                                .FirstOrDefaultAsync(s => s.Id == teacherId);
-
+            // 2) Fetch the teacher model (for the view)
+            var teacher = await _context.Teacher
+                                .FirstOrDefaultAsync(t => t.Id == teacherId);
             if (teacher == null)
                 return NotFound();
 
-            // 3) Find all group IDs this student belongs to
-            /*var groupIds = await _context.StudentGroupComposition
-                                .Where(c => c.StudentId == studentId)
-                                .Select(c => c.GroupId)
-                                .Distinct()
-                                .ToListAsync();*/
-
-            // 4) Pick the next/ongoing lesson (within 3h behind → future)
-            // TODO: fix nowutc.addhours(-3)
+            // 3) Pick the next/ongoing lesson (within 3h behind → future),
+            //    filtering by Assignment.TeacherId
             var nowUtc = DateTime.UtcNow;
             var targetLesson = await _context.Schedule
                 .Include(s => s.Assignment)
                 .Where(s =>
-                    s.Id == teacherId &&
+                    s.Assignment != null &&
+                    s.Assignment.TeacherId == teacherId &&
                     s.DateTime >= nowUtc.AddHours(-3))
                 .OrderBy(s => s.DateTime)
                 .FirstOrDefaultAsync();
 
-            // 5) Surface the lesson’s start time + duration
+            // 4) If we found a lesson, surface its time, duration, and Zoom link
             if (targetLesson != null)
             {
-                ViewBag.LessonUtc = DateTime.SpecifyKind(targetLesson.DateTime, DateTimeKind.Utc)
-                                        .ToUniversalTime()
-                                        .ToString("o");
+                // a) Lesson start time (UTC) for the JS
+                ViewBag.LessonUtc = DateTime
+                    .SpecifyKind(targetLesson.DateTime, DateTimeKind.Utc)
+                    .ToUniversalTime()
+                    .ToString("o");
                 ViewBag.LessonDuration = targetLesson.Duration;
 
-                // 6) Only now look up the ZoomMeeting by ScheduleId
+                // b) Lookup the ZoomMeeting by ScheduleId
                 var zoomMeeting = await _context.ZoomMeetings
-                                    .Include(z => z.Schedule)
-                                    .FirstOrDefaultAsync(z => z.ScheduleId == targetLesson.Id);
+                    .FirstOrDefaultAsync(z => z.ScheduleId == targetLesson.Id);
 
-                ViewBag.ZoomLink = zoomMeeting?.JoinUrl;
-                ViewBag.MeetingId = zoomMeeting?.MeetingId;
-                ViewBag.MeetingPassword = zoomMeeting?.MeetingPassword;
+                ViewBag.ZoomLink       = zoomMeeting?.JoinUrl;
+                ViewBag.MeetingId      = zoomMeeting?.MeetingId;
+                ViewBag.MeetingPassword= zoomMeeting?.MeetingPassword;
             }
             else
             {
                 // no upcoming lesson
-                ViewBag.LessonUtc = string.Empty;
-                ViewBag.LessonDuration = null;
-                ViewBag.ZoomLink = null;
-                ViewBag.MeetingId = null;
-                ViewBag.MeetingPassword = null;
+                ViewBag.LessonUtc        = string.Empty;
+                ViewBag.LessonDuration   = null;
+                ViewBag.ZoomLink         = null;
+                ViewBag.MeetingId        = null;
+                ViewBag.MeetingPassword  = null;
             }
 
-            // 7) Finally, render the view with your student model
+            // 5) Render the same Zoom.cshtml view (which already has
+            //    the timing + enable/disable logic)
             return View(teacher);
         }
+
         
         [HttpPost]
         public async Task<IActionResult> SaveTimeZone([FromBody] TimeZoneUpdateModel model)
