@@ -6,7 +6,8 @@ namespace DotNetCoreSqlDb.Services
 {
     public interface IZoomMeetingService
     {
-        Task AssignMeetingsAsync();
+        Task AssignMeetingsAsync(Guid id);
+        Task EndMeetingsAsync(Guid id);
         Task CleanupMeetingsAsync();
     }
 }

@@ -114,14 +114,12 @@ namespace DotNetCoreSqlDb.Controllers
                 return View();
             }
 
-            if (newUsername != newUsername.Trim())
+            if (newUsername != newUsername.Trim().Replace(" ", ""))
             {
                 ViewBag.Error = "The username cannot have spaces in it.";
                 ViewBag.UserId = userId;
                 return View();
             }
-
-            //if (newPassword == )
 
             var user = await _context.User.FindAsync(userId);
             if (user == null)
@@ -157,9 +155,6 @@ namespace DotNetCoreSqlDb.Controllers
                 user.Username = newUsername;
             }
 
-
-            
-
             await _context.SaveChangesAsync();
 
             return RedirectToAction("Index", "Login");
@@ -172,25 +167,33 @@ namespace DotNetCoreSqlDb.Controllers
             // we’ll need this in the form’s hidden field
             ViewBag.UserId = userId;
 
-            var student = await _context.Student
-                .Include(s => s.Contacts)
-                .FirstOrDefaultAsync(s => s.ID == userId);
-            
-            if (student == null)
-                return NotFound();
+            var user = await _context.User
+                .FirstOrDefaultAsync(u => u.ID == userId);
 
-            var primaryEmail = student.Contacts?
-                    .FirstOrDefault(c => c.Type.Equals("email", StringComparison.OrdinalIgnoreCase))
-                    ?.Value;
+            if (user.Role.ToLower() == "student")
+            {
+                var student = await _context.Student
+                    .Include(s => s.Contacts)
+                    .FirstOrDefaultAsync(s => s.ID == userId);
 
-            var obfuscatedEmail = ObfuscateEmailHelper.ObfuscateEmail(primaryEmail);
+                if (student == null)
+                    return NotFound();
 
-            if (!string.IsNullOrWhiteSpace(primaryEmail))
-                ViewBag.Email = obfuscatedEmail;
-            else
-                ViewBag.Error = "We could not find an email for your account. Please contact support.";
-            
-            return View();
+                var primaryEmail = student.Contacts?
+                        .FirstOrDefault(c => c.Type.Equals("email", StringComparison.OrdinalIgnoreCase))
+                        ?.Value;
+
+                var obfuscatedEmail = ObfuscateEmailHelper.ObfuscateEmail(primaryEmail);
+
+                if (!string.IsNullOrWhiteSpace(primaryEmail))
+                    ViewBag.Email = obfuscatedEmail;
+                else
+                    ViewBag.Error = "We could not find an email for your account. Please contact support.";
+
+                return View();
+            }
+
+            return Forbid();            
         }
 
         // POST: /AccountManagement/ForgotPassword

@@ -14,7 +14,10 @@ namespace DotNetCoreSqlDb.Models
         public required string Name { get; set; }
 
         [DisplayName("TimeZone")]
-        public string? TimeZoneId { get; set;}
+        public string? TimeZoneId { get; set; } = "Eastern Standard Time";
+
+        [DisplayName("Email")]
+        public string? Email { get; set; } = "";
 
         // Navigation property
         public virtual ICollection<Assignments> Assignments { get; set; } = new List<Assignments>();
