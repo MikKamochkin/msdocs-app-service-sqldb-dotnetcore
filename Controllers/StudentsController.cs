@@ -12,6 +12,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using TimeZoneConverter;
+using DotNetCoreSqlDb.Hubs;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Build.Execution;
+
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -19,10 +23,14 @@ namespace DotNetCoreSqlDb.Controllers
     public class StudentsController : Controller
     {
         private readonly MyDatabaseContext _context;
+        private readonly IHubContext<ZoomMeetingHub> _hub;
+        private readonly ILogger<TeachersController> _logger;
 
-        public StudentsController(MyDatabaseContext context)
+        public StudentsController(MyDatabaseContext context, IHubContext<ZoomMeetingHub> hub, ILogger<TeachersController> logger)
         {
             _context = context;
+            _hub = hub;
+            _logger = logger;
         }
 
         // GET: Students/Index
@@ -98,8 +106,6 @@ namespace DotNetCoreSqlDb.Controllers
                 .Take(15)
                 .ToListAsync();
 
-
-
             // 4) Serialize for the view’s JS (ISO timestamps + teacher names)
             var flat = scheduleEntries.Select(s => new
             {
@@ -134,71 +140,84 @@ namespace DotNetCoreSqlDb.Controllers
             return View(scheduleEntries);
         }
 
-        // GET: /Students/Zoom
-        public async Task<IActionResult> Zoom()
+        // GET: /Teachers/Zoom
+        public async Task<IActionResult> Zoom(Guid? scheduleId)
         {
-            // 1) Identify the logged-in student
-            var userIdClaim = User.FindFirst("UserID")?.Value;
-            if (!Guid.TryParse(userIdClaim, out var studentId))
-                return NotFound();
+            //_logger.LogInformation("In studentscontroller Zoom() called with scheduleId: {sid}", scheduleId);
 
-            // 2) Fetch the student model (needed for the view)
-            var student = await _context.Student
-                                .Include(s => s.Contacts)
-                                .FirstOrDefaultAsync(s => s.ID == studentId);
-            if (student == null)
-                return NotFound();
-
-            // 3) Find all group IDs this student belongs to
-            var groupIds = await _context.StudentGroupComposition
-                                .Where(c => c.StudentId == studentId)
-                                .Select(c => c.GroupId)
-                                .Distinct()
-                                .ToListAsync();
-
-            // 4) Pick the next/ongoing lesson (within 3h behind → future)
-            // TODO: fix nowutc.addhours(-3)
-            var nowUtc = DateTime.UtcNow;
-            var targetLesson = await _context.Schedule
-                .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Teacher)
-                .Where(s =>
-                    groupIds.Contains(s.Assignment!.GroupId) &&
-                    s.DateTime >= nowUtc.AddHours(-3))
-                .OrderBy(s => s.DateTime)
-                .FirstOrDefaultAsync();
-
-            // 5) Surface the lesson’s start time + duration
-            if (targetLesson != null)
+            if (scheduleId == null)
             {
-                ViewBag.LessonUtc = DateTime.SpecifyKind(targetLesson.DateTime, DateTimeKind.Utc)
-                                        .ToUniversalTime()
-                                        .ToString("o");
-                ViewBag.LessonDuration = targetLesson.Duration;
-
-                // 6) Only now look up the ZoomMeeting by ScheduleId
-                var zoomMeeting = await _context.ZoomMeetings
-                                    .Include(z => z.Schedule)
-                                    .FirstOrDefaultAsync(z => z.ScheduleId == targetLesson.Id);
-
-                ViewBag.ZoomLink = zoomMeeting?.JoinUrl;
-                ViewBag.MeetingId = zoomMeeting?.MeetingId;
-                ViewBag.MeetingPassword = zoomMeeting?.MeetingPassword;
+                return NotFound();
             }
             else
             {
-                // no upcoming lesson
-                ViewBag.LessonUtc = string.Empty;
-                ViewBag.LessonDuration = null;
-                ViewBag.ZoomLink = null;
-                ViewBag.MeetingId = null;
-                ViewBag.MeetingPassword = null;
-            }
+                // 1) Identify the logged-in teacher
+                var userIdClaim = User.FindFirst("UserID")?.Value;
+                if (!Guid.TryParse(userIdClaim, out var studentId))
+                    return NotFound();
 
-            // 7) Finally, render the view with your student model
-            return View(student);
+                // 2) Fetch the teacher model (for the view)
+                var student = await _context.Student
+                                    .FirstOrDefaultAsync(t => t.ID == studentId);
+
+                //_logger.LogInformation("In zoom() with student: {s}", student?.Name);
+                if (student == null)
+                    return NotFound();
+
+                var targetLesson = await _context.Schedule
+                    .Where(s => s.Id == scheduleId)
+                    .FirstOrDefaultAsync();
+
+                //_logger.LogInformation("target lessons duraion: {a}", targetLesson?.Duration);
+
+                if (targetLesson != null)
+                {
+                    // b) Lookup the ZoomMeeting by ScheduleId
+                    var zoomMeeting = await _context.ZoomMeetings
+                        .FirstOrDefaultAsync(z => z.ScheduleId == targetLesson.Id);
+
+                    ViewBag.ZoomLink = zoomMeeting?.JoinUrl;
+                    ViewBag.MeetingId = zoomMeeting?.MeetingId;
+                    ViewBag.MeetingPassword = zoomMeeting?.MeetingPassword;
+                    ViewBag.MeetingStatus = zoomMeeting?.Schedule?.Status;
+                }
+                else
+                {
+                    // no upcoming lesson
+                    ViewBag.LessonUtc = string.Empty;
+                    ViewBag.LessonDuration = null;
+                    ViewBag.ZoomLink = null;
+                    ViewBag.MeetingId = null;
+                    ViewBag.MeetingPassword = null;
+                }
+
+                // 5) Render the same Zoom.cshtml view (which already has
+                //    the timing + enable/disable logic)
+                return View(student);
+            }
         }
-        
+
+
+        // 1) Render the “waiting room” page
+        [HttpGet]
+        public IActionResult Wait(Guid scheduleId)
+        {
+            return View(model: scheduleId);
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetJoinUrl(Guid scheduleId)
+        {
+            var zoom = await _context.ZoomMeetings
+                .FirstOrDefaultAsync(z => z.ScheduleId == scheduleId);
+
+            if (zoom == null)
+                return NoContent();          // 204 → not ready
+
+            return Ok(new { joinUrl = zoom.JoinUrl });
+        }
+
         [HttpPost]
         public async Task<IActionResult> SaveTimeZone([FromBody] TimeZoneUpdateModel model)
         {

@@ -353,7 +353,7 @@
 			const { DateTime } = luxon;
 
 			/* ───────── CONSTANTS (match Zoom page) ───────── */
-			const minsBefore = 1;           // allow join 1 min before start
+			const minsBefore = 5;           // allow join 5 min before start
 			const minsAfter = 15;           // …and 15 min after the lesson ENDS
 			const meetingId = "7890699796";
 			const pwd = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
@@ -372,13 +372,6 @@
 			$(renderTable);
 			$('#timeZoneSelect').on('change', renderTable);
 
-			/* ============================================================
-			   1.  RENDER TABLE
-			   2.  Decide which row is “next-row” highlight
-			   3.  Enable / disable “Join lesson” buttons with the SAME
-				   timing window used on Zoom.cshtml:
-				   start − 15 min  ≤  NOW  ≤  start + duration + 15 min
-			============================================================ */
 			function renderTable() {
 				const zone = $('#timeZoneSelect').val();
 				const nowUtc = DateTime.utc();
@@ -416,33 +409,48 @@
 					const isToday = startLocal.hasSame(nowLocal, 'day');
 
 					let actionHtml = '';
+					//TODO: Fix this logic (or not, it sorta works, just very ugly)
 					if (isToday) {
 						if (diffMin > minsBefore)               // too early
-							actionHtml = buildBtn('disabled', row.Id);
+							actionHtml = '';
 						else if (diffMin < windowEnd)           // too late (>15 min after end)
 							actionHtml = '';
-						else                                    // within join-window
-							actionHtml = buildBtn('enabled', row.Id);
+						else {
+							actionHtml = buildBtn('enabled', row.Id, row.Status);
+						}                                    // within join-window
+
 					}
 
 					tbody.append(`
-	                <tr class="${row.Id === highlightId ? 'next-row' : ''}">
-	                  <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
-	                  <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
-	                  <td data-label="Student">${row.StudentName}</td>
-	                  <td data-label="Status">${row.Status}</td>
-	                  <td data-label="Duration">${row.Duration}&nbsp;min</td>
-	                  <td data-label="Actions">${actionHtml}</td>
-	                </tr>`);
+		                <tr class="${row.Id === highlightId ? 'next-row' : ''}">
+		                  <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
+		                  <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
+		                  <td data-label="Student">${row.StudentName}</td>
+		                  <td data-label="Status">${row.Status}</td>
+		                  <td data-label="Duration">${row.Duration}&nbsp;min</td>
+		                  <td data-label="Actions">${actionHtml}</td>
+		                </tr>`);
 				});
 			}
 
 			/* ---------- helpers ---------- */
-			function buildBtn(state, id) {
+			function buildBtn(state, id, status) {
 				const cls = state === 'disabled'
 					? 'btn btn-primary btn-md join-btn ml-2 disabled-btn'
 					: 'btn btn-primary btn-md join-btn ml-2';
 				const extra = state === 'disabled' ? 'aria-disabled="true" tabindex="-1"' : '';
+				let startOrJoin = "";
+				let endBtnStatus = "";
+
+				if (status == "Ongoing") {
+					startOrJoin = "Join";
+
+				}
+				else {
+					startOrJoin = "Start";
+					endBtnStatus = "disabled"
+				}
+
 				//Uncomment this to use actual static link
 				/*return `
 				  <a href="${deepLink}" class="${cls}" data-id="${id}" ${extra}>
@@ -452,32 +460,29 @@
 					<i class="fa-solid fa-circle-info text-light"></i>
 				  </a>`;*/
 				return `
-				<a
-					href="${tempTestLink}" class="${cls}" data-id="${id}" ${extra}>
-					<strong>Join Static Link</strong>
-				</a>
-				<a
-					class="btn btn-primary btn-md ml-2"
-					href="${startLessonBase}?id=${id}"
-					target="_blank"
-					rel="noopener noreferrer">
-					<strong>Start Lesson</strong>
-				</a>
-				<button
-					class="btn btn-danger btn-md start-btn ml-2" data-id="${id}" onclick="pingEndLesson('${id}')" ${extra}>
-					<strong>End Lesson</strong>
-				</button>	
-				<a
-					href="${detailsBase}?scheduleId=${id}"
-					class="btn btn-info btn-md ml-3"
-					title="Lesson details">
-					<i class="fa-solid fa-circle-info text-light"></i>
-				</a>`;
-				/*
-				<a href="${detailsBase}/${id}" class="btn btn-info btn-md ml-3" title="Lesson details">
-				<i class="fa-solid fa-circle-info text-light"></i>
-				</a>*/
-
+					<a
+						href="${tempTestLink}" class="${cls}" data-id="${id}" ${extra}>
+						<strong>Join Static Link</strong>
+					</a>
+					<a
+						href="${startLessonBase}?id=${id}"
+						class="btn btn-primary btn-md ml-2 start-lesson-btn"
+						target="_blank"
+						rel="noopener noreferrer">
+						<strong>${startOrJoin} Lesson</strong>
+					</a>
+					<button
+						class="btn btn-danger btn-md ml-2 end-lesson-btn ${endBtnStatus}"
+						data-id="${id}"
+						onclick="pingEndLesson('${id}')"
+						<strong>End Lesson</strong>
+					</button>	
+					<a
+						href="${detailsBase}?scheduleId=${id}"
+						class="btn btn-info btn-md ml-3"
+						title="Lesson details">
+						<i class="fa-solid fa-circle-info text-light"></i>
+					</a>`;
 			}
 
 			/* open Zoom + browser fallback */
@@ -515,6 +520,44 @@
 			} catch (error) {
 				console.error("Error calling EndLesson:", error);
 			}
+			location.reload(true)
 		}
+
+		// ── PREVENT DOUBLE-CLICK ON START/END ─────────────────────────────
+		$(document).on('click', '.start-lesson-btn, .end-lesson-btn', function (e) {
+			const $btn = $(this);
+			// first click: add .disabled-btn (blocks pointer-events + greys it out)
+			$btn.addClass('disabled-btn');
+			// after 2s: restore
+			setTimeout(() => {
+				$btn.removeClass('disabled-btn');
+			}, 2000);
+
+			//location.reload(true);
+
+			// allow the first click to proceed (opening the new tab or firing pingEndLesson)
+		});
+
+		// 1) Intercept the Start-Lesson link
+		$(document).on('click', '.start-lesson-btn', function (e) {
+			e.preventDefault();                         // stop the default navigation
+			const $btn = $(this);
+			const url = $btn.attr('href');           // e.g. “/Teachers/StartLesson?id=…”
+
+			// 2) Open Zoom in a new tab (will follow the server’s redirect → joinUrl)
+			window.open(url, '_blank');
+
+			// 3) Swap this into a “Join Lesson” button
+			$btn
+				.removeClass('start-lesson-btn btn-primary')   // no longer a “start” button
+				.addClass('join-btn btn-secondary')            // give it your “join” styling
+				.find('strong')
+				.text('Join Lesson');                        // flip the text label
+
+			setTimeout(() => {
+				window.location.reload();
+			}, 500)
+		});
+
 	</script>
 }

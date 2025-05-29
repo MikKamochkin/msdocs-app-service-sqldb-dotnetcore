@@ -90,6 +90,11 @@ namespace DotNetCoreSqlDb.Controllers
                 .Take(15)
                 .ToListAsync();
 
+            /*var zoomLinks = await _context.ZoomMeetings
+                .Where(z => scheduleEntries.Select(s => s.Id).Contains(z.ScheduleId))
+                .ToDictionaryAsync(z => z.ScheduleId, z => z.JoinUrl);*/
+
+
             // 4) Serialize for the view’s JS (ISO timestamps + teacher names)
             var flat = scheduleEntries.Select(s => new
             {
@@ -98,7 +103,8 @@ namespace DotNetCoreSqlDb.Controllers
                 DateTime = s.DateTime.ToString("o"),
                 s.Status,
                 s.Duration,
-                StudentName = s.Assignment?.Group?.Name
+                StudentName = s.Assignment?.Group?.Name,
+                //JoinUrl = zoomLinks.TryGetValue(s.Id, out var url) ? url : null
             });
 
             ViewBag.ExistingJson = JsonSerializer.Serialize(
@@ -150,7 +156,7 @@ namespace DotNetCoreSqlDb.Controllers
                     .Where(s => s.Id == scheduleId)
                     .FirstOrDefaultAsync();
 
-                
+
                 if (targetLesson != null)
                 {
                     // b) Lookup the ZoomMeeting by ScheduleId
@@ -160,6 +166,7 @@ namespace DotNetCoreSqlDb.Controllers
                     ViewBag.ZoomLink = zoomMeeting?.JoinUrl;
                     ViewBag.MeetingId = zoomMeeting?.MeetingId;
                     ViewBag.MeetingPassword = zoomMeeting?.MeetingPassword;
+                    ViewBag.MeetingStatus = zoomMeeting?.Schedule?.Status;
                 }
                 else
                 {

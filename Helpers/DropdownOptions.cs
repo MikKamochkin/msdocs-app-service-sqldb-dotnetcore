@@ -43,8 +43,10 @@ public static class DropdownOptions
         new SelectListItem {Text = "USD", Value = "USD"}  
     };
 
+    //Whenever these are changed, have to change the JS logic in teacher/schedule.cshtml and student/schedule.cshtml
     public static List<SelectListItem> ScheduleStatusTypes => new List<SelectListItem>
     {
+        new SelectListItem { Text = "Ongoing", Value = "Ongoing" },
         new SelectListItem { Text = "Scheduled", Value = "Scheduled" },
         new SelectListItem { Text = "Taken", Value = "Taken" },
         new SelectListItem { Text = "Cancelled", Value = "Cancelled" },

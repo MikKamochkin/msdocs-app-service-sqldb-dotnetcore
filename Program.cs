@@ -106,6 +106,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<WhatsAppHub>("/hubs/whstatus");
+app.MapHub<ZoomMeetingHub>("/hubs/zoomMeetingHub");
+
 
 app.MapControllerRoute(
     name: "default",

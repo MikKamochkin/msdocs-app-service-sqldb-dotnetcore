@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 using System.Data;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
+using DotNetCoreSqlDb.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 
 namespace DotNetCoreSqlDb.Services
@@ -15,19 +17,22 @@ namespace DotNetCoreSqlDb.Services
         private readonly MyDatabaseContext _context;
         private readonly IZoomApiService _zoomApiService;
         private readonly ILogger<ZoomMeetingService> _logger;
+        private readonly IHubContext<ZoomMeetingHub> _hub;
 
         public ZoomMeetingService(
             MyDatabaseContext context,
             IZoomApiService zoomApiService,
-            ILogger<ZoomMeetingService> logger)
+            ILogger<ZoomMeetingService> logger,
+            IHubContext<ZoomMeetingHub> hub)
         {
             _context = context;
             _zoomApiService = zoomApiService;
             _logger = logger;
+            _hub = hub;
+
         }
 
-        //Creates a meeting based on scheduleId param\
-    
+        //Creates a meeting based on scheduleId param
         public async Task AssignMeetingsAsync(Guid scheduleId)
         {
             var zoomMeetings = await _context.ZoomMeetings
@@ -84,6 +89,7 @@ namespace DotNetCoreSqlDb.Services
                     freeSlot.MeetingPassword = result.Passcode;
                     freeSlot.StartTime = DateTime.UtcNow;           // actual create time
                     freeSlot.Duration = schedule.Duration;         // from your Schedule
+                    schedule.Status = "Ongoing";
 
                     await _context.SaveChangesAsync();
                     await tx2.CommitAsync();
@@ -91,6 +97,8 @@ namespace DotNetCoreSqlDb.Services
                     _logger.LogInformation(
                         "Updated ZoomMeetings row {ZoomRowId} with join link + timing",
                         freeSlot.Id);
+
+                    await _hub.Clients.Group(scheduleId.ToString()).SendAsync("MeetingCreated", result.JoinUrl);
                 }
                 catch (Exception ex)
                 {
@@ -115,101 +123,6 @@ namespace DotNetCoreSqlDb.Services
                 _logger.LogInformation("A meeting with scheduleId {scheduleId} already exists, didn't do anything", scheduleId);
             }
         }
-
-
-        //Decomissioned logic that creates meetings based on the schedule automatically
-        /*public async Task AssignMeetingsAsyncFromTimer()
-        {
-            var nowUtc = DateTime.UtcNow;
-            var windowStart = nowUtc.AddMinutes(0);
-            var windowEnd = nowUtc.AddMinutes(3);
-
-            var upcomingSchedules = await _context.Schedule
-                .Where(s => s.DateTime >= windowStart && s.DateTime < windowEnd)
-                .ToListAsync();
-
-            _logger.LogInformation(
-                "Found {Count} upcoming schedules between {Start} and {End}: {@Schedules}",
-                upcomingSchedules.Count,
-                windowStart,
-                windowEnd,
-                upcomingSchedules
-            );
-
-            foreach (var schedule in upcomingSchedules)
-            {
-                _logger.LogInformation("upcoming schedules id: " + schedule.Id + " at time: " + schedule.DateTime);
-                ZoomMeetings? freeSlot = null;
-                try
-                {
-                    // 1) Reserve a free Zoom slot
-                    using var tx1 = await _context.Database
-                                                   .BeginTransactionAsync(IsolationLevel.Serializable);
-
-                    freeSlot = await _context.ZoomMeetings
-                        .Where(m => !m.IsBusy)
-                        .FirstOrDefaultAsync();
-
-                    if (freeSlot == null)
-                    {
-                        _logger.LogWarning("No free Zoom users for schedule {ScheduleId}", schedule.Id);
-                        await tx1.RollbackAsync();
-                        continue;
-                    }
-
-                    freeSlot.IsBusy = true;
-                    freeSlot.ScheduleId = schedule.Id;
-                    await _context.SaveChangesAsync();
-                    await tx1.CommitAsync();
-
-                    // 2) Create the instant Zoom meeting
-                    var hostIdentifier = string.IsNullOrWhiteSpace(freeSlot.ZoomId)
-                                           ? freeSlot.Email
-                                           : freeSlot.ZoomId;
-
-                    var result = await _zoomApiService.CreateInstantMeetingAsync(
-                                     hostIdentifier,
-                                     topic: $"Lesson – {schedule.Id}");
-
-                    _logger.LogInformation(
-                        "Instant meeting {MeetingId} created for schedule {ScheduleId}",
-                        result.Id, schedule.Id);
-
-                    // 3) Persist Zoom response + timing in your DB
-                    using var tx2 = await _context.Database
-                                                   .BeginTransactionAsync(IsolationLevel.Serializable);
-
-                    freeSlot.MeetingId = result.Id;
-                    freeSlot.UUid = result.Uuid;
-                    freeSlot.JoinUrl = result.JoinUrl;
-                    freeSlot.MeetingPassword = result.Passcode;
-                    freeSlot.StartTime = DateTime.UtcNow;           // actual create time
-                    freeSlot.Duration = schedule.Duration;         // from your Schedule
-
-                    await _context.SaveChangesAsync();
-                    await tx2.CommitAsync();
-
-                    _logger.LogInformation(
-                        "Updated ZoomMeetings row {ZoomRowId} with join link + timing",
-                        freeSlot.Id);
-                }
-                catch (Exception ex)
-                {
-                    // if we reserved a slot and something failed, mark it free again
-                    if (freeSlot != null)
-                    {
-                        freeSlot.IsBusy = false;
-                        freeSlot.ScheduleId = null;
-                        await _context.SaveChangesAsync();
-                    }
-
-                    _logger.LogError(
-                        ex,
-                        "Failed to assign or persist Zoom meeting for schedule {ScheduleId}",
-                        schedule.Id);
-                }
-            }
-        }*/
 
         public async Task EndMeetingsAsync(Guid scheduleId)
         {
@@ -245,6 +158,13 @@ namespace DotNetCoreSqlDb.Services
                     zoomRow.StartTime = null;
                     zoomRow.Duration = null;
                     zoomRow.UUid = null;
+
+                    var schedule = await _context.Schedule
+                                        .FirstOrDefaultAsync(s => s.Id == scheduleId);
+                    if (schedule != null)
+                    {
+                        schedule.Status = "Taken";
+                    }
 
                     await _context.SaveChangesAsync();
                     await tx.CommitAsync();
