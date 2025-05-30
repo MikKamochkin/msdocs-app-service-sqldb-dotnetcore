@@ -31,11 +31,18 @@
 
 		/* ---------- HEADER / NAV ---------- */
 		header {
+			position: relative;
+			left: 50%;
+			width: 100vw;
+			/* full viewport width */
+			margin-left: -50vw;
+			/* pull it back so it’s centered */
+
+			/* (your existing styles) */
 			background: #6981ec;
 			color: #fff;
 			padding: 10px 0;
 			min-height: 60px;
-			position: relative;
 		}
 
 		.header-container {
@@ -104,7 +111,7 @@
 		}
 
 		/* ---------- MOBILE NAV ---------- */
-		@@media(max-width:768px) {
+		/*@@media(max-width:768px) {
 			nav {
 				position: relative;
 				left: 0;
@@ -150,7 +157,7 @@
 			.burger.active .line3 {
 				transform: rotate(-45deg) translate(-5px, -6px);
 			}
-		}
+		}*/
 
 		/* ---------- MAIN WRAPPER ---------- */
 		.content-wrapper {
@@ -422,14 +429,14 @@
 					}
 
 					tbody.append(`
-		                <tr class="${row.Id === highlightId ? 'next-row' : ''}">
-		                  <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
-		                  <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
-		                  <td data-label="Student">${row.StudentName}</td>
-		                  <td data-label="Status">${row.Status}</td>
-		                  <td data-label="Duration">${row.Duration}&nbsp;min</td>
-		                  <td data-label="Actions">${actionHtml}</td>
-		                </tr>`);
+				                <tr class="${row.Id === highlightId ? 'next-row' : ''}">
+				                  <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
+				                  <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
+				                  <td data-label="Student">${row.StudentName}</td>
+				                  <td data-label="Status">${row.Status}</td>
+				                  <td data-label="Duration">${row.Duration}&nbsp;min</td>
+				                  <td data-label="Actions">${actionHtml}</td>
+				                </tr>`);
 				});
 			}
 
@@ -452,14 +459,13 @@
 				}
 
 				//Uncomment this to use actual static link
-				/*return `
-				  <a href="${deepLink}" class="${cls}" data-id="${id}" ${extra}>
-					<strong>Join Static Link</strong>
-				  </a>
-				  <a href="${detailsBase}/${id}" class="btn btn-info btn-md ml-3" title="Lesson details">
-					<i class="fa-solid fa-circle-info text-light"></i>
-				  </a>`;*/
 				return `
+						  <a href="${deepLink}" class="${cls}" data-id="${id}" ${extra}>
+							<strong>Join Static Link</strong>
+						  </a>
+						  `;
+				//Dynamic link:
+				/*return `
 					<a
 						href="${tempTestLink}" class="${cls}" data-id="${id}" ${extra}>
 						<strong>Join Static Link</strong>
@@ -482,24 +488,28 @@
 						class="btn btn-info btn-md ml-3"
 						title="Lesson details">
 						<i class="fa-solid fa-circle-info text-light"></i>
-					</a>`;
+					</a>`;*/
 			}
 
 			/* open Zoom + browser fallback */
 			//Uncomment this to route to actual static link; for now just testing
-			/*
-			$(document).on('click','.join-btn',function(e){
-			  if ($(this).hasClass('disabled-btn')) return;
-			  e.preventDefault();
-			  window.location.href = deepLink;
-			  setTimeout(()=>window.location.href = webLink, 500);
-			});*/
+
 			$(document).on('click', '.join-btn', function (e) {
+				if ($(this).hasClass('disabled-btn')) return;
+				e.preventDefault();
+				const $btn = $(this);
+				const url = $btn.attr('href');
+				//window.location.href = deepLink;
+				window.open(url, '_blank');
+
+				setTimeout(() => window.open(weblink, '_blank'), 500);
+			});
+			/*$(document).on('click', '.join-btn', function (e) {
 				if ($(this).hasClass('disabled-btn')) return;
 				e.preventDefault();
 				window.location.href = tempTestLink;
 				setTimeout(() => window.location.href = tempTestLink, 500);
-			});
+			});*/
 		})();
 
 		async function pingEndLesson(id) {

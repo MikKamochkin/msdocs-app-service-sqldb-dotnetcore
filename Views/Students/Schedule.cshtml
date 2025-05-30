@@ -30,13 +30,20 @@
         }
 
         /* ---------- HEADER / NAV ---------- */
-        header {
-            background: #6981ec;
-            color: #fff;
-            padding: 10px 0;
-            min-height: 60px;
-            position: relative;
-        }
+		header {
+			position: relative;
+			left: 50%;
+			width: 100vw;
+			/* full viewport width */
+			margin-left: -50vw;
+			/* pull it back so it’s centered */
+
+			/* (your existing styles) */
+			background: #6981ec;
+			color: #fff;
+			padding: 10px 0;
+			min-height: 60px;
+		}
 
         .header-container {
             max-width: 1250px;
@@ -454,16 +461,22 @@
                         Join Lesson
                     </a>`;
 
-                return zoomBtn + detailsBtn + waitBtn;
+                //Uncomment this to actiavate the dynamic buttons
+                //return detailsBtn + waitBtn;
+                return zoomBtn;
             }
 
             /* open Zoom + browser fallback */
             $(document).on('click', '.join-btn', function (e) {
-                if ($(this).hasClass('disabled-btn')) return;
-                e.preventDefault();
-                window.location.href = deepLink;
-                setTimeout(() => window.location.href = webLink, 500);
-            });
+				if ($(this).hasClass('disabled-btn')) return;
+				e.preventDefault();
+				const $btn = $(this);
+				const url = $btn.attr('href');
+				//window.location.href = deepLink;
+				window.open(url, '_blank');
+
+				setTimeout(() => window.open(weblink, '_blank'), 500);
+			});
         })();
     </script>
 }

@@ -48,6 +48,9 @@
                         <th>
                             Name
                         </th>
+                        <th>
+                            Email
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -55,6 +58,7 @@
                     {
                         <tr>
                             <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Email)</td>
                             @*<td>
                                 <a href="@Url.Action("Details", new { id = item.ID })"><i class="fa-solid fa-circle-info btn-lg text-dark"></i></a>
                             </td>*@

@@ -46,5 +46,16 @@
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
     <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
     @RenderSection("Scripts", required: false)
+    <script>
+      window.addEventListener("pageshow", function (evt) {
+        // if this page was restored from the back-forward cache…
+        var navEntries = performance.getEntriesByType?.("navigation") || [];
+        var navType = navEntries[0]?.type;
+        if (evt.persisted || navType === "back_forward") {
+          // force a reload so we lose any stale auth state
+          window.location.reload();
+        }
+      });
+    </script>
 </body>
 </html>

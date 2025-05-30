@@ -43,6 +43,8 @@ namespace DotNetCoreSqlDb.Controllers
                 //.Include(s => s.User)
                 .FirstOrDefaultAsync(s => s.Id.ToString() == userId);
 
+            var user = await _context.User.FirstOrDefaultAsync(u => u.ID.ToString() == userId);
+
             if (teacher == null)
             {
                 return NotFound();
@@ -70,6 +72,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             }
             ViewBag.TimeZones = timeZones;
+            ViewBag.Username = user.Username;
 
             return View(teacher);
         }

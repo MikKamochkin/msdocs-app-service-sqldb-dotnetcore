@@ -23,13 +23,20 @@
     }
 
     /* ---------- HEADER / NAV ---------- */
-    header {
-      background-color: #6981ec;
-      color: #fff;
-      padding: 10px 0;
-      min-height: 60px;
-      position: relative;
-    }
+		header {
+			position: relative;
+			left: 50%;
+			width: 100vw;
+			/* full viewport width */
+			margin-left: -50vw;
+			/* pull it back so it’s centered */
+
+			/* (your existing styles) */
+			background: #6981ec;
+			color: #fff;
+			padding: 10px 0;
+			min-height: 60px;
+		}
     .header-container { max-width: 1250px; margin: 0 auto; overflow: hidden; }
     #logo { float: left; font-size: 1.5em; color: #ffffff; padding-top: 5px; }
 
@@ -189,7 +196,7 @@
         <h2><b>My Profile</b></h2>
 
         <!-- SETTINGS BUTTONS -->
-        @*<div class="settings-actions">
+        <div class="settings-actions">
           <a asp-controller="AccountManagement"
              asp-action="ChangeUsername"
              asp-route-userId="@Model.Id">
@@ -200,14 +207,15 @@
              asp-route-userId="@Model.Id">
             Change Password
           </a>
-        </div>*@
+        </div>
+      
       </div>
       <hr />
       <dl class="dl-horizontal">
         <dt>Name</dt>
         <dd>@Html.DisplayFor(m => m.Name)</dd>
-        @*<dt>Username</dt>
-        <dd>@ViewBag.Username</dd>*@
+        <dt>Username</dt>
+        <dd>@ViewBag.Username</dd>
 
         <form id="timezoneForm">
           @Html.AntiForgeryToken()
@@ -224,6 +232,37 @@
           </div>
         </form>
       </dl>
+    </div>
+    <!-- CONTACT INFO -->
+    <div class="profile-section">
+      <h4><b>Contact Information</b></h4>
+      @if (Model.Email != null)
+      {
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              @*<tr>
+                <th>Type</th><th>Value</th><th>Invitation</th><th>Emergency</th><th>Money</th>
+              </tr>*@
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td data-label="Type">Email</td>
+                  <td data-label="Value">@Model.Email</td>
+                  @*<td data-label="Invitation">@(contact.Invitation ? "✔" : "")</td>
+                  <td data-label="Emergency">@(contact.Emergency ? "✔" : "")</td>
+                  <td data-label="Money">@(contact.Money ? "✔" : "")</td>*@
+                </tr>
+              
+            </tbody>
+          </table>
+        </div>
+      }
+      else
+      {
+        <p>No contact information available.</p>
+      }
     </div>
   </div>
 

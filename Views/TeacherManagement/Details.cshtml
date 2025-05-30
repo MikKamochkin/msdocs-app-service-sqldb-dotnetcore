@@ -45,8 +45,12 @@
             </dl>
         </div>
 
-        <h4>Contact Information</h4>
+        @*<h4>Contact Information</h4>*@
 
+            <dl class="dl-horizontal">
+                <dt>Email</dt>
+                <dd>@Html.DisplayFor(model => model.Email)</dd>
+            </dl>
         <div class="details-buttons">
             <a  
                 href='@Url.Action("Edit", new { id = Model.Id })'

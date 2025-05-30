@@ -1,3 +1,8 @@
+add email recovery for users with role == "teacher"
+make password recovery through entering an email, if entered email matches up with email on record, send to that email, else fail
+
+
+DONE:
 meetings start only through teacher ui
 add buttons to teacher: start next meeting, end meeting
 for back to back lessons: start next meeting -> end meeting api call, clear db row, start meeting api call, populate db, send to users:

@@ -237,31 +237,74 @@ namespace DotNetCoreSqlDb.Controllers
                 };
                 _context.User.Add(newUser);
 
-                try
-                {
-                    var html = $"""
-                        <h2>Bienvenue {existingStudent.Name} !</h2>
-                        <p>Your temporary credentials at <strong>TorontoFrench.com</strong>.</p>
-                        <p>
-                            <strong>Username :</strong> {candidate}<br/>
-                            <strong>Temporary Password :</strong> {tempPass}
-                        </p>
-                        <p>You will have to change your password (and optionally username) upon your first login.</p>
-                        <p>
-                            Click here to log in: 
-                            <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
-                        </p>
-                        """;
 
-                    await _mailer.SendAsync(
-                        to: "michael.kamochkin@gmail.com",
-                        subject: "Your credentials at Toronto French",
-                        htmlBody: html);
-                }
-                catch (Exception ex)
+
+                var primaryEmail = updatedStudent.Contacts?
+                    .FirstOrDefault(c =>
+                        string.Equals(c.Type, "email", StringComparison.OrdinalIgnoreCase) &&
+                        c.Invitation == true)
+                    ?.Value;
+
+                //_logger.LogInformation("Would have sent welcome email with the name of {n} to email: {e}", existingStudent.Name, primaryEmail);
+
+                if (string.IsNullOrWhiteSpace(primaryEmail))
                 {
-                    _logger.LogError(ex, "Failed to send welcome e-mail to student {StudentId}", existingStudent.ID);
+                    try
+                    {
+                        var html = $"""
+                            <h2>Bienvenue {existingStudent.Name} !</h2>
+                            <p>Your temporary credentials at <strong>torontofrench.com</strong>.</p>
+                            <p>
+                                <strong>Username :</strong> {candidate}<br/>
+                                <strong>Temporary Password :</strong> {tempPass}
+                            </p>
+                            <p>You will need to change your password upon your first login.</p>
+                            <p>
+                                Click here to log in: 
+                                <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
+                            </p>
+                            """;
+
+                        await _mailer.SendAsync(
+                            to: "michael.kamochkin@gmail.com",
+                            subject: "Your credentials at torontofrench.com",
+                            htmlBody: html);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send welcome e-mail to student {StudentId}", existingStudent.ID);
+                    }
                 }
+                else
+                {
+                    try
+                    {
+                        var html = $"""
+                            <h2>Bienvenue {existingStudent.Name} !</h2>
+                            <p>Your temporary credentials at <strong>torontofrench.com</strong>.</p>
+                            <p>
+                                <strong>Username :</strong> {candidate}<br/>
+                                <strong>Temporary Password :</strong> {tempPass}
+                            </p>
+                            <p>You will need to change your password upon your first login.</p>
+                            <p>
+                                Click here to log in: 
+                                <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
+                            </p>
+                            """;
+
+                        await _mailer.SendAsync(
+                            to: primaryEmail,
+                            subject: "Your credentials at torontofrench.com",
+                            htmlBody: html);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send welcome e-mail to student {StudentId}", existingStudent.ID);
+                    }
+                }
+
+                
             }
 
             // --- persist ---
@@ -579,7 +622,8 @@ namespace DotNetCoreSqlDb.Controllers
             // Do fuzzy comparison in C#
             var threshold = 75;  // adjust as needed
             var matches = allNames
-                .Select(existing => new {
+                .Select(existing => new
+                {
                     Name = existing,
                     Score = Fuzz.TokenSetRatio(existing, name)
                 })
@@ -589,12 +633,13 @@ namespace DotNetCoreSqlDb.Controllers
                 .Select(x => x.Name)
                 .ToList();
 
-            return Json(new {
+            return Json(new
+            {
                 duplicate = matches.Any(),
                 closeMatches = matches
             });
         }
 
-        
+
     }
 }

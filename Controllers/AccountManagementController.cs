@@ -7,6 +7,8 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication;               // for SignOutAsync(...)
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -28,19 +30,49 @@ namespace DotNetCoreSqlDb.Controllers
         [HttpGet]
         public async Task<IActionResult> ChangePassword(Guid userId)
         {
-            // we’ll need this in the form’s hidden field
             ViewBag.UserId = userId;
 
-            // NEW ─ determine if this is a forced-change scenario
             var user = await _context.User.FirstOrDefaultAsync(u => u.ID == userId);
-            ViewBag.RequireChange = user?.MustChangePassword ?? false;
 
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            //If this is a required change, they don't have the option to go "back" to index
+            if (user.MustChangePassword == true)
+            {
+                ViewBag.RequireChange = true;
+            }
+            else
+            {
+                ViewBag.RequireChange = false;
+            }
+
+            var returnController = "";
+            string role = user.Role;
+
+            switch (role)
+            {
+                case "student":
+                    returnController = "Students";
+                    break;
+                case "teacher":
+                    returnController = "Teachers";
+                    break;
+                case "support":
+                    returnController = "Support";
+                    break;
+                default:
+                    returnController = null;
+                    break;
+            }
+            ViewBag.ReturnController = returnController;
             return View();
         }
 
 
         // POST: /AccountManagement/PasswordReset
-        //[AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(
@@ -77,22 +109,49 @@ namespace DotNetCoreSqlDb.Controllers
                 out var salt);
 
 
-            user.PasswordHash       = hash;
-            user.PasswordSalt       = salt;
+            user.PasswordHash = hash;
+            user.PasswordSalt = salt;
             user.MustChangePassword = false;
 
             await _context.SaveChangesAsync();
+
+
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+            HttpContext.Session.Clear();
 
             return RedirectToAction("Index", "Login");
         }
 
         // GET: /AccountManagement/PasswordReset?userId=…
-        //[AllowAnonymous]
         [HttpGet]
-        public IActionResult ChangeUsername(Guid userId)
+        public async Task<IActionResult> ChangeUsername(Guid userId)
         {
-            // we’ll need this in the form’s hidden field
             ViewBag.UserId = userId;
+            var user = await _context.User.FindAsync(userId);
+
+            var returnController = "";
+            string role = user.Role;
+
+            switch (role)
+            {
+                case "student":
+                    returnController = "Students";
+                    break;
+                case "teacher":
+                    returnController = "Teachers";
+                    break;
+                case "support":
+                    returnController = "Support";
+                    break;
+                default:
+                    returnController = null;
+                    break;
+            }
+
+            //return RedirectToAction("Index", returnController);
+            ViewBag.ReturnController = returnController;
+
             return View();
         }
 
@@ -107,7 +166,7 @@ namespace DotNetCoreSqlDb.Controllers
         {
             // simple server-side validation
             if (string.IsNullOrEmpty(newUsername)
-                ||newUsername != confirmUsername)
+                || newUsername != confirmUsername)
             {
                 ViewBag.Error = "The usernames must be non-empty and match.";
                 ViewBag.UserId = userId;
@@ -157,7 +216,18 @@ namespace DotNetCoreSqlDb.Controllers
 
             await _context.SaveChangesAsync();
 
-            return RedirectToAction("Index", "Login");
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Clear();
+
+            // this will swap the URL in history rather than stacking a new one
+            var loginUrl = Url.Action("Index", "Login");
+            var script = $@"
+                <script>
+                    window.history.replaceState(null, null, '{loginUrl}');
+                    window.location.replace('{loginUrl}');
+                </script>";
+
+            return Content(script, "text/html");
         }
 
         [AllowAnonymous]
@@ -170,7 +240,7 @@ namespace DotNetCoreSqlDb.Controllers
             var user = await _context.User
                 .FirstOrDefaultAsync(u => u.ID == userId);
 
-            if (user.Role.ToLower() == "student")
+            if (user?.Role.ToLower() == "student")
             {
                 var student = await _context.Student
                     .Include(s => s.Contacts)
@@ -180,11 +250,18 @@ namespace DotNetCoreSqlDb.Controllers
                     return NotFound();
 
                 var primaryEmail = student.Contacts?
-                        .FirstOrDefault(c => c.Type.Equals("email", StringComparison.OrdinalIgnoreCase))
+                        .FirstOrDefault(c =>
+                        string.Equals(c.Type, "email", StringComparison.OrdinalIgnoreCase) &&
+                        c.Invitation)
                         ?.Value;
 
-                var obfuscatedEmail = ObfuscateEmailHelper.ObfuscateEmail(primaryEmail);
+                var obfuscatedEmail = "";
 
+                if (primaryEmail != null)
+                {
+                    obfuscatedEmail = ObfuscateEmailHelper.ObfuscateEmail(primaryEmail);
+                }
+                
                 if (!string.IsNullOrWhiteSpace(primaryEmail))
                     ViewBag.Email = obfuscatedEmail;
                 else
@@ -193,7 +270,7 @@ namespace DotNetCoreSqlDb.Controllers
                 return View();
             }
 
-            return Forbid();            
+            return Forbid();
         }
 
         // POST: /AccountManagement/ForgotPassword
@@ -205,66 +282,126 @@ namespace DotNetCoreSqlDb.Controllers
         {
             ViewBag.UserId = userId;
 
-            var student = await _context.Student
+            var user = await _context.User
+                .FirstOrDefaultAsync(u => u.ID == userId);
+
+            var role = "";
+
+            if (user != null)
+            {
+                role = user.Role;
+            }
+            else
+            {
+                return NotFound();
+            }
+
+            if (role == "student")
+            {
+                var student = await _context.Student
                 .Include(s => s.Contacts)
                 .FirstOrDefaultAsync(s => s.ID == userId);
-            if (student == null)
-                return NotFound();
+                if (student == null)
+                    return NotFound();
 
-            // Check for primary email before resetting password
-            var primaryEmail = student.Contacts?
-                .FirstOrDefault(c => c.Type.Equals("email", StringComparison.OrdinalIgnoreCase))
-                ?.Value;
+                // Check for primary email before resetting password
+                var primaryEmail = student.Contacts?
+                    .FirstOrDefault(c =>
+                        string.Equals(c.Type, "email", StringComparison.OrdinalIgnoreCase) &&
+                        c.Invitation == true)
+                    ?.Value;
 
-            if (string.IsNullOrWhiteSpace(primaryEmail))
+                if (string.IsNullOrWhiteSpace(primaryEmail))
+                {
+                    // Do NOT reset IncorrectAttempts or password if no email is on record
+                    ViewBag.Error = "We could not find an email for your account. Please contact support.";
+                    return View();
+                }
+
+                // Generate temporary password
+                var rnd = new Random();
+                string tempPassword = rnd.Next(100000, 999999).ToString();
+
+                // Create hash & salt
+                PasswordHelper.CreatePasswordHash(tempPassword, out byte[] hash, out byte[] salt);
+
+                // Update user credentials
+                //var user = await _context.User.FindAsync(userId);
+                if (user == null)
+                    return NotFound();
+
+                user.PasswordHash = hash;
+                user.PasswordSalt = salt;
+                user.MustChangePassword = true;
+                user.IncorrectAttempts = 0;
+
+                _context.User.Update(user);
+                await _context.SaveChangesAsync();
+
+                if (primaryEmail == null)
+                {
+                    try
+                    {
+                        var html = $"""
+                        <h2>Hello {student.Name}!</h2>
+                        <p>You have requested to reset your password at <strong>torontofrench.com</strong>.</p>
+                        <p><strong>Temporary Password:</strong> {tempPassword}</p>
+                        <p>You will need to change this temporary password upon your next login.</p>
+                        """;
+
+                        await _mailer.SendAsync(
+                            to: "michael.kamochkin@gmail.com",
+                            subject: "Password Reset Request",
+                            htmlBody: html);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex,
+                            "Failed to send password reset e-mail to student {StudentId}", student.ID);
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        var html = $"""
+                        <h2>Hello {student.Name}!</h2>
+                        <p>You have requested to reset your password at <strong>torontofrench.com</strong>.</p>
+                        <p><strong>Temporary Password:</strong> {tempPassword}</p>
+                        <p>You will need to change this temporary password upon your next login.</p>
+                        """;
+
+                        await _mailer.SendAsync(
+                            to: primaryEmail,
+                            subject: "Password Reset Request",
+                            htmlBody: html);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex,
+                            "Failed to send password reset e-mail to student {StudentId}", student.ID);
+                    }
+                }
+
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                HttpContext.Session.Clear();
+
+                // this will swap the URL in history rather than stacking a new one
+                var loginUrl = Url.Action("Index", "Login");
+                var script = $@"
+                    <script>
+                        window.history.replaceState(null, null, '{loginUrl}');
+                        window.location.replace('{loginUrl}');
+                    </script>";
+
+                return Content(script, "text/html");
+            }
+            else
             {
-                // Do NOT reset IncorrectAttempts or password if no email is on record
-                ViewBag.Error = "We could not find an email for your account. Please contact support.";
-                return View();
+                return Forbid();
             }
 
-            // Generate temporary password
-            var rnd = new Random();
-            string tempPassword = rnd.Next(100000, 999999).ToString();
 
-            // Create hash & salt
-            PasswordHelper.CreatePasswordHash(tempPassword, out byte[] hash, out byte[] salt);
-
-            // Update user credentials
-            var user = await _context.User.FindAsync(userId);
-            if (user == null)
-                return NotFound();
-
-            user.PasswordHash       = hash;
-            user.PasswordSalt       = salt;
-            user.MustChangePassword = true;
-            user.IncorrectAttempts  = 0;
-
-            _context.User.Update(user);
-            await _context.SaveChangesAsync();
-
-            // Send reset email
-            try
-            {
-                var html = $"""
-                    <h2>Hello {student.Name}!</h2>
-                    <p>You have requested to reset your password at <strong>TorontoFrench.com</strong>.</p>
-                    <p><strong>Temporary Password:</strong> {tempPassword}</p>
-                    <p>You will have to change your password upon your next login.</p>
-                    """;
-
-                await _mailer.SendAsync(
-                    to:       "michael.kamochkin@gmail.com",
-                    subject:  "Password Reset Request",
-                    htmlBody: html);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Failed to send password reset e-mail to student {StudentId}", student.ID);
-            }
-
-            return RedirectToAction("Index", "Login");
         }
     }
 }
