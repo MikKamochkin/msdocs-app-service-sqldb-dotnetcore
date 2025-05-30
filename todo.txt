@@ -1,3 +1,6 @@
+for buttons to auto refresh on schedule page, count time to lesson start-5 mins, and run a timer for that duration, then refresh button status
+
+
 add email recovery for users with role == "teacher"
 make password recovery through entering an email, if entered email matches up with email on record, send to that email, else fail
 
