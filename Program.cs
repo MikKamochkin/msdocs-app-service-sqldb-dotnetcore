@@ -3,10 +3,11 @@ using DotNetCoreSqlDb.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Azure.Identity;
 using DotNetCoreSqlDb.Services;
-using DotNetCoreSqlDb.Settings;  // ← NEW
+using DotNetCoreSqlDb.Settings;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using System.Net.Http.Headers;
 using DotNetCoreSqlDb.Hubs;
+using DotNetCoreSqlDb.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,8 @@ builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("Email"));
 
 builder.Services.AddTransient<IEmailSender, MailKitEmailSender>();
+builder.Services.AddScoped<LogHelper>();
+
 
 /* ───── 3.  Database context + cache (unchanged) ─────── */
 if (builder.Environment.IsDevelopment())

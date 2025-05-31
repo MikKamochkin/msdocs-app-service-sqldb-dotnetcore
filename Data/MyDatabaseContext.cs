@@ -39,6 +39,8 @@ namespace DotNetCoreSqlDb.Data
         public DbSet<DotNetCoreSqlDb.Models.WassengerApiLog> WassengerApiLog { get; set; } = default!;
 
         public DbSet<DotNetCoreSqlDb.Models.ZoomMeetings> ZoomMeetings { get; set; } = default!;
+        
+        public DbSet<DotNetCoreSqlDb.Models.MailLog> MailLog { get; set; } = default!;
 
 
         // method defines model-level constraints like unique indexes

@@ -1,0 +1,81 @@
+@using Microsoft.AspNetCore.Mvc.Routing
+@{
+    var currentController = (ViewContext.RouteData.Values["controller"] as string) ?? "";
+    var currentAction = (ViewContext.RouteData.Values["action"] as string) ?? "";
+
+    // Helper to choose “btn-success” vs. “btn-dark”
+    Func<string, string, string> btnClass = (linkController, linkAction) =>
+    {
+        if (string.Equals(currentController, linkController, StringComparison.OrdinalIgnoreCase))
+        {
+            return "btn btn-success icon-btn";
+        }
+        return "btn btn-dark icon-btn";
+    };
+}
+
+
+<div class="col-auto admin-sidebar">
+    <div class="sidebar-header">
+        <i class="hgi hgi-stroke hgi-croissant"></i>
+    </div>
+    <div class="sidebar-content">
+        @* Student Management *@
+        @{
+            var cssStudent = btnClass("StudentManagement", "Index");
+        }
+        <a href="@Url.Action("Index", "StudentManagement")" class="@cssStudent" title="Student Management">
+            <i class="fas fa-user-graduate"></i>
+        </a>
+
+        @* Manage Groups *@
+        @{
+            var cssGroups = btnClass("Groups", "Index");
+        }
+        <a href="@Url.Action("Index", "Groups")" class="@cssGroups" title="Manage Groups">
+            <i class="fas fa-users"></i>
+        </a>
+
+        @* Schedule *@
+        @{
+            var cssSchedule = btnClass("Schedule", "Manage");
+        }
+        <a href="@Url.Action("Manage", "Schedule")" class="@cssSchedule" title="Schedule">
+            <i class="hgi hgi-stroke hgi-calendar-03"></i>
+        </a>
+
+        @* WhatsApp *@
+        @{
+            var cssWhatsApp = btnClass("Whatsapp", "Index");
+        }
+        <a href="@Url.Action("Index", "Whatsapp")" class="@cssWhatsApp" title="WhatsApp">
+            <i class="hgi hgi-stroke hgi-message-01"></i>
+        </a>
+
+        @* Assignments *@
+        @{
+            var cssAssignments = btnClass("Assignments", "Index");
+        }
+        <a href="@Url.Action("Index", "Assignments")" class="@cssAssignments" title="Assignments">
+            <i class="fas fa-tasks"></i>
+        </a>
+
+        @* Teacher Management (only for admin/support) *@
+        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        {
+            var cssTeachers = btnClass("TeacherManagement", "Index");
+            <a href="@Url.Action("Index", "TeacherManagement")" class="@cssTeachers" title="Teachers">
+                <i class="fa-solid fa-chalkboard-user"></i>
+            </a>
+        }
+
+        @* Mail (only for admin/support) *@
+        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        {
+            var cssMail = btnClass("Mail", "Index");
+            <a href="@Url.Action("Index", "Mail")" class="@cssMail" title="Teachers">
+                <i class="fa-solid fa-envelope"></i>
+            </a>
+        }
+    </div>
+</div>

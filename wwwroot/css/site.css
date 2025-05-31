@@ -261,7 +261,7 @@ footer {
     background-color: #add6ff;
     border-right: 1px solid #dee2e6;
     padding: 20px 0;
-    min-height: calc(100vh - 150px);
+    min-height: calc(100vh);
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
     margin-left: -15px; /* Negative margin to counteract Bootstrap's container padding */
     padding-left: 20px; /* Add 20px padding on the left */

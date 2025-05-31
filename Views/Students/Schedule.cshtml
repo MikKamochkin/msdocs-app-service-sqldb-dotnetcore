@@ -30,20 +30,20 @@
         }
 
         /* ---------- HEADER / NAV ---------- */
-		header {
-			position: relative;
-			left: 50%;
-			width: 100vw;
-			/* full viewport width */
-			margin-left: -50vw;
-			/* pull it back so it’s centered */
+        header {
+            position: relative;
+            left: 50%;
+            width: 100vw;
+            /* full viewport width */
+            margin-left: -50vw;
+            /* pull it back so it’s centered */
 
-			/* (your existing styles) */
-			background: #6981ec;
-			color: #fff;
-			padding: 10px 0;
-			min-height: 60px;
-		}
+            /* (your existing styles) */
+            background: #6981ec;
+            color: #fff;
+            padding: 10px 0;
+            min-height: 60px;
+        }
 
         .header-container {
             max-width: 1250px;
@@ -346,10 +346,10 @@
     <script src="https://code.jquery.com/jquery-3.6.1.min.js"
         integrity="sha256-+LdG5Fjnxd8h8JAoywV4P8pIY2q3FfvMZHO7+jT9BkE=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
-    
+
     <script>
         const enterWaitingRoomBase = '@Url.Action("GetJoinUrl", "Students")';
-        const waitRoomBase = '@Url.Action("Wait","Students")';  
+        const waitRoomBase = '@Url.Action("Wait", "Students")';
         (() => {
             const { DateTime } = luxon;
 
@@ -368,6 +368,9 @@
                 .map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
                 .sort((a, b) => DateTime.fromISO(b.DateTime) - DateTime.fromISO(a.DateTime)); // newest → oldest
 
+
+            let nextTimerId = null;
+
             $(renderTable);
             $('#timeZoneSelect').on('change', renderTable);
 
@@ -379,6 +382,12 @@
                    start − 15 min  ≤  NOW  ≤  start + duration + 15 min
             ============================================================ */
             function renderTable() {
+
+                if (nextTimerId !== null) {
+                    clearTimeout(nextTimerId);
+                    nextTimerId = null;
+                }
+
                 const zone = $('#timeZoneSelect').val();
                 const nowUtc = DateTime.utc();
                 const nowLocal = nowUtc.setZone(zone);
@@ -425,41 +434,63 @@
                     }
 
                     tbody.append(`
-            <tr class="${r.Id === highlightId ? 'next-row' : ''}">
-              <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
-              <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
-              <td data-label="Teacher">${r.TeacherName}</td>
-              <td data-label="Status">${r.Status}</td>
-              <td data-label="Duration">${r.Duration}&nbsp;min</td>
-              <td data-label="Actions">${actionHtml}</td>
-            </tr>`);
+                        <tr class="${r.Id === highlightId ? 'next-row' : ''}">
+                        <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
+                        <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
+                        <td data-label="Teacher">${r.TeacherName}</td>
+                        <td data-label="Status">${r.Status}</td>
+                        <td data-label="Duration">${r.Duration}&nbsp;min</td>
+                        <td data-label="Actions">${actionHtml}</td>
+                        </tr>
+                    `);
                 });
+
+                let soonest = null;
+                row.forEach(r => {
+                    const startUtc = DateTime.fromISO(r.DateTime);
+                    const enableTime = startUtc.minus({minutes: minsBefore});
+                    const disableTime = startUtc.plut({minutes: Number(r.Duration) + minsAfter});
+                    const now = DateTime.utc();
+
+                    if (enableTime > now) {
+                        if (!soonest || enableTime < soonest) soonest = enableTime;
+                    }
+                    if (disableTime > now) {
+                        if (!soonest || disableTime < soonest) soonest = disableTime;
+                    }
+                });
+
+                if (soonest)
+                {
+                    const msUntilNext = soonest.toMillis() - DateTime.utc().toMillis();
+                    nextTimerId = setTimeout(renderTable, Math.max(msUntilNext, 0), + 50);
+                }
             }
 
             /* ---------- helpers ---------- */
             function buildBtn(state, id) {
                 const disabled = state === 'disabled';
                 const zoomBtn = `<a href="${deepLink}"
-                                class="btn btn-primary btn-md join-btn ml-2${disabled?" disabled-btn":""}"
-                                ${disabled?`aria-disabled="true" tabindex="-1"`:""}>
-                                    <strong>Join lesson</strong>
-                                </a>`;
+                                    class="btn btn-primary btn-md join-btn ml-2${disabled ? " disabled-btn" : ""}"
+                                    ${disabled ? `aria-disabled="true" tabindex="-1"` : ""}>
+                                        <strong>Join lesson</strong>
+                                    </a>`;
 
                 const detailsBtn = `
-                    <a
-						href="${detailsBase}?scheduleId=${id}"
-						class="btn btn-info btn-md ml-3"
-						title="Lesson details">
-						<i class="fa-solid fa-circle-info text-light"></i>
-					</a>`;
+                        <a
+          href="${detailsBase}?scheduleId=${id}"
+          class="btn btn-info btn-md ml-3"
+          title="Lesson details">
+          <i class="fa-solid fa-circle-info text-light"></i>
+         </a>`;
 
                 const waitBtn = `
-                    <a href="${waitRoomBase}?scheduleId=${id}"
-                        class="btn btn-secondary btn-md ml-2"
-                        target="_blank"
-                        rel="noopener noreferrer">
-                        Join Lesson
-                    </a>`;
+                        <a href="${waitRoomBase}?scheduleId=${id}"
+                            class="btn btn-secondary btn-md ml-2"
+                            target="_blank"
+                            rel="noopener noreferrer">
+                            Join Lesson
+                        </a>`;
 
                 //Uncomment this to actiavate the dynamic buttons
                 //return detailsBtn + waitBtn;
@@ -468,15 +499,15 @@
 
             /* open Zoom + browser fallback */
             $(document).on('click', '.join-btn', function (e) {
-				if ($(this).hasClass('disabled-btn')) return;
-				e.preventDefault();
-				const $btn = $(this);
-				const url = $btn.attr('href');
-				//window.location.href = deepLink;
-				window.open(url, '_blank');
+                if ($(this).hasClass('disabled-btn')) return;
+                e.preventDefault();
+                const $btn = $(this);
+                const url = $btn.attr('href');
+                //window.location.href = deepLink;
+                window.open(url, '_blank');
 
-				setTimeout(() => window.open(weblink, '_blank'), 500);
-			});
+                setTimeout(() => window.open(weblink, '_blank'), 500);
+            });
         })();
     </script>
 }

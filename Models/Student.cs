@@ -26,7 +26,7 @@ namespace DotNetCoreSqlDb.Models
         public string? Source { get; set;}
 
         [DisplayName("TimeZone")]
-        public string? TimeZoneId { get; set;}
+        public string? TimeZoneId { get; set;} = "Eastern Standard Time";
 
         [DisplayName("AccountingGroup")]
         public string AccountingGroup { get; set;} = "";

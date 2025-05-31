@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using DotNetCoreSqlDb.Services;
+using DotNetCoreSqlDb.Helpers;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -16,15 +17,18 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly MyDatabaseContext _context;
         private readonly ILogger<TeacherManagementController> _logger;
         private readonly IEmailSender _mailer;
+        private readonly LogHelper _logHelper;
 
         public TeacherManagementController(
             MyDatabaseContext context,
             ILogger<TeacherManagementController> logger,
-            IEmailSender mailer)
+            IEmailSender mailer,
+            LogHelper logHelper)
         {
             _context = context;
-            _logger  = logger;
-            _mailer  = mailer;
+            _logger = logger;
+            _mailer = mailer;
+            _logHelper = logHelper;
         }
 
         
@@ -244,7 +248,7 @@ namespace DotNetCoreSqlDb.Controllers
             return View(teacher);
         }
 
-        // POST: Students/Create
+        // POST: Teacher/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
@@ -262,6 +266,8 @@ namespace DotNetCoreSqlDb.Controllers
             // consume it so it can’t be used again
             HttpContext.Session.Remove("CreateTeacherToken");
 
+            teacher.TimeZoneId = "America/New_York";
+            
             if (ModelState.IsValid)
             {
                 // 1) Save the new Student (and its Contacts)
@@ -269,7 +275,7 @@ namespace DotNetCoreSqlDb.Controllers
                 _context.Add(teacher);
 
                 Random rnd = new Random();
-                string defaultPassword = rnd.Next(100000,1000000) + "";
+                string defaultPassword = rnd.Next(100000, 1000000) + "";
                 //Random rnd = new Random();
                 //int rndAppend = rnd.Next(0, 1000);
 
@@ -278,11 +284,11 @@ namespace DotNetCoreSqlDb.Controllers
                     out byte[] passwordHash,
                     out byte[] passwordSalt
                 );
-                
+
                 //bool exists = await _context.User.AnyAsync(u => u.Username == student.Name + rndAppend);
 
                 // 1) Seed Random once
-                
+
                 string candidate;
                 bool exists;
                 int tries = 0;
@@ -297,28 +303,29 @@ namespace DotNetCoreSqlDb.Controllers
                 do
                 {
                     int usernameSuffix = rnd.Next(100, 1000);
-                    
+
                     candidate = $"{clean}{usernameSuffix}";
-                    
+
                     exists = await _context.User
                         .AnyAsync(u => u.Username == candidate);
 
-                    if(++tries >= maxTries)
+                    if (++tries >= maxTries)
                     {
                         ViewBag.Error = "Could not generate a unique username for this user.";
                         break;
                     }
-                } 
+                }
                 // keep trying *while* it already exists
                 while (exists);
 
-                var user = new User {
-                    ID                 = teacher.Id,
-                    Username           = candidate,
-                    Role               = "teacher",
+                var user = new User
+                {
+                    ID = teacher.Id,
+                    Username = candidate,
+                    Role = "teacher",
                     MustChangePassword = true,
-                    PasswordHash       = passwordHash,
-                    PasswordSalt       = passwordSalt,
+                    PasswordHash = passwordHash,
+                    PasswordSalt = passwordSalt,
                     IncorrectAttempts = 0
                 };
                 _context.User.Add(user);
@@ -327,12 +334,12 @@ namespace DotNetCoreSqlDb.Controllers
                     .FirstOrDefault(c => c.Type.Equals("email", StringComparison.OrdinalIgnoreCase))
                     ?.Value;
                 */
-                
+
                 //if (!string.IsNullOrWhiteSpace(primaryEmail))
-                 //{
-                     try
-                     {
-                         var html = $"""
+                //{
+                try
+                {
+                    var html = $"""
                              <h2>Bienvenue {teacher.Name} !</h2>
                              <p>Your temporary credentials at <strong>TorontoFrench.com</strong>.</p>
                              <p>
@@ -346,26 +353,29 @@ namespace DotNetCoreSqlDb.Controllers
                              </p>
                              """;
 
-                            /*await _mailer.SendAsync(
-                             to:       primaryEmail,
-                             //from: "Toronto French",
-                             subject:  "Your credentials at Toronto French",
-                             htmlBody: html);*/
+                    /*await _mailer.SendAsync(
+                     to:       primaryEmail,
+                     //from: "Toronto French",
+                     subject:  "Your credentials at Toronto French",
+                     htmlBody: html);*/
+                    string to = "michael.kamochkin@gmail.com";
+                    string subject = "Your credentials at Toronto French";
+                    await _mailer.SendAsync(
+                    to: to,
+                    //from: "Toronto French",
+                    subject: subject,
+                    htmlBody: html);
 
-                             await _mailer.SendAsync(
-                             to:       "michael.kamochkin@gmail.com",
-                             //from: "Toronto French",
-                             subject:  "Your credentials at Toronto French",
-                             htmlBody: html);
-                             
-                     }
-                     catch (Exception ex)
-                     {
-                         _logger.LogError(ex,
-                             "Failed to send welcome e-mail to student {StudentId}", teacher.Id);
-                         // swallow → the user is created even if mail fails
-                     }
-                 //}
+                    await _logHelper.LogMailAsync(to, subject, html);
+
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to send welcome e-mail to student {StudentId}", teacher.Id);
+                    // swallow → the user is created even if mail fails
+                }
+                //}
 
 
                 // 4) Create a blank Assignments entry for the new group
@@ -398,9 +408,9 @@ namespace DotNetCoreSqlDb.Controllers
                         ViewBag.Error = "Could not generate a unique username for this user.";
 
                         // Repopulate dropdowns and return the Create view again
-                        
+
                         var newToken = Guid.NewGuid().ToString();
-                        HttpContext.Session.SetString("CreateStudentToken", newToken);
+                        HttpContext.Session.SetString("CreateTeacherToken", newToken);
                         ViewBag.FormToken = newToken;
                         return View(teacher);
                     }

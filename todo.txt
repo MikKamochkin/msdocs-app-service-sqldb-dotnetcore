@@ -1,3 +1,5 @@
+complete _StudentNavbar.cshtml
+
 add email recovery for users with role == "teacher"
 make password recovery through entering an email, if entered email matches up with email on record, send to that email, else fail
 

@@ -5,42 +5,15 @@
 }
 
 <div class="row no-gutters">
-    @if (User.IsInRole("support")  || User.IsInRole("admin")  || User.IsInRole("assistant"))
+    @if (User.IsInRole("support") || User.IsInRole("admin") || User.IsInRole("assistant"))
     {
-        <div class="col-auto admin-sidebar">
-            <div class="sidebar-header">
-                <i class="hgi hgi-stroke hgi-croissant"></i>
-            </div>
-            <div class="sidebar-content">
-                <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-dark d-flex icon-btn" title="Student Management">
-                    <i class="fas fa-user-graduate"></i>
-                </a>
-                <a href="@Url.Action("Index", "Groups")" class="btn btn-dark d-flex icon-btn" title="Manage Groups">
-                    <i class="fas fa-users"></i>
-                </a>
-                <a href="@Url.Action("Manage", "Schedule")" class="btn btn-dark d-flex icon-btn" title="Schedule">
-                    <i class="hgi hgi-stroke hgi-calendar-03"></i>
-                </a>
-                <a href="@Url.Action("Index", "WhatsApp")" class="btn btn-success d-flex icon-btn" title="WhatsApp">
-                    <i class="hgi hgi-stroke hgi-message-01"></i>
-                </a>
-                <a href="@Url.Action("Index", "Assignments")" class="btn btn-dark icon-btn" title="Assignments">
-                    <i class="fas fa-tasks"></i>
-                </a>
-                <a href="@Url.Action("Index", "TeacherManagement")" class="btn btn-dark icon-btn" title="Teachers">
-                    <i class="fa-solid fa-chalkboard-user"></i>
-                </a>
-            </div>
-        </div>
+        <partial name="_AdminSidebar" />
     }
     <div class="col-md-10">
         <h2>Voice Messages</h2>
 
         <!-- Search box -->
-        <input id="search-box"
-               type="text"
-               class="form-control mb-3"
-               placeholder="Search descriptions…" />
+        <input id="search-box" type="text" class="form-control mb-3" placeholder="Search descriptions…" />
 
         <table class="table" id="messages-table">
             <thead>
@@ -61,167 +34,167 @@
 <!-- Fuse.js for client-side search -->
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
 <script>
-  const allMessages = @Html.Raw(
-    System.Text.Json.JsonSerializer.Serialize(
-      Model.Select(m => new { m.Id, m.Name, m.Description })
-    )
-  );
+    const allMessages = @Html.Raw(
+        System.Text.Json.JsonSerializer.Serialize(
+            Model.Select(m => new { m.Id, m.Name, m.Description })
+                )
+                );
 
-  function debounce(fn, delay) {
-    let timer;
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn.apply(this, args), delay);
-    };
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const fuse = new Fuse(allMessages, {
-      keys: ['Description'],
-      threshold: 0.3,
-      distance: 100,
-      ignoreLocation: true,
-      minMatchCharLength: 2
-    });
-
-    const tableBody = document.querySelector('#messages-table tbody');
-    const searchBox = document.getElementById('search-box');
-
-    function render(items) {
-      tableBody.innerHTML = '';
-      items.forEach(vm => {
-        const tr = document.createElement('tr');
-
-        const tdName = document.createElement('td');
-        tdName.textContent = vm.Name || '';
-        tr.appendChild(tdName);
-
-        const tdDesc = document.createElement('td');
-        tdDesc.classList.add('description-col');
-        tdDesc.textContent = vm.Description;
-        tr.appendChild(tdDesc);
-
-        const tdPhone = document.createElement('td');
-        const form = document.createElement('form');
-        form.classList.add('d-flex', 'mb-0');
-        form.onsubmit = e => sendAndTrack(e, vm.Id);
-
-        const hid = document.createElement('input');
-        hid.type = 'hidden'; hid.name = 'id'; hid.value = vm.Id;
-        form.appendChild(hid);
-
-        const input = document.createElement('input');
-        Object.assign(input, {
-          type: 'text',
-          name: 'phone',
-          placeholder: '+16475550123',
-          required: true,
-          pattern: "^\\+[1-9]\\d{1,14}$",
-          title: 'Valid number leading with "+"'
-        });
-        input.classList.add('form-control', 'me-2');
-        form.appendChild(input);
-
-        const btn = document.createElement('button');
-        btn.type = 'submit';
-        btn.id = `send-btn-${vm.Id}`;
-        btn.classList.add('btn','btn-sm','btn-primary');
-        btn.textContent = 'Send';
-        form.appendChild(btn);
-
-        tdPhone.appendChild(form);
-        tr.appendChild(tdPhone);
-
-        const tdStatus = document.createElement('td');
-        const span = document.createElement('span');
-        span.id = `status-${vm.Id}`;
-        span.classList.add('ms-2','small');
-        tdStatus.appendChild(span);
-        tr.appendChild(tdStatus);
-
-        tableBody.appendChild(tr);
-      });
+    function debounce(fn, delay) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), delay);
+        };
     }
 
-    render(allMessages);
+    document.addEventListener('DOMContentLoaded', () => {
+        const fuse = new Fuse(allMessages, {
+            keys: ['Description'],
+            threshold: 0.3,
+            distance: 100,
+            ignoreLocation: true,
+            minMatchCharLength: 2
+        });
 
-    searchBox.addEventListener('input', debounce(e => {
-      const q = e.target.value.trim();
-      render(q ? fuse.search(q).map(r => r.item) : allMessages);
-    }, 150));
-  });
+        const tableBody = document.querySelector('#messages-table tbody');
+        const searchBox = document.getElementById('search-box');
+
+        function render(items) {
+            tableBody.innerHTML = '';
+            items.forEach(vm => {
+                const tr = document.createElement('tr');
+
+                const tdName = document.createElement('td');
+                tdName.textContent = vm.Name || '';
+                tr.appendChild(tdName);
+
+                const tdDesc = document.createElement('td');
+                tdDesc.classList.add('description-col');
+                tdDesc.textContent = vm.Description;
+                tr.appendChild(tdDesc);
+
+                const tdPhone = document.createElement('td');
+                const form = document.createElement('form');
+                form.classList.add('d-flex', 'mb-0');
+                form.onsubmit = e => sendAndTrack(e, vm.Id);
+
+                const hid = document.createElement('input');
+                hid.type = 'hidden'; hid.name = 'id'; hid.value = vm.Id;
+                form.appendChild(hid);
+
+                const input = document.createElement('input');
+                Object.assign(input, {
+                    type: 'text',
+                    name: 'phone',
+                    placeholder: '+16475550123',
+                    required: true,
+                    pattern: "^\\+[1-9]\\d{1,14}$",
+                    title: 'Valid number leading with "+"'
+                });
+                input.classList.add('form-control', 'me-2');
+                form.appendChild(input);
+
+                const btn = document.createElement('button');
+                btn.type = 'submit';
+                btn.id = `send-btn-${vm.Id}`;
+                btn.classList.add('btn', 'btn-sm', 'btn-primary');
+                btn.textContent = 'Send';
+                form.appendChild(btn);
+
+                tdPhone.appendChild(form);
+                tr.appendChild(tdPhone);
+
+                const tdStatus = document.createElement('td');
+                const span = document.createElement('span');
+                span.id = `status-${vm.Id}`;
+                span.classList.add('ms-2', 'small');
+                tdStatus.appendChild(span);
+                tr.appendChild(tdStatus);
+
+                tableBody.appendChild(tr);
+            });
+        }
+
+        render(allMessages);
+
+        searchBox.addEventListener('input', debounce(e => {
+            const q = e.target.value.trim();
+            render(q ? fuse.search(q).map(r => r.item) : allMessages);
+        }, 150));
+    });
 </script>
 
 @* SignalR client lib *@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 <script>
-  const connection = new signalR.HubConnectionBuilder()
-    .withUrl("/hubs/whstatus")
-    .build();
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/hubs/whstatus")
+        .build();
 
-  connection.on("statusUpdated", (dbId, status) => {
-    const el = document.getElementById(`status-${dbId}`);
-    if (!el) return;
-    if (["delivered","processed","read","sent"].includes(status)) {
-      el.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
-    } else if (["failed","cancelled","revoked"].includes(status)) {
-      el.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
-    }
-  });
-
-  connection.start().catch(console.error);
-
-  // helper to validate numbers via our API
-  async function validateNumber(phone) {
-    for (let i = 0; i < 10; i++) {
-      const res = await fetch(`/WhatsApp/ValidateContact?phone=${encodeURIComponent(phone)}`);
-      if (res.status === 503) {
-        await new Promise(r => setTimeout(r, 200 * (i+1)));
-        continue;
-      }
-      if (!res.ok) return false;
-      const { valid, exists } = await res.json();
-      return valid && exists;
-    }
-    return false;
-  }
-
-
-  // send & then rely on SignalR for status updates
-  async function sendAndTrack(evt, id) {
-  evt.preventDefault();
-  const form     = evt.target;
-  const phone    = form.querySelector('input[name="phone"]').value;
-  const statusEl = document.getElementById(`status-${id}`);
-  const btn      = document.getElementById(`send-btn-${id}`);
-
-  // 1) Show spinner while validating…
-  statusEl.innerHTML = 
-    '<div class="spinner-border spinner-border-sm" role="status"></div>';
-  btn.disabled = true;
-
-  // 2) Call your ValidateContact endpoint first
-  const isValid = await validateNumber(phone);
-  if (!isValid) {
-    // Not a WhatsApp number: show cancel icon, re-enable Send
-    statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
-    btn.disabled = false;
-    return;
-  }
-
-  // 3) It’s a real WhatsApp number—go ahead and send
-  try {
-    const res = await fetch(`/WhatsApp/Send`, {
-      method: 'POST',
-      body: new FormData(form)
+    connection.on("statusUpdated", (dbId, status) => {
+        const el = document.getElementById(`status-${dbId}`);
+        if (!el) return;
+        if (["delivered", "processed", "read", "sent"].includes(status)) {
+            el.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
+        } else if (["failed", "cancelled", "revoked"].includes(status)) {
+            el.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
+        }
     });
-    if (!res.ok) throw new Error();
-    statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
-  } catch {
-    statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
-  } finally {
-    btn.disabled = false;
-  }
-}
+
+    connection.start().catch(console.error);
+
+    // helper to validate numbers via our API
+    async function validateNumber(phone) {
+        for (let i = 0; i < 10; i++) {
+            const res = await fetch(`/WhatsApp/ValidateContact?phone=${encodeURIComponent(phone)}`);
+            if (res.status === 503) {
+                await new Promise(r => setTimeout(r, 200 * (i + 1)));
+                continue;
+            }
+            if (!res.ok) return false;
+            const { valid, exists } = await res.json();
+            return valid && exists;
+        }
+        return false;
+    }
+
+
+    // send & then rely on SignalR for status updates
+    async function sendAndTrack(evt, id) {
+        evt.preventDefault();
+        const form = evt.target;
+        const phone = form.querySelector('input[name="phone"]').value;
+        const statusEl = document.getElementById(`status-${id}`);
+        const btn = document.getElementById(`send-btn-${id}`);
+
+        // 1) Show spinner while validating…
+        statusEl.innerHTML =
+            '<div class="spinner-border spinner-border-sm" role="status"></div>';
+        btn.disabled = true;
+
+        // 2) Call your ValidateContact endpoint first
+        const isValid = await validateNumber(phone);
+        if (!isValid) {
+            // Not a WhatsApp number: show cancel icon, re-enable Send
+            statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
+            btn.disabled = false;
+            return;
+        }
+
+        // 3) It’s a real WhatsApp number—go ahead and send
+        try {
+            const res = await fetch(`/WhatsApp/Send`, {
+                method: 'POST',
+                body: new FormData(form)
+            });
+            if (!res.ok) throw new Error();
+            statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-tick-double-02"></i>';
+        } catch {
+            statusEl.innerHTML = '<i class="hgi hgi-stroke hgi-cancel-01"></i>';
+        } finally {
+            btn.disabled = false;
+        }
+    }
 
 </script>

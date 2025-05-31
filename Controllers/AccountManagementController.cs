@@ -9,6 +9,7 @@ using DotNetCoreSqlDb.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication;               // for SignOutAsync(...)
 using Microsoft.AspNetCore.Authentication.Cookies;
+using DotNetCoreSqlDb.Helpers;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -18,12 +19,14 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly MyDatabaseContext _context;
         private readonly IEmailSender _mailer;
         private readonly ILogger<AccountManagementController> _logger;
+        private readonly LogHelper _logHelper;
 
-        public AccountManagementController(MyDatabaseContext context, IEmailSender mailer, ILogger<AccountManagementController> logger)
+        public AccountManagementController(MyDatabaseContext context, IEmailSender mailer, ILogger<AccountManagementController> logger, LogHelper logHelper)
         {
             _context = context;
             _mailer = mailer;
             _logger = logger;
+            _logHelper = logHelper;
         }
 
         // GET: /AccountManagement/ChangePassword?userId=…
@@ -349,10 +352,14 @@ namespace DotNetCoreSqlDb.Controllers
                         <p>You will need to change this temporary password upon your next login.</p>
                         """;
 
+                        string to = "michael.kamochkin@gmail.com";
+                        string subject = "Password Reset Request";
                         await _mailer.SendAsync(
-                            to: "michael.kamochkin@gmail.com",
-                            subject: "Password Reset Request",
+                            to: to,
+                            subject: subject,
                             htmlBody: html);
+
+                        await _logHelper.LogMailAsync(to, subject, html);
                     }
                     catch (Exception ex)
                     {
@@ -371,10 +378,14 @@ namespace DotNetCoreSqlDb.Controllers
                         <p>You will need to change this temporary password upon your next login.</p>
                         """;
 
+                        string to = primaryEmail;
+                        string subject = "Password Reset Request";
                         await _mailer.SendAsync(
                             to: primaryEmail,
-                            subject: "Password Reset Request",
+                            subject: subject,
                             htmlBody: html);
+
+                        await _logHelper.LogMailAsync(to, subject, html);
                     }
                     catch (Exception ex)
                     {

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using DotNetCoreSqlDb.Services;
 using FuzzySharp;
+using DotNetCoreSqlDb.Helpers;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -17,15 +18,18 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly MyDatabaseContext _context;
         private readonly ILogger<StudentManagementController> _logger;
         private readonly IEmailSender _mailer;
+        private readonly LogHelper _logHelper;
 
         public StudentManagementController(
             MyDatabaseContext context,
             ILogger<StudentManagementController> logger,
-            IEmailSender mailer)
+            IEmailSender mailer,
+            LogHelper logHelper)
         {
             _context = context;
             _logger = logger;
             _mailer = mailer;
+            _logHelper = logHelper;
         }
 
 
@@ -265,10 +269,14 @@ namespace DotNetCoreSqlDb.Controllers
                             </p>
                             """;
 
+                        string to = "michael.kamochkin@gmail.com";
+                        string subject = "Your credentials at torontofrench.com";
                         await _mailer.SendAsync(
-                            to: "michael.kamochkin@gmail.com",
-                            subject: "Your credentials at torontofrench.com",
+                            to: to,
+                            subject: subject,
                             htmlBody: html);
+
+                        await _logHelper.LogMailAsync(to, subject, html);
                     }
                     catch (Exception ex)
                     {
@@ -292,11 +300,14 @@ namespace DotNetCoreSqlDb.Controllers
                                 <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
                             </p>
                             """;
-
+                        string to = primaryEmail;
+                        string subject = "Your credentials at torontofrench.com";
                         await _mailer.SendAsync(
-                            to: primaryEmail,
-                            subject: "Your credentials at torontofrench.com",
+                            to: to,
+                            subject: subject,
                             htmlBody: html);
+
+                        await _logHelper.LogMailAsync(to, subject, html);
                     }
                     catch (Exception ex)
                     {
@@ -304,7 +315,7 @@ namespace DotNetCoreSqlDb.Controllers
                     }
                 }
 
-                
+
             }
 
             // --- persist ---
@@ -375,6 +386,9 @@ namespace DotNetCoreSqlDb.Controllers
             }*/
 
             // set created date
+
+            student.TimeZoneId = "America/New_York";
+
             student.CreatedDate = DateTime.Now;
 
             bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
@@ -485,7 +499,9 @@ namespace DotNetCoreSqlDb.Controllers
                 _context.User.Add(user);
 
                 var primaryEmail = student.Contacts?
-                    .FirstOrDefault(c => c.Type.Equals("email", StringComparison.OrdinalIgnoreCase))
+                    .FirstOrDefault(c =>
+                        string.Equals(c.Type, "email", StringComparison.OrdinalIgnoreCase) &&
+                        c.Invitation == true)
                     ?.Value;
 
 
@@ -512,12 +528,15 @@ namespace DotNetCoreSqlDb.Controllers
                          //from: "Toronto French",
                          subject:  "Your credentials at Toronto French",
                          htmlBody: html);*/
-
+                        string to = "michael.kamochkin@gmail.com";
+                        string subject = "Your credentials at Toronto French";
                         await _mailer.SendAsync(
-                        to: "michael.kamochkin@gmail.com",
+                        to: to,
                         //from: "Toronto French",
-                        subject: "Your credentials at Toronto French",
+                        subject: subject,
                         htmlBody: html);
+
+                        await _logHelper.LogMailAsync(to, subject, html);
 
                     }
                     catch (Exception ex)
@@ -526,6 +545,48 @@ namespace DotNetCoreSqlDb.Controllers
                             "Failed to send welcome e-mail to student {StudentId}", student.ID);
                         // swallow → the user is created even if mail fails
                     }
+                }
+                else
+                {
+                    try
+                    {
+                        var html = $"""
+                             <h2>Bienvenue {student.Name} !</h2>
+                             <p>Your temporary credentials at <strong>TorontoFrench.com</strong>.</p>
+                             <p>
+                                 <strong>Username :</strong> {candidate}<br/>
+                                 <strong>Temporary Password :</strong> {defaultPassword}
+                             </p>
+                             <p>You will have to change your password (and optionally username) upon your first login.</p>
+                             <p>
+                                 Click here to log in: 
+                                 <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
+                             </p>
+                             """;
+
+                        /*await _mailer.SendAsync(
+                         to:       primaryEmail,
+                         //from: "Toronto French",
+                         subject:  "Your credentials at Toronto French",
+                         htmlBody: html);*/
+                        string to = "michael.kamochkin@gmail.com";
+                        string subject = "Your credentials at Toronto French";
+                        await _mailer.SendAsync(
+                        to: to,
+                        //from: "Toronto French",
+                        subject: subject,
+                        htmlBody: html);
+
+                        await _logHelper.LogMailAsync(to, subject, html);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex,
+                            "Failed to send welcome e-mail to student {StudentId}", student.ID);
+                        // swallow → the user is created even if mail fails
+                    }
+
                 }
 
 
