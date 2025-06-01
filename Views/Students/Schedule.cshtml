@@ -364,11 +364,11 @@
             .build();
 
         await connection.start();
-        console.log("SignalR connected. Joining group…");
+        //console.log("SignalR connected. Joining group…");
         await connection.invoke("JoinStudentGroup", studentId);
 
         connection.on("ScheduleChanged", () => {
-            console.log("Ping received – refresh!");
+            //.log("Ping received – refresh!");
             refreshRows();                 // your existing function
         });
 
@@ -376,7 +376,7 @@
     </script>
 
     <script>
-        console.log("=== Schedule.cshtml script starting ===");
+        //console.log("=== Schedule.cshtml script starting ===");
 
         const enterWaitingRoomBase = '@Url.Action("GetJoinUrl", "Students")';
         const waitRoomBase = '@Url.Action("Wait", "Students")';
@@ -384,7 +384,7 @@
             const { DateTime } = luxon;
 
             /* ───────── CONSTANTS (match Zoom page) ───────── */
-            console.log("Setting constants…");
+            //console.log("Setting constants…");
             const minsBefore = 5;           // allow join 15 min before start
             const minsAfter = 15;           // …and 15 min after the lesson ENDS
             const meetingId = "7890699796";
@@ -394,12 +394,12 @@
             const detailsBase = '@Url.Action("Zoom", "Students")';
                         
             /* ───────── DATA ───────── */
-            console.log("Parsing raw JSON…");
+            //console.log("Parsing raw JSON…");
             const raw = @Html.Raw(existingJson);
             const rows = raw
                 .map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
                 .sort((a, b) => DateTime.fromISO(b.DateTime) - DateTime.fromISO(a.DateTime)); // newest → oldest
-            console.log("Initial rows:", rows);
+            //console.log("Initial rows:", rows);
 
 
             let nextTimerId = null;
@@ -524,7 +524,7 @@
                 renderTable();
             });*/
 
-            console.log("Calling initial renderTable()…"); 
+            //console.log("Calling initial renderTable()…"); 
             $(renderTable);
             $('#timeZoneSelect').on('change', renderTable);
 
@@ -536,24 +536,24 @@
                    start − 15 min  ≤  NOW  ≤  start + duration + 15 min
             ============================================================ */
             function renderTable() {
-                console.log("renderTable() called. rows.length =", rows.length);
+                //console.log("renderTable() called. rows.length =", rows.length);
                 if (nextTimerId !== null) {
-                    console.log("Clearing previous renderTable timer:", nextTimerId);
+                    //console.log("Clearing previous renderTable timer:", nextTimerId);
                     clearTimeout(nextTimerId);
                     nextTimerId = null;
                 }
 
-                console.log("renderTable(): computing now & time zone…");
+                //console.log("renderTable(): computing now & time zone…");
                 const zone = $('#timeZoneSelect').val();
                 const nowUtc = DateTime.utc();
                 const nowLocal = nowUtc.setZone(zone);
-                console.log("Now in UTC:", nowUtc.toISO(), "Now in local:", nowLocal.toISO());
+                //console.log("Now in UTC:", nowUtc.toISO(), "Now in local:", nowLocal.toISO());
                 const tbody = $('#entriesTable tbody').empty();
 
                 /* ---------- choose row to highlight ---------- */
                 let highlightId = null;
                 rows.forEach(r => {
-                    console.log("Checking row for highlight:", r.Id, r.TeacherName, "DateTime:", r.DateTime);
+                    //console.log("Checking row for highlight:", r.Id, r.TeacherName, "DateTime:", r.DateTime);
                     const startUtc = DateTime.fromISO(r.DateTime);
                     const diffMin = startUtc.diff(nowUtc, 'minutes').minutes;   // +ve = future
                     const windowEnd = -(Number(r.Duration) + minsAfter);        // negative minutes after END
@@ -573,7 +573,7 @@
                     if (bestAhead) highlightId = bestAhead.id;
                 }
                 
-                console.log("Highlighting Id:", highlightId);
+                //console.log("Highlighting Id:", highlightId);
                 /* ---------- render each <tr> ---------- */
                 let appendedCount = 0;
                 rows.forEach(r => {
@@ -604,9 +604,9 @@
                         </tr>
                     `);
                     appendedCount++;
-                    console.log("Appended row for:", r.Id, r.TeacherName);
+                    //console.log("Appended row for:", r.Id, r.TeacherName);
                 });
-                console.log("Total rows appended to DOM:", appendedCount);
+                //console.log("Total rows appended to DOM:", appendedCount);
 
                 let soonest = null;
                 rows.forEach(r => {
@@ -626,14 +626,14 @@
                 if (soonest)
                 {
                     const msUntilNext = soonest.toMillis() - DateTime.utc().toMillis();
-                    console.log("Scheduling next renderTable in", msUntilNext, "ms");
+                    //console.log("Scheduling next renderTable in", msUntilNext, "ms");
                     nextTimerId = setTimeout(renderTable, Math.max(msUntilNext, 0) + 50)
                 }
                 //console.log("msuntilnext: " + msUntilNext);
                 //console.log("mins until next: " + msUntilNext/60000);
                 //console.log("test hi");
                 const domRowCount = $('#entriesTable tbody tr').length;
-                console.log("After renderTable(): DOM <tbody> has", domRowCount, "rows.");
+                //console.log("After renderTable(): DOM <tbody> has", domRowCount, "rows.");
             }
 
             /* ---------- helpers ---------- */
