@@ -50,7 +50,13 @@ namespace DotNetCoreSqlDb.Controllers
                 .ToList();
 
             // 4) Status dropdown
-            ViewBag.Statuses = DropdownOptions.ScheduleStatusTypes;
+            ViewBag.Statuses = DropdownOptions.ScheduleStatusTypes
+                .Select(item => new SelectListItem
+                {
+                    Text = item.Text,
+                    Value = item.Value,
+                    Selected = item.Value == "Scheduled"
+                });
 
             // 4.1) Duration dropdown (new)
             //ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes;
@@ -186,7 +192,8 @@ namespace DotNetCoreSqlDb.Controllers
             await _context.SaveChangesAsync();
 
             // Redirect back to the same teacher/date
-            return RedirectToAction(nameof(Manage), new {
+            return RedirectToAction(nameof(Manage), new
+            {
                 teacherId,
                 date = selectedDate.ToString("yyyy-MM-dd")
             });

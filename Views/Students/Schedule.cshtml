@@ -446,10 +446,10 @@
                 });
 
                 let soonest = null;
-                row.forEach(r => {
+                rows.forEach(r => {
                     const startUtc = DateTime.fromISO(r.DateTime);
                     const enableTime = startUtc.minus({minutes: minsBefore});
-                    const disableTime = startUtc.plut({minutes: Number(r.Duration) + minsAfter});
+                    const disableTime = startUtc.plus({minutes: Number(r.Duration) + minsAfter});
                     const now = DateTime.utc();
 
                     if (enableTime > now) {
@@ -459,12 +459,16 @@
                         if (!soonest || disableTime < soonest) soonest = disableTime;
                     }
                 });
-
+                
                 if (soonest)
                 {
                     const msUntilNext = soonest.toMillis() - DateTime.utc().toMillis();
-                    nextTimerId = setTimeout(renderTable, Math.max(msUntilNext, 0), + 50);
+                    nextTimerId = setTimeout(renderTable, Math.max(msUntilNext, 0) + 50)
                 }
+                //console.log("msuntilnext: " + msUntilNext);
+                //console.log("mins until next: " + msUntilNext/60000);
+                //console.log("test hi");
+
             }
 
             /* ---------- helpers ---------- */

@@ -73,7 +73,7 @@
         @if (User.IsInRole("admin") || User.IsInRole("support"))
         {
             var cssMail = btnClass("Mail", "Index");
-            <a href="@Url.Action("Index", "Mail")" class="@cssMail" title="Teachers">
+            <a href="@Url.Action("Index", "Mail")" class="@cssMail" title="Mail">
                 <i class="fa-solid fa-envelope"></i>
             </a>
         }
