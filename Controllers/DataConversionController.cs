@@ -4,20 +4,22 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;      // your DbContext namespace
 using DotNetCoreSqlDb.Services;  // <-- so IDataConversionService resolves
-using DotNetCoreSqlDb.Models;    // <-- so Student and Contact resolve (if needed)
+using DotNetCoreSqlDb.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DotNetCoreSqlDb.Controllers
 {
+    [Authorize(Roles = "support")]
     public class DataConversionController : Controller
     {
-        private readonly MyDatabaseContext      _context;
+        private readonly MyDatabaseContext _context;
         private readonly IDataConversionService _conversionSvc;
 
         public DataConversionController(
             MyDatabaseContext context,
             IDataConversionService conversionSvc)
         {
-            _context       = context;
+            _context = context;
             _conversionSvc = conversionSvc;
         }
 
@@ -62,7 +64,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             var base64 = TempData["AccountCsv"] as string;
             var bytes = System.Convert.FromBase64String(base64);
-            TempData.Keep("AccountCsv"); 
+            TempData.Keep("AccountCsv");
             return File(bytes, "text/csv", "target_account.csv");
         }
 
