@@ -26,6 +26,7 @@ builder.Services.Configure<EmailSettings>(
 
 builder.Services.AddTransient<IEmailSender, MailKitEmailSender>();
 builder.Services.AddScoped<LogHelper>();
+builder.Services.AddScoped<IDataConversionService, DataConversionService>();
 
 
 /* ───── 3.  Database context + cache (unchanged) ─────── */
@@ -110,6 +111,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<WhatsAppHub>("/hubs/whstatus");
 app.MapHub<ZoomMeetingHub>("/hubs/zoomMeetingHub");
+app.MapHub<ScheduleHub>("/hubs/scheduleHub");
 
 
 app.MapControllerRoute(

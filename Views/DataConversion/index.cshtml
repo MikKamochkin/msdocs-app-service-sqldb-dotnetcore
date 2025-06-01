@@ -1,0 +1,17 @@
+@{
+    ViewData["Title"] = "Data Conversion";
+}
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+    }
+    <div class="col">
+        <h2>Data Conversion</h2>
+        <form asp-action="RunConversion" method="post">
+            <button type="submit" class="btn btn-primary">
+                Run Conversion and Prepare CSVs
+            </button>
+        </form>
+    </div>
+</div>

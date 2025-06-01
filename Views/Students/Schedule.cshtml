@@ -4,6 +4,7 @@
     ViewData["Title"] = "My Schedule";
     var existingJson = ViewBag.ExistingJson as string ?? "[]";
     var timeZones = ViewBag.TimeZones as List<SelectListItem>;
+    var studentId = ViewBag.StudentId;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -343,17 +344,47 @@
 
 @* ---------- SCRIPTS ---------- *@
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+
     <script src="https://code.jquery.com/jquery-3.6.1.min.js"
         integrity="sha256-+LdG5Fjnxd8h8JAoywV4P8pIY2q3FfvMZHO7+jT9BkE=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
 
     <script>
+    (async () => {
+
+        /* studentId injected by Razor */
+        const studentId = '@ViewBag.StudentId';
+
+        /* build + start connection */
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/scheduleHub")
+            .withAutomaticReconnect()
+            //.configureLogging(signalR.LogLevel.Information)
+            .build();
+
+        await connection.start();
+        console.log("SignalR connected. Joining group…");
+        await connection.invoke("JoinStudentGroup", studentId);
+
+        connection.on("ScheduleChanged", () => {
+            console.log("Ping received – refresh!");
+            refreshRows();                 // your existing function
+        });
+
+    })();
+    </script>
+
+    <script>
+        console.log("=== Schedule.cshtml script starting ===");
+
         const enterWaitingRoomBase = '@Url.Action("GetJoinUrl", "Students")';
         const waitRoomBase = '@Url.Action("Wait", "Students")';
         (() => {
             const { DateTime } = luxon;
 
             /* ───────── CONSTANTS (match Zoom page) ───────── */
+            console.log("Setting constants…");
             const minsBefore = 5;           // allow join 15 min before start
             const minsAfter = 15;           // …and 15 min after the lesson ENDS
             const meetingId = "7890699796";
@@ -361,16 +392,139 @@
             const deepLink = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
             const webLink = `https://us02web.zoom.us/j/${meetingId}?pwd=${pwd}`;
             const detailsBase = '@Url.Action("Zoom", "Students")';
-
+                        
             /* ───────── DATA ───────── */
+            console.log("Parsing raw JSON…");
             const raw = @Html.Raw(existingJson);
             const rows = raw
                 .map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
                 .sort((a, b) => DateTime.fromISO(b.DateTime) - DateTime.fromISO(a.DateTime)); // newest → oldest
+            console.log("Initial rows:", rows);
 
 
             let nextTimerId = null;
 
+
+            /*const studentId = '@ViewBag.StudentId';
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/hubs/scheduleHub")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.onclose(error => {
+                console.error("SignalR: connection closed:", error);
+            });
+
+            connection.onreconnected(connId => {
+                console.log("SignalR: reconnected, connectionId=", connId);
+            });
+
+            connection.start()
+                .then(() => {
+                    const studentId = '@studentId';
+                    console.log("studentId: ", studentId);      // razor-injected
+                    return connection.invoke("JoinStudentGroup", studentId);
+                })
+                .then(() => console.log("Joined group student_" + '@studentId'))
+                .catch(err => console.error(err));
+
+            connection.on("ScheduleChanged", () => {
+                console.log("Ping received – pulling fresh schedule");
+                refreshRows();
+            });
+            */
+            window.refreshRows = async function refreshRows() {
+                try {
+                    const latest = await fetch('@Url.Action("ScheduleJson","Students")')
+                                        .then(r => r.json());
+
+                    rows.length = 0;                             // clear array
+
+                    latest.forEach(src => {
+                        // tolerate both PascalCase and camelCase coming from JSON
+                        const rawTime = src.DateTime ?? src.dateTime;
+                        if (!rawTime) return;                   // skip bad rows
+
+                        rows.push({
+                            Id:          src.Id          ?? src.id,
+                            TeacherId:   src.TeacherId   ?? src.teacherId,
+                            TeacherName: src.TeacherName ?? src.teacherName,
+                            Status:      src.Status      ?? src.status,
+                            // ensure we always have a *number*
+                            Duration:    Number(src.Duration ?? src.duration ?? 0),
+                            DateTime:    rawTime.endsWith('Z') ? rawTime : rawTime + 'Z'
+                        });
+                    });
+
+                    renderTable();                              // redraw
+                } catch (e) {
+                    console.error("Refresh failed", e);
+                }
+            };
+
+
+            /* ───────── SIGNALR SETUP ───────── */
+            // 1) Build a connection to the exact same endpoint you mapped in Program.cs:
+            //      app.MapHub<ScheduleHub>("/scheduleHub");
+            //    so here we use "/scheduleHub" (not "/hubs/scheduleHub").
+            /*console.log("Building SignalR connection…");
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/hubs/scheduleHub")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.onclose(error => {
+                console.error("SignalR: connection closed:", error);
+            });
+
+            connection.onreconnected(connId => {
+                console.log("SignalR: reconnected, connectionId=", connId);
+            });
+
+            // 2) Once the connection is up, join each teacher’s group:
+            console.log("Starting SignalR connection…");
+            connection.start()
+                .then(() => {
+                    console.log("SignalR connected to /hubs/scheduleHub (connectionId:", connection.connectionId, ")");
+
+                    // Extract unique TeacherId values from `rows`:
+                    const uniqueTeacherIds = [...new Set(rows.map(r => r.TeacherId))];
+                    console.log("Attempting to JoinTeacherGroup for:", uniqueTeacherIds);
+                    uniqueTeacherIds.forEach(tid => {
+                        // invoke the Hub method that adds us to "teacher_{tid}" group
+                        connection.invoke("JoinTeacherGroup", tid)
+                            .then(() => console.log(`Joined group: teacher_${tid}`))
+                            .catch(err => console.error("JoinTeacherGroup failed:", err.toString()));
+                    });
+                })
+                .catch(err => console.error("SignalR connection error:", err.toString()));
+
+            // 3) Listen for the “ScheduleChanged” event:
+            //    When it arrives, we replace `rows` + call renderTable().
+            connection.on("ScheduleChanged", newRaw => {
+                rows.length = 0;
+                console.log("newRaw: ", newRaw);
+                newRaw.forEach(r => {
+                    // Handle either casing seamlessly
+                    const date = r.DateTime ?? r.dateTime;
+                    const iso  = date.endsWith('Z') ? date : date + 'Z';
+
+                    rows.push({
+                        Id:          r.Id          ?? r.id,
+                        TeacherId:   r.TeacherId   ?? r.teacherId,
+                        TeacherName: r.TeacherName ?? r.teacherName,
+                        Status:      r.Status      ?? r.status,
+                        Duration:    r.Duration    ?? r.duration,
+                        DateTime:    iso
+                    });
+                });
+
+                console.log("calling renderTable after receiving newRaw");
+                renderTable();
+            });*/
+
+            console.log("Calling initial renderTable()…"); 
             $(renderTable);
             $('#timeZoneSelect').on('change', renderTable);
 
@@ -382,20 +536,24 @@
                    start − 15 min  ≤  NOW  ≤  start + duration + 15 min
             ============================================================ */
             function renderTable() {
-
+                console.log("renderTable() called. rows.length =", rows.length);
                 if (nextTimerId !== null) {
+                    console.log("Clearing previous renderTable timer:", nextTimerId);
                     clearTimeout(nextTimerId);
                     nextTimerId = null;
                 }
 
+                console.log("renderTable(): computing now & time zone…");
                 const zone = $('#timeZoneSelect').val();
                 const nowUtc = DateTime.utc();
                 const nowLocal = nowUtc.setZone(zone);
+                console.log("Now in UTC:", nowUtc.toISO(), "Now in local:", nowLocal.toISO());
                 const tbody = $('#entriesTable tbody').empty();
 
                 /* ---------- choose row to highlight ---------- */
                 let highlightId = null;
                 rows.forEach(r => {
+                    console.log("Checking row for highlight:", r.Id, r.TeacherName, "DateTime:", r.DateTime);
                     const startUtc = DateTime.fromISO(r.DateTime);
                     const diffMin = startUtc.diff(nowUtc, 'minutes').minutes;   // +ve = future
                     const windowEnd = -(Number(r.Duration) + minsAfter);        // negative minutes after END
@@ -414,8 +572,10 @@
                     });
                     if (bestAhead) highlightId = bestAhead.id;
                 }
-
+                
+                console.log("Highlighting Id:", highlightId);
                 /* ---------- render each <tr> ---------- */
+                let appendedCount = 0;
                 rows.forEach(r => {
                     const startUtc = DateTime.fromISO(r.DateTime);
                     const diffMin = startUtc.diff(nowUtc, 'minutes').minutes;
@@ -443,7 +603,10 @@
                         <td data-label="Actions">${actionHtml}</td>
                         </tr>
                     `);
+                    appendedCount++;
+                    console.log("Appended row for:", r.Id, r.TeacherName);
                 });
+                console.log("Total rows appended to DOM:", appendedCount);
 
                 let soonest = null;
                 rows.forEach(r => {
@@ -463,12 +626,14 @@
                 if (soonest)
                 {
                     const msUntilNext = soonest.toMillis() - DateTime.utc().toMillis();
+                    console.log("Scheduling next renderTable in", msUntilNext, "ms");
                     nextTimerId = setTimeout(renderTable, Math.max(msUntilNext, 0) + 50)
                 }
                 //console.log("msuntilnext: " + msUntilNext);
                 //console.log("mins until next: " + msUntilNext/60000);
                 //console.log("test hi");
-
+                const domRowCount = $('#entriesTable tbody tr').length;
+                console.log("After renderTable(): DOM <tbody> has", domRowCount, "rows.");
             }
 
             /* ---------- helpers ---------- */
@@ -482,22 +647,23 @@
 
                 const detailsBtn = `
                         <a
-          href="${detailsBase}?scheduleId=${id}"
-          class="btn btn-info btn-md ml-3"
-          title="Lesson details">
-          <i class="fa-solid fa-circle-info text-light"></i>
-         </a>`;
+                            href="${detailsBase}?scheduleId=${id}"
+                            class="btn btn-info btn-md ml-3"
+                            title="Lesson details">
+                            <i class="fa-solid fa-circle-info text-light"></i>
+                            </a>`;
 
                 const waitBtn = `
                         <a href="${waitRoomBase}?scheduleId=${id}"
-                            class="btn btn-secondary btn-md ml-2"
+                            class="btn btn-primary btn-md ml-2${disabled ? " disabled-btn" : ""}"
+                                    ${disabled ? `aria-disabled="true" tabindex="-1"` : ""}"
                             target="_blank"
                             rel="noopener noreferrer">
                             Join Lesson
                         </a>`;
 
                 //Uncomment this to actiavate the dynamic buttons
-                //return detailsBtn + waitBtn;
+                //return  waitBtn + detailsBtn;
                 return zoomBtn;
             }
 

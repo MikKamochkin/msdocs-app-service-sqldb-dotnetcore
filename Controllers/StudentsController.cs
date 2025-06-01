@@ -87,6 +87,7 @@ namespace DotNetCoreSqlDb.Controllers
         {
             // 1) Get the student ID from their UserID claim
             var userId = User.FindFirst("UserID")?.Value;
+            ViewBag.StudentId = userId;
             if (!Guid.TryParse(userId, out var studentId))
                 return NotFound();
 
@@ -114,7 +115,9 @@ namespace DotNetCoreSqlDb.Controllers
                 DateTime = s.DateTime.ToString("o"),
                 s.Status,
                 s.Duration,
-                TeacherName = s.Assignment!.Teacher!.Name
+                TeacherName = s.Assignment!.Teacher!.Name,
+                TeacherId = s.Assignment!.Teacher!.Id,
+
             });
 
             ViewBag.ExistingJson = JsonSerializer.Serialize(
@@ -195,6 +198,39 @@ namespace DotNetCoreSqlDb.Controllers
                 //    the timing + enable/disable logic)
                 return View(student);
             }
+        }
+
+        // GET: /Students/ScheduleJson
+        [HttpGet]
+        public async Task<IActionResult> ScheduleJson()
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var studentId))
+                return Unauthorized();
+
+            // same LINQ you already have in Schedule(), minus the View-bag work
+            var groupIds = await _context.StudentGroupComposition
+                            .Where(c => c.StudentId == studentId)
+                            .Select(c => c.GroupId)
+                            .Distinct()
+                            .ToListAsync();
+
+            var results = await _context.Schedule
+                .Include(s => s.Assignment).ThenInclude(a => a.Teacher)
+                .Where(s => groupIds.Contains(s.Assignment!.GroupId))
+                .OrderByDescending(s => s.DateTime)
+                .Take(15)
+                .Select(s => new {
+                    s.Id,
+                    DateTime = s.DateTime.ToString("o"),
+                    s.Status,
+                    s.Duration,
+                    TeacherName = s.Assignment!.Teacher!.Name,
+                    TeacherId   = s.Assignment!.Teacher!.Id
+                })
+                .ToListAsync();
+
+            return Ok(results);      // HTTP 200 with JSON
         }
 
 

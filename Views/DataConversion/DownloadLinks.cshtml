@@ -1,0 +1,30 @@
+@{
+    ViewData["Title"] = "Download CSV Files";
+}
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+    }
+    <div class="col">
+    <h2>Download CSV Files</h2>
+    <ul>
+        <li>
+            <a asp-action="DownloadAccountCsv" asp-controller="DataConversion">
+                Download Account CSV
+            </a>
+        </li>
+        <li>
+            <a asp-action="DownloadStudentCsv" asp-controller="DataConversion">
+                Download Student CSV
+            </a>
+        </li>
+    </ul>
+    <hr />
+    <p>
+        <a asp-action="Index" asp-controller="DataConversion" class="btn btn-secondary">
+            ← Back to Conversion
+        </a>
+    </p>
+    </div>
+</div>

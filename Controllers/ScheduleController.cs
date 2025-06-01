@@ -11,6 +11,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using TimeZoneConverter;
+using DotNetCoreSqlDb.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -18,10 +20,14 @@ namespace DotNetCoreSqlDb.Controllers
     public class ScheduleController : Controller
     {
         private readonly MyDatabaseContext _context;
+        private readonly IHubContext<ScheduleHub> _hub;
+        private readonly ILogger<TeachersController> _logger;
 
-        public ScheduleController(MyDatabaseContext context)
+        public ScheduleController(MyDatabaseContext context, IHubContext<ScheduleHub> hub, ILogger<TeachersController> logger)
         {
             _context = context;
+            _hub = hub;
+            _logger = logger;
         }
 
         // GET: Schedule/Manage
@@ -61,7 +67,8 @@ namespace DotNetCoreSqlDb.Controllers
             // 4.1) Duration dropdown (new)
             //ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes;
             ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes
-                .Select(item => new SelectListItem {
+                .Select(item => new SelectListItem
+                {
                     Text = item.Text,
                     Value = item.Value,
                     Selected = item.Value == "60"
@@ -83,7 +90,8 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 var assignments = await _context.Assignments
                     .Where(a => a.TeacherId == teacherId)
-                    .Select(a => new {
+                    .Select(a => new
+                    {
                         a.Id,
                         a.GroupId,
                         GroupName = a.Group!.Name
@@ -94,9 +102,10 @@ namespace DotNetCoreSqlDb.Controllers
                 groupItems = assignments
                     .GroupBy(x => x.GroupId)
                     .Select(g => g.First())
-                    .Select(a => new SelectListItem {
+                    .Select(a => new SelectListItem
+                    {
                         Value = a.Id.ToString(),
-                        Text  = a.GroupName
+                        Text = a.GroupName
                     })
                     .OrderBy(x => x.Text)
                     .ToList();
@@ -112,10 +121,10 @@ namespace DotNetCoreSqlDb.Controllers
                 var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
 
                 var localStart = selectedDate;          // 00:00 local
-                var localEnd   = selectedDate.AddDays(1); // next midnight
+                var localEnd = selectedDate.AddDays(1); // next midnight
 
                 var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, tzInfo);
-                var endUtc   = TimeZoneInfo.ConvertTimeToUtc(localEnd,   tzInfo);
+                var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, tzInfo);
 
                 existing = await _context.Schedule
                     .Include(s => s.Assignment!)
@@ -123,23 +132,25 @@ namespace DotNetCoreSqlDb.Controllers
                     .Where(s =>
                         s.Assignment!.TeacherId == teacherId &&
                         s.DateTime >= startUtc &&
-                        s.DateTime <  endUtc
+                        s.DateTime < endUtc
                     )
                     .OrderBy(s => s.DateTime)
                     .ToListAsync();
             }
 
             // Flatten into JSON payload with UTC ISO strings
-            var flat = existing.Select(r => new {
+            var flat = existing.Select(r => new
+            {
                 r.Id,
                 r.AssignmentId,
-                DateTime  = r.DateTime.ToUniversalTime().ToString("o"),
+                DateTime = r.DateTime.ToUniversalTime().ToString("o"),
                 r.Status,
                 r.Duration,
                 GroupName = r.Assignment!.Group!.Name
             }).ToList();
 
-            ViewBag.ExistingJson = JsonSerializer.Serialize(flat, new JsonSerializerOptions {
+            ViewBag.ExistingJson = JsonSerializer.Serialize(flat, new JsonSerializerOptions
+            {
                 ReferenceHandler = ReferenceHandler.IgnoreCycles
             });
 
@@ -189,14 +200,79 @@ namespace DotNetCoreSqlDb.Controllers
                 }
             }
 
+
             await _context.SaveChangesAsync();
 
-            // Redirect back to the same teacher/date
+            var assignmentIds = schedules.Select(s => s.AssignmentId).Distinct().ToList();
+
+            // Query StudentGroupCompositions linked to those assignments via GroupId
+            var affectedStudentIds = await _context.Assignments
+                .Where(a => assignmentIds.Contains(a.Id))
+                .Include(a => a.Group)
+                    .ThenInclude(g => g.StudentGroupCompositions)
+                .SelectMany(a => a.Group!.StudentGroupCompositions)
+                .Select(sgc => sgc.StudentId)
+                .Distinct()
+                .ToListAsync();
+
+            foreach (var studentId in affectedStudentIds)
+            {
+                _logger.LogInformation("Edited student with studentId: " + studentId);
+                await _hub.Clients
+                    .Group($"student_{studentId}")
+                    .SendAsync("ScheduleChanged");
+            }
+
+
+
+            //
+            // ─── Build “updatedSchedule” JSON for that teacher/date ───
+            //
+            // 3.1) Convert `selectedDate` (which is local) → UTC range using your server’s default zone
+            var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
+            var windowsZoneId = TZConvert.IanaToWindows(defaultZoneIana);
+            var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
+
+            var localStart = selectedDate.Date;            // midnight local
+            var localEnd = localStart.AddDays(1);        // next midnight
+            var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, tzInfo);
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, tzInfo);
+
+            // 3.2) Instead of “today’s” window, always grab the most recent 15 lessons for this teacher:
+            var updatedSchedule = await _context.Schedule
+                .Include(s => s.Assignment!).ThenInclude(a => a.Teacher)
+                .Where(s => s.Assignment!.TeacherId == teacherId)
+                .OrderByDescending(s => s.DateTime)
+                .Take(15)
+                .Select(r => new
+                {
+                    r.Id,
+                    r.AssignmentId,
+                    DateTime = r.DateTime.ToUniversalTime().ToString("o"),
+                    r.Status,
+                    r.Duration,
+                    TeacherId = r.Assignment!.Teacher!.Id,
+                    TeacherName = r.Assignment!.Teacher!.Name
+                })
+                .ToListAsync();
+
+            _logger.LogInformation("Broadcasting ScheduleChanged to teacher_{TeacherId}, count={Count}", teacherId, updatedSchedule.Count);
+            _logger.LogDebug("Payload: {PayloadJson}", JsonSerializer.Serialize(updatedSchedule));
+
+
+            // 3.3) Broadcast to the “teacher_{teacherId}” group:
+            await _hub.Clients
+                .Group($"teacher_{teacherId}")
+                .SendAsync("ScheduleChanged", updatedSchedule);
+
+            // 4) Redirect as before
             return RedirectToAction(nameof(Manage), new
             {
                 teacherId,
                 date = selectedDate.ToString("yyyy-MM-dd")
             });
         }
+        
+        
     }
 }

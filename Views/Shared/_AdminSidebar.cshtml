@@ -77,5 +77,13 @@
                 <i class="fa-solid fa-envelope"></i>
             </a>
         }
+
+        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        {
+            var cssDataConversion = btnClass("DataConversion", "Index");
+            <a href="@Url.Action("Index", "DataConversion")" class="@cssDataConversion" title="DataConversion">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </a>
+        }
     </div>
 </div>
