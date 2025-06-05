@@ -69,12 +69,12 @@
             </a>
         }
 
-        @* Mail (only for admin/support) *@
+        @* Logs (only for admin/support) *@
         @if (User.IsInRole("admin") || User.IsInRole("support"))
         {
-            var cssMail = btnClass("Mail", "Index");
-            <a href="@Url.Action("Index", "Mail")" class="@cssMail" title="Mail">
-                <i class="fa-solid fa-envelope"></i>
+            var cssLog = btnClass("Logs", "Index");
+            <a href="@Url.Action("Index", "Logs")" class="@cssLog" title="Logs">
+                <i class="fa-solid fa-list"></i>
             </a>
         }
 

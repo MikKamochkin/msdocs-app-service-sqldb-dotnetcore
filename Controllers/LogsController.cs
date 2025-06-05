@@ -11,16 +11,16 @@ using DotNetCoreSqlDb.Services;
 namespace DotNetCoreSqlDb.Controllers
 {
     [Authorize(Roles = "support, admin")]
-    public class MailController : Controller
+    public class LogsController : Controller
     {
         private readonly MyDatabaseContext _context;
-        private readonly ILogger<MailController> _logger;
+        private readonly ILogger<LogsController> _logger;
         private readonly IEmailSender _mailer;
 
 
-        public MailController(
+        public LogsController(
             MyDatabaseContext context,
-            ILogger<MailController> logger,
+            ILogger<LogsController> logger,
             IEmailSender mailer)
         {
             _context = context;
@@ -28,16 +28,27 @@ namespace DotNetCoreSqlDb.Controllers
             _mailer = mailer;
         }
 
-
-
+        public async Task<IActionResult> Index()
+        {
+            return View();
+        }
         // GET: Mail
-        public async Task<IActionResult> Index(string sortOrder)
+        public async Task<IActionResult> Mail(string sortOrder)
         {
             var mails = await _context.MailLog
                 .OrderByDescending(d => d.Time)
                 .ToListAsync();
 
             return View(mails);
+        }
+
+        public async Task<IActionResult> SignIn(string sortOrder)
+        {
+            var signIns = await _context.SignInLog
+                .OrderByDescending(d => d.Time)
+                .ToListAsync();
+
+            return View(signIns);
         }
     }
 }

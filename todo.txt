@@ -1,3 +1,7 @@
+add logging for sign in/attempted sign in
+
+add signalr teacher updates when schedule MustChangePassword
+
 complete _StudentNavbar.cshtml
 
 add email recovery for users with role == "teacher"
@@ -14,6 +18,7 @@ if student already in "waiting room", auto connect them as soon as row is popula
 
 
 
+DISCONTINUED:
 /*run timer every 5 mins on hour-1 (xx:04 xx:09 ...xx:54 xx:59),
 call assignMeetingAsync with window of now - now + 2 for scheduled lesson start time
 only activate button in ui when lesson exists, not 15 mins before as it is now.
@@ -47,5 +52,4 @@ DONE: when editing a group, add student button doesn't open the modal correctly
 DONE: when editing group, add option to change use balance
 DONE: only show groups where >1 person
 
-add option to delete group when it's empty after editing
 

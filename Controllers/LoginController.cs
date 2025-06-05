@@ -4,18 +4,21 @@ using DotNetCoreSqlDb.Data;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using DotNetCoreSqlDb.Helpers;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [RequireHttps]
+    //[RequireHttps]
     public class LoginController : Controller
     {
         private readonly MyDatabaseContext _context;
+        private readonly LogHelper _logHelper;
         private const int maxAttempts = 6;
 
-        public LoginController(MyDatabaseContext context)
+        public LoginController(MyDatabaseContext context, LogHelper logHelper)
         {
             _context = context;
+            _logHelper = logHelper;
         }
 
         // GET: /Login
@@ -30,6 +33,9 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> Index(string username, string password)
         {
             ViewBag.ShowForgotPassword = false;
+
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() 
+                            ?? "Unknown";
             // Validate input
             if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             {
@@ -42,6 +48,7 @@ namespace DotNetCoreSqlDb.Controllers
             if (user == null)
             {
                 ViewBag.Error = "Invalid credentials. Please try again.";
+                await _logHelper.LogSignInAsync(username, ipAddress, false);
                 return View();
             }
 
@@ -52,6 +59,7 @@ namespace DotNetCoreSqlDb.Controllers
                 ViewBag.Error = "You have reached the limit of incorrect sign-in attempts.";
                 ViewBag.ShowForgotPassword = true;
                 ViewBag.ForgotUserId = user.ID;
+                await _logHelper.LogSignInAsync(user.ID, username, ipAddress, false);
                 return View();
             }
 
@@ -65,10 +73,12 @@ namespace DotNetCoreSqlDb.Controllers
                 ViewBag.Error = "Invalid credentials. Please try again.";
                 ViewBag.ShowForgotPassword = user.IncorrectAttempts >= 1;
                 ViewBag.ForgotUserId = user.ID;
+                await _logHelper.LogSignInAsync(user.ID, username, ipAddress, false);
                 return View();
             }     
             
             user.IncorrectAttempts = 0;
+            await _logHelper.LogSignInAsync(user.ID, username, ipAddress, true);
             await _context.SaveChangesAsync();
 
             var claims = new List<Claim>

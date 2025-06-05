@@ -45,6 +45,46 @@ namespace DotNetCoreSqlDb.Helpers
             await _context.SaveChangesAsync();
         }
 
-    }
+        public async Task LogSignInAsync(
+            Guid userId,
+            string attemptedUsername,
+            string ipAddress,
+            bool wasSuccessful)
+        {
+            var user = await _context.User
+                .FirstOrDefaultAsync(u => u.ID == userId);
 
+            if (user != null)
+            {
+                var log = new SignInLog
+                {
+                    UserId = userId,
+                    UserName = attemptedUsername,
+                    WasSuccessful = wasSuccessful,
+                    IpAddress = ipAddress,
+                    Time = DateTime.Now
+                };
+                _context.SignInLog.Add(log);
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task LogSignInAsync(
+            string attemptedUsername,
+            string ipAddress,
+            bool wasSuccessful)
+        {
+            var log = new SignInLog
+            {
+                UserId = null,
+                UserName = attemptedUsername,
+                WasSuccessful = wasSuccessful,
+                IpAddress = ipAddress,
+                Time = DateTime.Now
+            };
+            _context.SignInLog.Add(log);
+            await _context.SaveChangesAsync();
+        }
+    }
 }

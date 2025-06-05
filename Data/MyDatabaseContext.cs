@@ -41,7 +41,8 @@ namespace DotNetCoreSqlDb.Data
         public DbSet<DotNetCoreSqlDb.Models.ZoomMeetings> ZoomMeetings { get; set; } = default!;
         
         public DbSet<DotNetCoreSqlDb.Models.MailLog> MailLog { get; set; } = default!;
-
+        
+        public DbSet<DotNetCoreSqlDb.Models.SignInLog> SignInLog { get; set; } = default!;
 
         // method defines model-level constraints like unique indexes
         protected override void OnModelCreating(ModelBuilder modelBuilder)
