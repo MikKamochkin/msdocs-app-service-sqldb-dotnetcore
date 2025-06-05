@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
 using System;
-using System.Collections.Generic;
+using System.Collections.Generic;   
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,7 +16,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "support")]
+    [Authorize(Roles = "support, admin")]
     public class ScheduleController : Controller
     {
         private readonly MyDatabaseContext _context;

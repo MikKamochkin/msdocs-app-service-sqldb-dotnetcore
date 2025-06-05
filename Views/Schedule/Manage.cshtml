@@ -65,61 +65,11 @@
 
             <hr />
 
-            <div class="form-group col-md-3">
-                <!-- ↓  “Time” picker button + hidden input ↓ -->
+            <div class="form-inline mb-2">
                 <label class="mr-2">Time</label>
-                <br>
+                <select id="timeSelect" class="form-control mr-3"
+                    asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
 
-                <!--
-                    Wrap the button+dropdown in a position-relative container so that
-                    we can absolutely position the dropdown right below the button.
-                -->
-                <div class="position-relative d-inline-block mr-3" style="z-index:1000;">
-                    <!-- Visible button: shows “Select Time” or chosen HH:mm -->
-                    <button type="button"
-                            id="timePickerBtn"
-                            class="btn btn-outline-secondary">
-                        <span id="timePickerDisplay">Select Time</span>
-                        <i class="fa fa-clock ml-1"></i>
-                    </button>
-
-                    <!-- Hidden field storing the final “HH:mm” value -->
-                    <input type="hidden" id="timeInput" />
-
-                    <!-- Dropdown: first shows hours (00–23), then minutes (00,05,…55) -->
-                    <div id="timePickerDropdown"
-                         class="border bg-white p-2"
-                         style="display:none; position:absolute; top:100%; left:0; width:220px;">
-                        <!-- STEP 1: Hour selection -->
-                        <div id="hourList" class="d-flex flex-wrap">
-                            @for (int h = 0; h < 24; h++)
-                            {
-                                var hh = h.ToString("D2");
-                                <button type="button"
-                                        class="btn btn-sm btn-light m-1 time-hour-btn"
-                                        data-hour="@hh"
-                                        style="width:48px;">
-                                    @hh
-                                </button>
-                            }
-                        </div>
-
-                        <!-- STEP 2: Minute selection (hidden initially) -->
-                        <div id="minuteList" class="d-flex flex-wrap" style="display:none; margin-top:8px;">
-                            @for (int m = 0; m < 60; m += 5)
-                            {
-                                var mm = m.ToString("D2");
-                                <button type="button"
-                                        class="btn btn-sm btn-light m-1 time-minute-btn"
-                                        data-minute="@mm"
-                                        style="width:48px;">
-                                    @mm
-                                </button>
-                            }
-                        </div>
-                    </div>
-                </div>
-                <br>
                 <label class="mr-2">Student</label>
                 <select id="groupSelect" class="form-control mr-3"
                     asp-items="(IEnumerable<SelectListItem>)ViewBag.Groups"></select>
@@ -131,9 +81,8 @@
                 <label class="mr-2">Duration</label>
                 <select id="durationSelect" class="form-control mr-3"
                     asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonDurationTypes"></select>
-                <br>
+
                 <button type="button" class="btn btn-primary" onclick="addOrUpdateEntry()">Save Entry</button>
-                <br>
             </div>
 
             <table class="table table-bordered" id="entriesTable">
@@ -169,46 +118,6 @@
 
         $(function () { renderTable(); });
         $('#timeZoneSelect').on('change', renderTable);
-
-        // Handle clicks on the “Time” button
-        // Toggle dropdown visibility when clicking on the Time button
-        $('#timePickerBtn').on('click', function (e) {
-            e.stopPropagation();
-            // Always start with hours visible
-            $('#minuteList').hide();
-            $('#hourList').show();
-            $('#timePickerDropdown').toggle();
-        });
-
-        // Close the dropdown if we click anywhere outside
-        $(document).on('click', function () {
-            $('#timePickerDropdown').hide();
-        });
-
-        // Prevent clicks inside the dropdown from closing it
-        $('#timePickerDropdown').on('click', function (e) {
-            e.stopPropagation();
-        });
-
-        // Delegated handler: when an hour is clicked
-        $('#hourList').on('click', '.time-hour-btn', function () {
-            selectedHour = $(this).data('hour'); // "HH"
-            // Hide hours, show minutes
-            $('#hourList').hide();
-            $('#minuteList').show();
-        });
-
-        // Delegated handler: when a minute is clicked
-        $('#minuteList').on('click', '.time-minute-btn', function () {
-            const chosenMinute = $(this).data('minute'); // "mm"
-            const hhmm = `${selectedHour}:${chosenMinute}`;
-            // 1) Write into hidden <input>
-            $('#timeInput').val(hhmm);
-            // 2) Update the button’s visible text
-            $('#timePickerDisplay').text(hhmm);
-            // 3) Close the dropdown
-            $('#timePickerDropdown').hide();
-        });
 
         function shiftDay(delta) {
             const input = document.querySelector('input[name=selectedDate]');
@@ -311,17 +220,7 @@
             const dtInZone = DateTime.fromISO(r.DateTime)
                 .setZone(zone);
 
-            // Extract “HH:mm” from the existing entry
-            const hhmm = dtInZone.toFormat('HH:mm');
-            // 1) Put it into hidden input so addOrUpdateEntry() will see it
-            $('#timeInput').val(hhmm);
-            // 2) Update the button text
-            $('#timePickerDisplay').text(hhmm);
-
-            // Also set selectedHour so if the user re-opens the dropdown,
-            // the state is correct (hour already chosen).
-            selectedHour = hhmm.split(':')[0];
-
+            $('#timeSelect').val(dtInZone.toFormat('HH:mm'));
             $('#groupSelect').val(r.AssignmentId);
             $('#statusSelect').val(r.Status);
             $('#durationSelect').val(r.Duration);
