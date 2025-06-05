@@ -8,7 +8,7 @@ using DotNetCoreSqlDb.Helpers;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    //[RequireHttps]
+    [RequireHttps]
     public class LoginController : Controller
     {
         private readonly MyDatabaseContext _context;

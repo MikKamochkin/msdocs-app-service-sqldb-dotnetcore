@@ -1,0 +1,71 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.SignInLog>
+
+@{
+    ViewData["Title"] = "SignIn List";
+}
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+        
+        <div class="col-md-10">
+            <h2>Sign In Log</h2>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            UserId
+                        </th>
+                        <th>
+                             Attempted UserName
+                        </th>
+                        <th>
+                            WasSuccessful
+                        </th>
+                        <th>
+                            IpAddress
+                        </th>
+                        <th>
+                            Time
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {      
+                        <tr>
+                            <td>
+                                @if (item.UserId != null)
+                                {
+                                    @Html.DisplayFor(modelItem => item.UserId)
+                                }
+                                else
+                                {
+                                    <span style="color: red; font-weight: bold;">✗</span>
+                                }
+                            </td>
+                            <td>@Html.DisplayFor(modelItem => item.UserName)</td>
+                            <td>
+                                @if (item.WasSuccessful)
+                                {
+                                    <span style="color: green; font-weight: bold;">✓</span>
+                                }
+                                else
+                                {
+                                    <span style="color: red; font-weight: bold;">✗</span>
+                                }
+                            </td>
+                            <td>@Html.DisplayFor(modelItem => item.IpAddress)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Time)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+}

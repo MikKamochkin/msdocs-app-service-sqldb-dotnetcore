@@ -11,16 +11,16 @@ using DotNetCoreSqlDb.Services;
 namespace DotNetCoreSqlDb.Controllers
 {
     [Authorize(Roles = "support, admin")]
-    public class LogsController : Controller
+    public class LoggingController : Controller
     {
         private readonly MyDatabaseContext _context;
-        private readonly ILogger<LogsController> _logger;
+        private readonly ILogger<LoggingController> _logger;
         private readonly IEmailSender _mailer;
 
 
-        public LogsController(
+        public LoggingController(
             MyDatabaseContext context,
-            ILogger<LogsController> logger,
+            ILogger<LoggingController> logger,
             IEmailSender mailer)
         {
             _context = context;

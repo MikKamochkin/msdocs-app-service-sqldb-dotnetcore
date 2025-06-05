@@ -1,0 +1,23 @@
+@{
+    ViewData["Title"] = "Logs";
+}
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+    }
+
+    <div class="col">
+        <br>
+        <!-- Mail button -->
+        &nbsp;&nbsp;&nbsp;<a asp-action="Mail" class="btn btn-outline-primary mr-2">
+                <i class="fa-solid fa-envelope"></i>
+                <span class="ml-1">Mail Logs</span>
+        </a>&nbsp;
+        <!-- SignIn button -->
+        <a asp-action="SignIn" class="btn btn-outline-primary mr-2">
+            <i class="fa-solid fa-door-open"></i>
+            <span class="ml-1">Sign In Logs</span>
+        </a>
+    </div>
+</div>
