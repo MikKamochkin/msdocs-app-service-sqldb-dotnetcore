@@ -352,7 +352,32 @@
 	<script src="https://code.jquery.com/jquery-3.6.1.min.js"
 		integrity="sha256-+LdG5Fjnxd8h8JAoywV4P8pIY2q3FfvMZHO7+jT9BkE=" crossorigin="anonymous"></script>
 	<script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+	<script>
+    (async () => {
 
+        /* teacherId injected by Razor */
+        const teacherId = '@ViewBag.TeacherId';
+
+        /* build + start connection */
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/scheduleHub")
+            .withAutomaticReconnect()
+            //.configureLogging(signalR.LogLevel.Information)
+            .build();
+
+        await connection.start();
+        //console.log("SignalR connected. Joining group…");
+        await connection.invoke("JoinTeacherGroup", teacherId);
+
+        connection.on("ScheduleChanged", () => {
+            //.log("Ping received – refresh!");
+			//g("pinging schedule changed");
+            refreshRows();                 // your existing function
+        });
+
+    })();
+    </script>
 	<script>
 		const startLessonBase = '@Url.Action("StartLesson", "Teachers")';
 		const endLessonBase = '@Url.Action("EndLesson", "Teachers")';
@@ -375,6 +400,37 @@
 			const rows = raw
 				.map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
 				.sort((a, b) => DateTime.fromISO(b.DateTime) - DateTime.fromISO(a.DateTime)); // newest → oldest
+
+
+			window.refreshRows = async function refreshRows() {
+				//console.log("in refresh rows");
+                try {
+                    const latest = await fetch('@Url.Action("ScheduleJson","Teachers")')
+                                        .then(r => r.json());
+
+                    rows.length = 0;                             // clear array
+
+                    latest.forEach(src => {
+                        // tolerate both PascalCase and camelCase coming from JSON
+                        const rawTime = src.DateTime ?? src.dateTime;
+                        if (!rawTime) return;                   // skip bad rows
+
+                        rows.push({
+                            Id:          src.Id          ?? src.id,
+                            TeacherId:   src.TeacherId   ?? src.teacherId,
+                            StudentName: src.StudentName ?? src.studentName,
+                            Status:      src.Status      ?? src.status,
+                            // ensure we always have a *number*
+                            Duration:    Number(src.Duration ?? src.duration ?? 0),
+                            DateTime:    rawTime.endsWith('Z') ? rawTime : rawTime + 'Z'
+                        });
+                    });
+
+                    renderTable();                              // redraw
+                } catch (e) {
+                    console.error("Refresh failed", e);
+                }
+            };
 
 			$(renderTable);
 			$('#timeZoneSelect').on('change', renderTable);
@@ -523,12 +579,12 @@
 				});
 
 				if (response.ok) {
-					console.log("EndLesson called successfully");
+					//nsole.log("EndLesson called successfully");
 				} else {
-					console.error("EndLesson call failed:", response.status);
+					//nsole.error("EndLesson call failed:", response.status);
 				}
 			} catch (error) {
-				console.error("Error calling EndLesson:", error);
+				//console.error("Error calling EndLesson:", error);
 			}
 			location.reload(true)
 		}

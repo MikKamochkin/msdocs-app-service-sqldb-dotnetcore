@@ -22,6 +22,7 @@
             @Html.AntiForgeryToken()
 
             <input type="hidden" name="FormToken" value="@ViewBag.FormToken" />
+            <input type="hidden" id="SkipDuplicateCheck" name="SkipDuplicateCheck" value="false" />
 
 
             <div class="form-horizontal">
@@ -86,7 +87,7 @@
 
                 <div class="form-group">
                     <div class="col-md-offset-2 col-md-10">
-                        <input type="submit" value="Create" class="btn btn-primary" />
+                        <input id="submitButton" type="submit" value="Create" class="btn btn-primary" />
                     </div>
                 </div>
 
@@ -293,18 +294,26 @@
             }
             const data = await res.json();
 
-            /* 3️⃣  – Duplicate?  Show confirm(); otherwise post immediately */
+        
             if (data.duplicate) {
                 const names = data.closeMatches?.join(", ") || "(no names)";
-                if (!confirm("A student with a very similar name already exists: " + names + ". Create anyway?")) {
-                    return; // user canceled
-                }
-            }
+                if (confirm("A student with a very similar name already exists: " + names + ". Create anyway?")) {
+                    // ⬇️ Disable the "Create" button so the user cannot click it again while the form is submitting
+                    $("#submitButton").prop("disabled", true);
 
-            /* 4️⃣  – Either not duplicate or the user accepted */
-            $("#SkipDuplicateCheck").val("true");   // tell the server to skip
-            $(this).off("submit")                   // prevent recursion
-                .submit();                       // fire the real post
+                    /* 4️⃣  – Either not duplicate or the user accepted */
+                    $("#SkipDuplicateCheck").val("true");   // tell the server to skip next time
+                    $(this).off("submit")                   // prevent recursion
+                            .submit();                       // fire the real post
+                }
+                // If they hit “Cancel”, do nothing; user can re-edit or change name
+            }
+            else {
+                // No duplicate → submit normally
+                $("#SkipDuplicateCheck").val("true");
+                $(this).off("submit")
+                        .submit();
+            }                    // fire the real post
         });
     </script>
 }

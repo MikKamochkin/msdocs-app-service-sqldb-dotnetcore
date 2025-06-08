@@ -272,6 +272,105 @@ namespace DotNetCoreSqlDb.Controllers
                 date = selectedDate.ToString("yyyy-MM-dd")
             });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CopyLastWeek(Guid teacherId, DateTime selectedDate)
+        {
+            var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
+            var windowsZoneId = TZConvert.IanaToWindows(defaultZoneIana);
+            var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
+
+            var lastWeekStartLocal = selectedDate.Date.AddDays(-7);
+            var lastWeekEndLocal = lastWeekStartLocal.AddDays(1);
+
+            var lastWeekStartUtc = TimeZoneInfo.ConvertTimeToUtc(lastWeekStartLocal, tzInfo);
+            var lastWeekEndUtc = TimeZoneInfo.ConvertTimeToUtc(lastWeekEndLocal, tzInfo);
+
+            var lastWeekEntries = await _context.Schedule
+                .Include(s => s.Assignment!)
+                .Where(s =>
+                    s.Assignment!.TeacherId == teacherId &&
+                    s.DateTime >= lastWeekStartUtc &&
+                    s.DateTime < lastWeekEndUtc)
+                .ToListAsync();
+
+            var newEntries = new List<Schedule>();
+
+            foreach (var entry in lastWeekEntries)
+            {
+                var newDate = entry.DateTime.AddDays(7);
+
+                var exists = await _context.Schedule.AnyAsync(s =>
+                    s.Assignment!.TeacherId == teacherId &&
+                    s.DateTime == newDate);
+
+                if (exists)
+                    continue;
+
+                var copy = new Schedule
+                {
+                    Id = Guid.NewGuid(),
+                    AssignmentId = entry.AssignmentId,
+                    DateTime = newDate,
+                    Status = entry.Status,
+                    Duration = entry.Duration
+                };
+
+                newEntries.Add(copy);
+                _context.Schedule.Add(copy);
+            }
+
+            if (newEntries.Count > 0)
+            {
+                await _context.SaveChangesAsync();
+
+                var assignmentIds = newEntries.Select(e => e.AssignmentId).Distinct().ToList();
+
+                var affectedStudentIds = await _context.Assignments
+                    .Where(a => assignmentIds.Contains(a.Id))
+                    .Include(a => a.Group)
+                        .ThenInclude(g => g.StudentGroupCompositions)
+                    .SelectMany(a => a.Group!.StudentGroupCompositions)
+                    .Select(sgc => sgc.StudentId)
+                    .Distinct()
+                    .ToListAsync();
+
+                foreach (var studentId in affectedStudentIds)
+                {
+                    await _hub.Clients
+                        .Group($"student_{studentId}")
+                        .SendAsync("ScheduleChanged");
+                }
+
+                var updatedSchedule = await _context.Schedule
+                    .Include(s => s.Assignment!).ThenInclude(a => a.Teacher)
+                    .Where(s => s.Assignment!.TeacherId == teacherId)
+                    .OrderByDescending(s => s.DateTime)
+                    .Take(15)
+                    .Select(r => new
+                    {
+                        r.Id,
+                        r.AssignmentId,
+                        DateTime = r.DateTime.ToUniversalTime().ToString("o"),
+                        r.Status,
+                        r.Duration,
+                        TeacherId = r.Assignment!.Teacher!.Id,
+                        TeacherName = r.Assignment!.Teacher!.Name
+                    })
+                    .ToListAsync();
+
+                await _hub.Clients
+                    .Group($"teacher_{teacherId}")
+                    .SendAsync("ScheduleChanged", updatedSchedule);
+            }
+
+            return RedirectToAction(nameof(Manage), new
+            {
+                teacherId,
+                date = selectedDate.ToString("yyyy-MM-dd")
+            });
+        }
         
         
     }

@@ -1,4 +1,11 @@
-add logging for sign in/attempted sign in
+password reset:
+    enter email
+    if email exists, send email:
+        email says "if u requested...click link, else ignore"
+        link has their sign in token that takes them right away to password reset page
+
+
+DONE: add logging for sign in/attempted sign in
 
 add signalr teacher updates when schedule MustChangePassword
 

@@ -82,6 +82,7 @@ namespace DotNetCoreSqlDb.Controllers
         {
 
             var userId = User.FindFirst("UserID")?.Value;
+            ViewBag.TeacherId = userId;
             if (!Guid.TryParse(userId, out var teacherId))
                 return NotFound();
 
@@ -106,7 +107,7 @@ namespace DotNetCoreSqlDb.Controllers
                 DateTime = s.DateTime.ToString("o"),
                 s.Status,
                 s.Duration,
-                StudentName = s.Assignment?.Group?.Name,
+                StudentName = s.Assignment?.Group?.Name
                 //JoinUrl = zoomLinks.TryGetValue(s.Id, out var url) ? url : null
             });
 
@@ -232,7 +233,7 @@ namespace DotNetCoreSqlDb.Controllers
                     .ThenInclude(s => s.Assignment)
                 .Where(zm =>
                     zm.Schedule.Assignment!.TeacherId == teacherId &&  // same teacher
-                    zm.ScheduleId                      != id &&          // different schedule
+                    zm.ScheduleId != id &&          // different schedule
                     zm.IsBusy                                     // still busy
                 )
                 .OrderByDescending(zm => zm.Schedule.DateTime)       // most recent first
@@ -253,7 +254,7 @@ namespace DotNetCoreSqlDb.Controllers
             else
             {
                 _logger.LogInformation(
-                    "No previous busy lesson found for teacher {TeacherId}", 
+                    "No previous busy lesson found for teacher {TeacherId}",
                     teacherId);
             }
 
@@ -263,28 +264,79 @@ namespace DotNetCoreSqlDb.Controllers
 
             var lesson = await _context.ZoomMeetings
                 .FirstOrDefaultAsync(z => z.ScheduleId == id);
-            if (lesson == null) 
+            if (lesson == null)
                 return NotFound();
 
             return Redirect(lesson.JoinUrl);
         }
 
-        
+
 
         [HttpGet]
         public async Task<IActionResult> EndLesson(Guid id)
         {
             _logger.LogInformation("Called end lesson with id: {id}", id);
-            
+
             await _svc.EndMeetingsAsync(id);
 
             return Ok(new { message = "EndLesson triggered" }); // returns HTTP 200
         }
 
 
+        [HttpGet]
+        public async Task<IActionResult> ScheduleJson()
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            ViewBag.TeacherId = userId;
+            if (!Guid.TryParse(userId, out var teacherId))
+                return NotFound();
 
-        /*public async Task<IActionResult> Calendar()
-        {return View();}*/
+            var scheduleEntries = await _context.Schedule
+                .Include(s => s.Assignment)          // load the Assignment nav
+                    .ThenInclude(a => a.Group)      // then load its Group nav
+                .Where(s => s.Assignment!.TeacherId == teacherId)
+                .OrderByDescending(s => s.DateTime)
+                .Take(15)
+                .Select(s => new
+                {
+                    s.Id,
+                    s.AssignmentId,
+                    DateTime = s.DateTime.ToString("o"),
+                    s.Status,
+                    s.Duration,
+                    StudentName = s.Assignment.Group.Name
+                })
+                .ToListAsync();
 
+            
+            /*
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var studentId))
+                return Unauthorized();
+
+            // same LINQ you already have in Schedule(), minus the View-bag work
+            var groupIds = await _context.StudentGroupComposition
+                            .Where(c => c.StudentId == studentId)
+                            .Select(c => c.GroupId)
+                            .Distinct()
+                            .ToListAsync();
+
+            var results = await _context.Schedule
+                .Include(s => s.Assignment).ThenInclude(a => a.Teacher)
+                .Where(s => groupIds.Contains(s.Assignment!.GroupId))
+                .OrderByDescending(s => s.DateTime)
+                .Take(15)
+                .Select(s => new {
+                    s.Id,
+                    DateTime = s.DateTime.ToString("o"),
+                    s.Status,
+                    s.Duration,
+                    TeacherName = s.Assignment!.Teacher!.Name,
+                    TeacherId   = s.Assignment!.Teacher!.Id
+                })
+                .ToListAsync();
+            */
+            return Ok(scheduleEntries);      // HTTP 200 with JSON*/
+        }
     }
 }

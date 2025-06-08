@@ -277,7 +277,7 @@ namespace DotNetCoreSqlDb.Controllers
         }
 
         // POST: /AccountManagement/ForgotPassword
-        [AllowAnonymous]
+        /*[AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("ForgotPassword")]
@@ -413,6 +413,6 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
 
-        }
+        }*/
     }
 }

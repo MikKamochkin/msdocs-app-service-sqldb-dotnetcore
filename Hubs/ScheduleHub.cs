@@ -13,9 +13,9 @@ namespace DotNetCoreSqlDb.Hubs
             _logger = logger;
         }
 
-        public Task JoinTeacherGroup(string teacherId)
+        public Task JoinTeacherGroup(Guid teacherId)
         {
-            _logger.LogInformation("Connection {ConnectionId} requested JoinTeacherGroup({TeacherId})", Context.ConnectionId, teacherId);
+            _logger.LogInformation("JoinTeacherGroup({TeacherId})", teacherId);
             return Groups.AddToGroupAsync(Context.ConnectionId, $"teacher_{teacherId}");
         }
 

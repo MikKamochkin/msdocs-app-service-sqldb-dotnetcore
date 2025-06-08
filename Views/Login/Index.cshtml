@@ -27,17 +27,13 @@
       <button type="submit" class="btn btn-primary">Login</button>
     </div>
 
-    @if (ViewBag.ShowForgotPassword == true)
-    {
-      <div class="form-group">
-        <a asp-controller="AccountManagement"
-           asp-action="ForgotPassword"
-           asp-route-userId="@ViewBag.ForgotUserId"
-           class="btn btn-link">
-          Forgot your password?
-        </a>
-      </div>
-    }
+    <div class="form-group">
+      <a asp-controller="Login"
+         asp-action="ForgotPassword"
+         class="btn btn-link">
+        Forgot your password?
+      </a>
+    </div>
 
     @if (ViewBag.Error != null)
     {
