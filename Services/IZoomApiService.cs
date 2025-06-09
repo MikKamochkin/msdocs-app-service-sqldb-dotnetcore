@@ -14,9 +14,14 @@ namespace DotNetCoreSqlDb.Services
                                                             string topic = "Lesson");
 
     /// <summary>
-    /// End a meeting by number, with optional UUID and host-id fall-back.
+    /// End all live meetings for a Zoom user.
     /// </summary>
     Task EndMeetingAsync(string zoomId);
+
+    /// <summary>
+    /// End a specific meeting by its UUID.
+    /// </summary>
+    Task EndZoomMeetingAsync(string meetingUuid);
 
     //Task<string?> LookupUuidAsync(string meetingNumber);
 }
