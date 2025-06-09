@@ -36,7 +36,8 @@ namespace DotNetCoreSqlDb.Services
         public async Task AssignMeetingsAsync(Guid scheduleId)
         {
             var zoomMeetings = await _context.ZoomMeetings
-                .FirstOrDefaultAsync(z => z.ScheduleId == scheduleId);
+                .FirstOrDefaultAsync(z => z.ScheduleId == scheduleId ||
+                                           z.ScheduleId2 == scheduleId);
 
             if (zoomMeetings == null)
             {
@@ -44,6 +45,7 @@ namespace DotNetCoreSqlDb.Services
                     .FirstOrDefaultAsync(s => s.Id == scheduleId);
 
                 ZoomMeetings? freeSlot = null;
+                bool useSecond = false;
                 try
                 {
                     // 1) Reserve a free Zoom slot
@@ -51,7 +53,7 @@ namespace DotNetCoreSqlDb.Services
                         .BeginTransactionAsync(IsolationLevel.Serializable);
 
                     freeSlot = await _context.ZoomMeetings
-                        .Where(m => !m.IsBusy)
+                        .Where(m => !m.IsBusy || !m.IsBusy2)
                         .FirstOrDefaultAsync();
 
                     if (freeSlot == null)
@@ -61,8 +63,17 @@ namespace DotNetCoreSqlDb.Services
                         return;
                     }
 
-                    freeSlot.IsBusy = true;
-                    freeSlot.ScheduleId = schedule.Id;
+                    useSecond = freeSlot.IsBusy; // first slot taken?
+                    if (useSecond)
+                    {
+                        freeSlot.IsBusy2 = true;
+                        freeSlot.ScheduleId2 = schedule.Id;
+                    }
+                    else
+                    {
+                        freeSlot.IsBusy = true;
+                        freeSlot.ScheduleId = schedule.Id;
+                    }
                     await _context.SaveChangesAsync();
                     await tx1.CommitAsync();
 
@@ -83,12 +94,24 @@ namespace DotNetCoreSqlDb.Services
                     using var tx2 = await _context.Database
                                                     .BeginTransactionAsync(IsolationLevel.Serializable);
 
-                    freeSlot.MeetingId = result.Id;
-                    freeSlot.UUid = result.Uuid;
-                    freeSlot.JoinUrl = result.JoinUrl;
-                    freeSlot.MeetingPassword = result.Passcode;
-                    freeSlot.StartTime = DateTime.UtcNow;           // actual create time
-                    freeSlot.Duration = schedule.Duration;         // from your Schedule
+                    if (useSecond)
+                    {
+                        freeSlot.MeetingId2 = result.Id;
+                        freeSlot.UUid2 = result.Uuid;
+                        freeSlot.JoinUrl2 = result.JoinUrl;
+                        freeSlot.MeetingPassword2 = result.Passcode;
+                        freeSlot.StartTime2 = DateTime.UtcNow;       // actual create time
+                        freeSlot.Duration2 = schedule.Duration;       // from your Schedule
+                    }
+                    else
+                    {
+                        freeSlot.MeetingId = result.Id;
+                        freeSlot.UUid = result.Uuid;
+                        freeSlot.JoinUrl = result.JoinUrl;
+                        freeSlot.MeetingPassword = result.Passcode;
+                        freeSlot.StartTime = DateTime.UtcNow;         // actual create time
+                        freeSlot.Duration = schedule.Duration;         // from your Schedule
+                    }
                     schedule.Status = "Ongoing";
 
                     await _context.SaveChangesAsync();
@@ -105,8 +128,16 @@ namespace DotNetCoreSqlDb.Services
                     // if we reserved a slot and something failed, mark it free again
                     if (freeSlot != null)
                     {
-                        freeSlot.IsBusy = false;
-                        freeSlot.ScheduleId = null;
+                        if (useSecond)
+                        {
+                            freeSlot.IsBusy2 = false;
+                            freeSlot.ScheduleId2 = null;
+                        }
+                        else
+                        {
+                            freeSlot.IsBusy = false;
+                            freeSlot.ScheduleId = null;
+                        }
                         await _context.SaveChangesAsync();
                     }
 
@@ -128,14 +159,23 @@ namespace DotNetCoreSqlDb.Services
         {
 
             var zoomRow = await _context.ZoomMeetings
-                .FirstOrDefaultAsync(z => z.ScheduleId == scheduleId);
+                .FirstOrDefaultAsync(z => z.ScheduleId == scheduleId ||
+                                           z.ScheduleId2 == scheduleId);
 
             if (zoomRow != null)
             {
+                bool second = zoomRow.ScheduleId2 == scheduleId;
+                string? uuid = second ? zoomRow.UUid2 : zoomRow.UUid;
                 try
                 {
-                    await _zoomApiService.EndMeetingAsync(
-                            zoomRow.ZoomId);
+                    if (!string.IsNullOrWhiteSpace(uuid))
+                    {
+                        await _zoomApiService.EndZoomMeetingAsync(uuid);
+                    }
+                    else
+                    {
+                        await _zoomApiService.EndMeetingAsync(zoomRow.ZoomId);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -150,14 +190,28 @@ namespace DotNetCoreSqlDb.Services
                     using var tx = await _context.Database
                                                     .BeginTransactionAsync(IsolationLevel.Serializable);
 
-                    zoomRow.IsBusy = false;
-                    zoomRow.ScheduleId = null;
-                    zoomRow.JoinUrl = null;
-                    zoomRow.MeetingId = null;
-                    zoomRow.MeetingPassword = null;
-                    zoomRow.StartTime = null;
-                    zoomRow.Duration = null;
-                    zoomRow.UUid = null;
+                    if (second)
+                    {
+                        zoomRow.IsBusy2 = false;
+                        zoomRow.ScheduleId2 = null;
+                        zoomRow.JoinUrl2 = null;
+                        zoomRow.MeetingId2 = null;
+                        zoomRow.MeetingPassword2 = null;
+                        zoomRow.StartTime2 = null;
+                        zoomRow.Duration2 = null;
+                        zoomRow.UUid2 = null;
+                    }
+                    else
+                    {
+                        zoomRow.IsBusy = false;
+                        zoomRow.ScheduleId = null;
+                        zoomRow.JoinUrl = null;
+                        zoomRow.MeetingId = null;
+                        zoomRow.MeetingPassword = null;
+                        zoomRow.StartTime = null;
+                        zoomRow.Duration = null;
+                        zoomRow.UUid = null;
+                    }
 
                     var schedule = await _context.Schedule
                                         .FirstOrDefaultAsync(s => s.Id == scheduleId);
@@ -188,26 +242,54 @@ namespace DotNetCoreSqlDb.Services
 
             var nowUtc = DateTime.UtcNow;
             var busySlots = await _context.ZoomMeetings
-                    .Where(m => m.IsBusy &&
-                                m.StartTime.HasValue &&
-                                m.Duration.HasValue)
+                    .Where(m => (m.IsBusy && m.StartTime.HasValue && m.Duration.HasValue) ||
+                                (m.IsBusy2 && m.StartTime2.HasValue && m.Duration2.HasValue))
                     .ToListAsync();
 
             foreach (var slot in busySlots)
             {
-                var endMoment = slot.StartTime!.Value
-                                              .AddMinutes(slot.Duration!.Value)
+                if (slot.IsBusy && slot.StartTime.HasValue && slot.Duration.HasValue)
+                {
+                    var endMoment = slot.StartTime.Value
+                                              .AddMinutes(slot.Duration.Value)
                                               .AddMinutes(bufferAfterMeetingEnd);
 
-                _logger.LogInformation("endMoment is {End} for slot {SlotId}", endMoment, slot.Id);
+                    _logger.LogInformation("endMoment is {End} for slot {SlotId}", endMoment, slot.Id);
 
-                if (nowUtc < endMoment) continue;
+                    if (nowUtc >= endMoment)
+                    {
+                        await CleanupSlotAsync(slot, second: false);
+                    }
+                }
 
+                if (slot.IsBusy2 && slot.StartTime2.HasValue && slot.Duration2.HasValue)
+                {
+                    var endMoment2 = slot.StartTime2.Value
+                                               .AddMinutes(slot.Duration2.Value)
+                                               .AddMinutes(bufferAfterMeetingEnd);
 
+                    _logger.LogInformation("endMoment2 is {End} for slot {SlotId}", endMoment2, slot.Id);
+
+                    if (nowUtc >= endMoment2)
+                    {
+                        await CleanupSlotAsync(slot, second: true);
+                    }
+                }
+            }
+
+            async Task CleanupSlotAsync(ZoomMeetings slot, bool second)
+            {
                 try
                 {
-                    await _zoomApiService.EndMeetingAsync(
-                            slot.ZoomId);
+                    string? uuid = second ? slot.UUid2 : slot.UUid;
+                    if (!string.IsNullOrWhiteSpace(uuid))
+                    {
+                        await _zoomApiService.EndZoomMeetingAsync(uuid);
+                    }
+                    else
+                    {
+                        await _zoomApiService.EndMeetingAsync(slot.ZoomId);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -216,20 +298,33 @@ namespace DotNetCoreSqlDb.Services
                         slot.Id);
                 }
 
-                // ── clear the slot in DB ────────────────────────────────────────
                 try
                 {
                     using var tx = await _context.Database
-                                                 .BeginTransactionAsync(IsolationLevel.Serializable);
+                        .BeginTransactionAsync(IsolationLevel.Serializable);
 
-                    slot.IsBusy = false;
-                    slot.ScheduleId = null;
-                    slot.JoinUrl = null;
-                    slot.MeetingId = null;
-                    slot.MeetingPassword = null;
-                    slot.StartTime = null;
-                    slot.Duration = null;
-                    slot.UUid = null;
+                    if (second)
+                    {
+                        slot.IsBusy2 = false;
+                        slot.ScheduleId2 = null;
+                        slot.JoinUrl2 = null;
+                        slot.MeetingId2 = null;
+                        slot.MeetingPassword2 = null;
+                        slot.StartTime2 = null;
+                        slot.Duration2 = null;
+                        slot.UUid2 = null;
+                    }
+                    else
+                    {
+                        slot.IsBusy = false;
+                        slot.ScheduleId = null;
+                        slot.JoinUrl = null;
+                        slot.MeetingId = null;
+                        slot.MeetingPassword = null;
+                        slot.StartTime = null;
+                        slot.Duration = null;
+                        slot.UUid = null;
+                    }
 
                     await _context.SaveChangesAsync();
                     await tx.CommitAsync();

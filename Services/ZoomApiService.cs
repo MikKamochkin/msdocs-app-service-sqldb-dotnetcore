@@ -188,14 +188,14 @@ namespace DotNetCoreSqlDb.Services
                 {
                     foreach (var m in meetings.EnumerateArray())
                     {
-                        // ── numeric meeting number ───────────────────────────────
-                        var idProp = m.GetProperty("id");
-                        string meetingNumber = idProp.ValueKind == JsonValueKind.String
-                                            ? idProp.GetString()!
-                                            : idProp.GetInt64().ToString();
-
-                        list.Add(meetingNumber);
-
+                        if (m.TryGetProperty("uuid", out var uuidProp))
+                        {
+                            var uuid = uuidProp.GetString();
+                            if (!string.IsNullOrWhiteSpace(uuid))
+                            {
+                                list.Add(uuid);
+                            }
+                        }
                     }
                 }
                 return list;
@@ -215,8 +215,11 @@ namespace DotNetCoreSqlDb.Services
             {
                 using var client = await BuildClientAsync();
 
-                //encoded is the meetingUuid made safe to embed into url (percent-encoded / URL-encoded)
-                string encoded = Uri.EscapeDataString(meetingUuid);
+                // Zoom requires meeting UUIDs used in the path to be URL encoded
+                // twice. The first pass escapes characters such as '+', '/' and
+                // '=', while the second pass ensures Zoom interprets the value
+                // correctly.
+                string encoded = Uri.EscapeDataString(Uri.EscapeDataString(meetingUuid));
                 Console.WriteLine($"→ PUT /meetings/{encoded}/status  (raw = {meetingUuid})");
 
                 var body = new { action = "end" };

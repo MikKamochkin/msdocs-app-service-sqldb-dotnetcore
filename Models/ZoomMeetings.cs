@@ -41,8 +41,36 @@ namespace DotNetCoreSqlDb.Models
 
         [DisplayName("UUid")]
         public string? UUid { get; set; } = "";
-        
+
         public virtual Schedule? Schedule { get; set; }
+
+        // ── second meeting slot ─────────────────────────────────────────────
+
+        [DisplayName("JoinUrl2")]
+        public string? JoinUrl2 { get; set; } = string.Empty;
+
+        [DisplayName("MeetingId2")]
+        public string? MeetingId2 { get; set; } = string.Empty;
+
+        [DisplayName("MeetingPassword2")]
+        public string? MeetingPassword2 { get; set; } = string.Empty;
+
+        [DisplayName("IsBusy2")]
+        public bool IsBusy2 { get; set; } = false;
+
+        [DisplayName("StartTime2")]
+        public DateTime? StartTime2 { get; set; }
+
+        [DisplayName("Duration2")]
+        public int? Duration2 { get; set; }
+
+        [ForeignKey("Schedule2")]
+        public Guid? ScheduleId2 { get; set; }
+
+        [DisplayName("UUid2")]
+        public string? UUid2 { get; set; } = string.Empty;
+
+        public virtual Schedule? Schedule2 { get; set; }
 
     }
 } 
