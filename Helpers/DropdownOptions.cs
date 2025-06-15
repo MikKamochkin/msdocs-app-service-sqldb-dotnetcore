@@ -40,7 +40,7 @@ public static class DropdownOptions
         new SelectListItem {Text = "RUB", Value = "RUB"},
         new SelectListItem {Text = "CAD", Value = "CAD"},
         new SelectListItem {Text = "EUR", Value = "EUR"},
-        new SelectListItem {Text = "USD", Value = "USD"}  
+        new SelectListItem {Text = "USD", Value = "USD"}
     };
 
     //Whenever these are changed, have to change the JS logic in teacher/schedule.cshtml and student/schedule.cshtml
@@ -62,6 +62,14 @@ public static class DropdownOptions
         new SelectListItem { Text = "60 minutes", Value = "60" },
         new SelectListItem { Text = "90 minutes", Value = "90" },
         new SelectListItem { Text = "120 minutes", Value = "120" }
+    };
+    
+    public static List<SelectListItem> LessonAccountingType => new List<SelectListItem>
+    {
+        new SelectListItem { Text = "Student 0% Teacher 100%", Value = "S0T100" },
+        new SelectListItem { Text = "Student 50% Teacher 100%", Value = "S50T100" },
+        new SelectListItem { Text = "Student 100% Teacher 100%", Value = "S100T100" },
+        new SelectListItem { Text = "Student 0% Teacher 0%", Value = "S0T0" }
     };
 
 }

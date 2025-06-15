@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [RequireHttps]
+    //[RequireHttps]
     public class LoginController : Controller
     {
         private readonly MyDatabaseContext _context;
@@ -166,7 +166,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             if (moreThanOneEmail)
             {
-                ViewBag.Message = "Unable to send you a reset link, please contact us for support";
+                ViewBag.Message = "Unable to send you a password reset link, please contact us for support";
                 return View();
             }
             // try to find a student with this email
@@ -194,7 +194,7 @@ namespace DotNetCoreSqlDb.Controllers
                 await _logHelper.LogMailAsync(email, subject, html);
             }
 
-            ViewBag.Message = "If the email exists, a reset link has been sent.";
+            ViewBag.Message = "If the email exists, a password reset link will be sent";
             return View();
         }
 

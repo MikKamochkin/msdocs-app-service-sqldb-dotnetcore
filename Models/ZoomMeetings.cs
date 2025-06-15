@@ -15,9 +15,6 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Email")]
         public string Email { get; set; } = "";
 
-        /*[DisplayName("Pmi")]
-        public string Pmi { get; set; } = "";*/
-        
         [DisplayName("JoinUrl")]
         public string? JoinUrl { get; set; } = "";
 
@@ -41,8 +38,7 @@ namespace DotNetCoreSqlDb.Models
 
         [DisplayName("UUid")]
         public string? UUid { get; set; } = "";
-        
-        public virtual Schedule? Schedule { get; set; }
 
+        public virtual Schedule? Schedule { get; set; }
     }
 } 

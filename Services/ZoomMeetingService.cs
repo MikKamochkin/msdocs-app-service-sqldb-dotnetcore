@@ -61,8 +61,8 @@ namespace DotNetCoreSqlDb.Services
                         return;
                     }
 
-                    freeSlot.IsBusy = true;
-                    freeSlot.ScheduleId = schedule.Id;
+                        freeSlot.IsBusy = true;
+                        freeSlot.ScheduleId = schedule.Id;
                     await _context.SaveChangesAsync();
                     await tx1.CommitAsync();
 
@@ -83,13 +83,13 @@ namespace DotNetCoreSqlDb.Services
                     using var tx2 = await _context.Database
                                                     .BeginTransactionAsync(IsolationLevel.Serializable);
 
-                    freeSlot.MeetingId = result.Id;
-                    freeSlot.UUid = result.Uuid;
-                    freeSlot.JoinUrl = result.JoinUrl;
-                    freeSlot.MeetingPassword = result.Passcode;
-                    freeSlot.StartTime = DateTime.UtcNow;           // actual create time
-                    freeSlot.Duration = schedule.Duration;         // from your Schedule
-                    schedule.Status = "Ongoing";
+                        freeSlot.MeetingId = result.Id;
+                        freeSlot.UUid = result.Uuid;
+                        freeSlot.JoinUrl = result.JoinUrl;
+                        freeSlot.MeetingPassword = result.Passcode;
+                        freeSlot.StartTime = DateTime.UtcNow;           // actual create time
+                        freeSlot.Duration = schedule.Duration;         // from your Schedule
+                        schedule.Status = "Ongoing";
 
                     await _context.SaveChangesAsync();
                     await tx2.CommitAsync();
@@ -105,8 +105,8 @@ namespace DotNetCoreSqlDb.Services
                     // if we reserved a slot and something failed, mark it free again
                     if (freeSlot != null)
                     {
-                        freeSlot.IsBusy = false;
-                        freeSlot.ScheduleId = null;
+                            freeSlot.IsBusy = false;
+                            freeSlot.ScheduleId = null;
                         await _context.SaveChangesAsync();
                     }
 
@@ -129,13 +129,14 @@ namespace DotNetCoreSqlDb.Services
 
             var zoomRow = await _context.ZoomMeetings
                 .FirstOrDefaultAsync(z => z.ScheduleId == scheduleId);
-
+            
             if (zoomRow != null)
             {
                 try
                 {
-                    await _zoomApiService.EndMeetingAsync(
-                            zoomRow.ZoomId);
+                    /*await _zoomApiService.EndMeetingAsync(
+                            zoomRow.ZoomId);*/
+                    await _zoomApiService.EndZoomMeetingAsync(zoomRow.MeetingId);
                 }
                 catch (Exception ex)
                 {
@@ -150,19 +151,20 @@ namespace DotNetCoreSqlDb.Services
                     using var tx = await _context.Database
                                                     .BeginTransactionAsync(IsolationLevel.Serializable);
 
-                    zoomRow.IsBusy = false;
-                    zoomRow.ScheduleId = null;
-                    zoomRow.JoinUrl = null;
-                    zoomRow.MeetingId = null;
-                    zoomRow.MeetingPassword = null;
-                    zoomRow.StartTime = null;
-                    zoomRow.Duration = null;
-                    zoomRow.UUid = null;
+                        zoomRow.IsBusy = false;
+                        zoomRow.ScheduleId = null;
+                        zoomRow.JoinUrl = null;
+                        zoomRow.MeetingId = null;
+                        zoomRow.MeetingPassword = null;
+                        zoomRow.StartTime = null;
+                        zoomRow.Duration = null;
+                        zoomRow.UUid = null;
 
                     var schedule = await _context.Schedule
                                         .FirstOrDefaultAsync(s => s.Id == scheduleId);
                     if (schedule != null)
                     {
+                        //_logger.LogInformation("Changed status for schedule with id: {d}", schedule.Id);
                         schedule.Status = "Taken";
                     }
 
@@ -206,8 +208,9 @@ namespace DotNetCoreSqlDb.Services
 
                 try
                 {
-                    await _zoomApiService.EndMeetingAsync(
-                            slot.ZoomId);
+                    /*await _zoomApiService.EndMeetingAsync(
+                            slot.ZoomId);*/
+                    await _zoomApiService.EndZoomMeetingAsync(slot.MeetingId);
                 }
                 catch (Exception ex)
                 {
@@ -222,14 +225,14 @@ namespace DotNetCoreSqlDb.Services
                     using var tx = await _context.Database
                                                  .BeginTransactionAsync(IsolationLevel.Serializable);
 
-                    slot.IsBusy = false;
-                    slot.ScheduleId = null;
-                    slot.JoinUrl = null;
-                    slot.MeetingId = null;
-                    slot.MeetingPassword = null;
-                    slot.StartTime = null;
-                    slot.Duration = null;
-                    slot.UUid = null;
+                        slot.IsBusy = false;
+                        slot.ScheduleId = null;
+                        slot.JoinUrl = null;
+                        slot.MeetingId = null;
+                        slot.MeetingPassword = null;
+                        slot.StartTime = null;
+                        slot.Duration = null;
+                        slot.UUid = null;
 
                     await _context.SaveChangesAsync();
                     await tx.CommitAsync();

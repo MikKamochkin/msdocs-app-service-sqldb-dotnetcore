@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 using TimeZoneConverter;
 using DotNetCoreSqlDb.Hubs;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore.Internal;
+using DotNetCoreSqlDb.Services;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -22,12 +24,14 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly MyDatabaseContext _context;
         private readonly IHubContext<ScheduleHub> _hub;
         private readonly ILogger<TeachersController> _logger;
+        private readonly IUpdateBalanceService _balanceSvc;
 
-        public ScheduleController(MyDatabaseContext context, IHubContext<ScheduleHub> hub, ILogger<TeachersController> logger)
+        public ScheduleController(MyDatabaseContext context, IHubContext<ScheduleHub> hub, ILogger<TeachersController> logger, IUpdateBalanceService balanceSvc)
         {
             _context = context;
             _hub = hub;
             _logger = logger;
+            _balanceSvc = balanceSvc;
         }
 
         // GET: Schedule/Manage
@@ -70,10 +74,25 @@ namespace DotNetCoreSqlDb.Controllers
                 .Select(item => new SelectListItem
                 {
                     Text = item.Text,
-                    Value = item.Value,
-                    Selected = item.Value == "60"
+                    Value = item.Value
                 })
                 .ToList();
+
+            // map each assignment to its StudentUnitDuration
+            var durationMap = await _context.Assignments
+                .Where(a => teacherId.HasValue && a.TeacherId == teacherId)
+                .ToDictionaryAsync(a => a.Id.ToString(), a => a.StudentUnitDuration);
+
+            ViewBag.DurationMapJson = JsonSerializer.Serialize(durationMap);
+
+
+            ViewBag.LessonAccountingType = DropdownOptions.LessonAccountingType
+                .Select(item => new SelectListItem
+                {
+                    Text = item.Text,
+                    Value = item.Value,
+                    Selected = item.Value == "S100T100"
+                });
 
             // 5) Time zones
             var timeZones = TimeZoneMapping.GetTimeZones();
@@ -146,6 +165,8 @@ namespace DotNetCoreSqlDb.Controllers
                 DateTime = r.DateTime.ToUniversalTime().ToString("o"),
                 r.Status,
                 r.Duration,
+                r.Accounted,
+                r.LessonAccountingType,
                 GroupName = r.Assignment!.Group!.Name
             }).ToList();
 
@@ -217,7 +238,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             foreach (var studentId in affectedStudentIds)
             {
-                _logger.LogInformation("Edited student with studentId: " + studentId);
+                //_logger.LogInformation("Edited student with studentId: " + studentId);
                 await _hub.Clients
                     .Group($"student_{studentId}")
                     .SendAsync("ScheduleChanged");
@@ -228,7 +249,7 @@ namespace DotNetCoreSqlDb.Controllers
             //
             // ─── Build “updatedSchedule” JSON for that teacher/date ───
             //
-            // 3.1) Convert `selectedDate` (which is local) → UTC range using your server’s default zone
+            // 3.1) Convert selectedDate (which is local) → UTC range using your server’s default zone
             var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
             var windowsZoneId = TZConvert.IanaToWindows(defaultZoneIana);
             var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
@@ -256,8 +277,8 @@ namespace DotNetCoreSqlDb.Controllers
                 })
                 .ToListAsync();
 
-            _logger.LogInformation("Broadcasting ScheduleChanged to teacher_{TeacherId}, count={Count}", teacherId, updatedSchedule.Count);
-            _logger.LogDebug("Payload: {PayloadJson}", JsonSerializer.Serialize(updatedSchedule));
+            //_logger.LogInformation("Broadcasting ScheduleChanged to teacher_{TeacherId}, count={Count}", teacherId, updatedSchedule.Count);
+            //_logger.LogDebug("Payload: {PayloadJson}", JsonSerializer.Serialize(updatedSchedule));
 
 
             // 3.3) Broadcast to the “teacher_{teacherId}” group:
@@ -274,9 +295,9 @@ namespace DotNetCoreSqlDb.Controllers
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CopyLastWeek(Guid teacherId, DateTime selectedDate)
         {
+            //_logger.LogInformation("copy last week for {a}, teacher: {b}", selectedDate, teacherId);
             var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
             var windowsZoneId = TZConvert.IanaToWindows(defaultZoneIana);
             var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
@@ -296,9 +317,9 @@ namespace DotNetCoreSqlDb.Controllers
                 .ToListAsync();
 
             var newEntries = new List<Schedule>();
-
             foreach (var entry in lastWeekEntries)
             {
+                //_logger.LogInformation("entry: {a}", entry.Id);
                 var newDate = entry.DateTime.AddDays(7);
 
                 var exists = await _context.Schedule.AnyAsync(s =>
@@ -313,14 +334,16 @@ namespace DotNetCoreSqlDb.Controllers
                     Id = Guid.NewGuid(),
                     AssignmentId = entry.AssignmentId,
                     DateTime = newDate,
-                    Status = entry.Status,
-                    Duration = entry.Duration
+                    Status = "Scheduled",
+                    Duration = (int)entry.Assignment!.StudentUnitDuration,
+                    LessonAccountingType = "S100T100",
+                    Accounted = false
                 };
 
                 newEntries.Add(copy);
                 _context.Schedule.Add(copy);
             }
-
+            //_logger.LogInformation("new entries count {}", newEntries.Count);
             if (newEntries.Count > 0)
             {
                 await _context.SaveChangesAsync();
@@ -371,7 +394,193 @@ namespace DotNetCoreSqlDb.Controllers
                 date = selectedDate.ToString("yyyy-MM-dd")
             });
         }
+
+        public class ScheduleDto
+        {
+            public Guid Id { get; set; }
+            public Guid AssignmentId { get; set; }
+            public DateTime DateTime { get; set; }
+            public string Status { get; set; } = "";
+            public int Duration { get; set; }
+            public string LessonAccountingType { get; set; } = "";
+            public bool Accounted { get; set; }
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> SaveEntry([FromBody] ScheduleDto dto)
+        {
+            if (dto == null)
+                return BadRequest("Invalid payload");
+
+            // 1) Pull in the tracked entity (if it exists)
+            var entity = await _context.Schedule
+                .Include(s => s.Assignment)
+                .ThenInclude(a => a.Group)
+                .ThenInclude(g => g.StudentGroupCompositions)
+                .FirstOrDefaultAsync(s => s.Id == dto.Id);
+
+            // 2) If it didn't exist, create + add it
+            if (entity == null)
+            {
+                entity = new Schedule {
+                    Id                 = dto.Id == Guid.Empty ? Guid.NewGuid() : dto.Id,
+                    AssignmentId       = dto.AssignmentId,
+                    DateTime           = dto.DateTime,
+                    Status             = dto.Status,
+                    Duration           = dto.Duration,
+                    LessonAccountingType = dto.LessonAccountingType,
+                    Accounted          = false
+                };
+                _context.Schedule.Add(entity);
+            }
+            else
+            {
+                // 3) If it *did* exist, do your "undo" logic first
+                await ProcessAccountingTypeChange(
+                    entity.LessonAccountingType,
+                    dto.LessonAccountingType,
+                    entity.Status,
+                    dto.Status,
+                    entity);
+            }
+
+            // 4) Update the entity's properties
+            entity.AssignmentId       = dto.AssignmentId;
+            entity.DateTime           = dto.DateTime;
+            entity.Status             = dto.Status;
+            entity.Duration           = dto.Duration;
+            entity.LessonAccountingType = dto.LessonAccountingType;
+            //entity.Accounted          = dto.Accounted;
+
+            // 5) Save and then do any "new" logic
+            await _context.SaveChangesAsync();
+            await ProcessNewAccountingType(entity.LessonAccountingType, entity);
+
+            // Get the teacher ID from the assignment
+            var teacherId = await _context.Assignments
+                .Where(a => a.Id == entity.AssignmentId)
+                .Select(a => a.TeacherId)
+                .FirstOrDefaultAsync();
+
+            // Get all student IDs in the group
+            var studentIds = await _context.Assignments
+                .Where(a => a.Id == entity.AssignmentId)
+                .SelectMany(a => a.Group.StudentGroupCompositions)
+                .Select(sgc => sgc.StudentId)
+                .ToListAsync();
+
+            // Broadcast to all affected students
+            foreach (var studentId in studentIds)
+            {
+                await _hub.Clients
+                    .Group($"student_{studentId}")
+                    .SendAsync("ScheduleChanged");
+            }
+
+            // Broadcast to the teacher
+            if (teacherId != Guid.Empty)
+            {
+                await _hub.Clients
+                    .Group($"teacher_{teacherId}")
+                    .SendAsync("ScheduleChanged");
+            }
+
+            //_logger.LogInformation("----------------------------------------------------");
+
+            return Json(new {
+                entity.Id,
+                entity.AssignmentId,
+                DateTime = entity.DateTime.ToUniversalTime().ToString("o"),
+                entity.Status,
+                entity.Duration,
+                entity.LessonAccountingType
+            });
+        }
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteEntry([FromBody] Guid id)
+        {
+            // Load the entity with related data before deleting
+            var entity = await _context.Schedule
+                .Include(s => s.Assignment)
+                    .ThenInclude(a => a.Group)
+                        .ThenInclude(g => g.StudentGroupCompositions)
+                .Include(s => s.Assignment)
+                    .ThenInclude(a => a.Teacher)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (entity != null)
+            {
+                // Get teacher and student IDs before deleting
+                var teacherId = entity.Assignment?.TeacherId ?? Guid.Empty;
+                var studentIds = entity.Assignment?.Group?.StudentGroupCompositions?
+                    .Select(sgc => sgc.StudentId)
+                    .ToList() ?? new List<Guid>();
+
+                _context.Schedule.Remove(entity);
+                await _context.SaveChangesAsync();
+
+                // Broadcast to all affected students
+                foreach (var studentId in studentIds)
+                {
+                    await _hub.Clients
+                        .Group($"student_{studentId}")
+                        .SendAsync("ScheduleChanged");
+                }
+
+                // Broadcast to the teacher if available
+                if (teacherId != Guid.Empty)
+                {
+                    // Get updated schedule for the teacher
+                    var updatedSchedule = await _context.Schedule
+                        .Include(s => s.Assignment!).ThenInclude(a => a.Teacher)
+                        .Where(s => s.Assignment!.TeacherId == teacherId)
+                        .OrderByDescending(s => s.DateTime)
+                        .Take(15)
+                        .Select(r => new
+                        {
+                            r.Id,
+                            r.AssignmentId,
+                            DateTime = r.DateTime.ToUniversalTime().ToString("o"),
+                            r.Status,
+                            r.Duration,
+                            TeacherId = r.Assignment!.Teacher!.Id,
+                            TeacherName = r.Assignment!.Teacher!.Name
+                        })
+                        .ToListAsync();
+
+                    await _hub.Clients
+                        .Group($"teacher_{teacherId}")
+                        .SendAsync("ScheduleChanged", updatedSchedule);
+                }
+            }
+            return Ok();
+        }
         
-        
+        private async Task ProcessAccountingTypeChange(string oldAccountingType, string newAccountingType, string oldStatus, string newStatus, Schedule schedule)
+        {
+            //_logger.LogInformation("In ProcessAccountingTypeChange method");
+            if ((oldAccountingType != newAccountingType && schedule.Accounted) ||
+                (oldStatus == "Cancelled" && oldStatus != newStatus && schedule.Accounted))
+            {
+                _logger.LogInformation("In UNDO If statement--------");
+                await _balanceSvc.UndoTransactionAsync(HttpContext.RequestAborted, schedule.Id, oldAccountingType);
+                //await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, schedule.Id);
+            }
+        }
+
+        private async Task ProcessNewAccountingType(string newValue, Schedule schedule)
+        {
+            //_logger.LogInformation("In ProcessNewAccountingType method");
+            //_logger.LogInformation("in process new, accounted: {1}", schedule.Accounted);
+            if (schedule.Accounted || (schedule.Status == "Cancelled" && schedule.Accounted == false))
+            {
+                //_logger.LogInformation("In ProcessNewAccountingType If statement-----");
+                await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, schedule.Id);
+            } 
+        }
     }
 }

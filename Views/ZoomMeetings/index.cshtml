@@ -4,72 +4,66 @@
     var items = (ViewBag.ZoomRows as IEnumerable<dynamic>) ?? Enumerable.Empty<dynamic>();
     var isFree = true;
 }
-
-<div>Api calls remaining: @ViewBag.RateLimitRemaining</div>
-
-<div class="zoom-lessons">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Participants</th>
-                <th>Join URL</th>
-                <th>MeetingId</th>
-                <th>MeetingPassword</th>
-                <th>IsFree</th>
-                <th>StartTime</th>
-                <th>Duration</th>
-                <th>ScheduleId</th>
-                <th>Group Name</th>
-                <th>Id</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in items)
-            {
-                string rowClass = item.IsBusy ? "busy-row" : "free-row";
-                isFree = !item.IsBusy;
-                <tr class="@rowClass">
-                    <td>@item.Email</td>
-                    <td>
-                        @if (((IReadOnlyList<ZoomParticipant>)item.Participants).Any())
-                        {
-                            <ul class="list-unstyled mb-0">
-                                @foreach (var p in (IReadOnlyList<ZoomParticipant>)item.Participants)
-                                {
-                                    <li>
-                                        Name: @p.UserName Joined at
-                                        @DateTime.Parse(p.JoinTime).ToLocalTime().ToString("HH:mm:ss")
-                                    </li>
-                                }
-                            </ul>
-                        }
-                        else
-                        {
-                            <span>No participants</span>
-                        }
-                    </td>
-                    <td>@item.JoinUrl</td>
-                    <td>@item.MeetingId</td>
-                    <td>@item.MeetingPassword</td>
-                    <td>@isFree</td>
-                    <td>@item.StartTime</td>
-                    <td>@item.Duration</td>
-                    <td>@item.ScheduleId</td>
-                    <td>@item.GroupName</td>
-                    <td>@item.Id</td>
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+        
+        <div class="col-md-10">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Participants</th>
+                    <th>Join URL</th>
+                    <th>MeetingId</th>
+                    <th>MeetingPassword</th>
+                    <th>IsFree</th>
+                    <th>StartTime</th>
+                    <th>Duration</th>
+                    <th>ScheduleId</th>
+                    <th>Group Name</th>
+                    <th>Id</th>
                 </tr>
-            }
-            @*<style>
-                .zoom-lessons .free-row {
-                    background-color: #e6ffe6; /* Light green */
+            </thead>
+            <tbody>
+                @foreach (var item in items)
+                {
+                    string rowClass = item.IsBusy ? "busy-row" : "free-row";
+                    isFree = !item.IsBusy;
+                    <tr class="@rowClass">
+                        <td>@item.Email</td>
+                        <td>
+                            @if (((IReadOnlyList<ZoomParticipant>)item.Participants).Any())
+                            {
+                                <ul class="list-unstyled mb-0">
+                                    @foreach (var p in (IReadOnlyList<ZoomParticipant>)item.Participants)
+                                    {
+                                        <li>
+                                            Name: @p.UserName Joined at
+                                            @DateTime.Parse(p.JoinTime).ToLocalTime().ToString("HH:mm:ss")
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <span>No participants</span>
+                            }
+                        </td>
+                        <td>@item.JoinUrl</td>
+                        <td>@item.MeetingId</td>
+                        <td>@item.MeetingPassword</td>
+                        <td>@isFree</td>
+                        <td>@item.StartTime</td>
+                        <td>@item.Duration</td>
+                        <td>@item.ScheduleId</td>
+                        <td>@item.GroupName</td>
+                        <td>@item.Id</td>
+                    </tr>
                 }
-
-                .zoom-lessons .busy-row {
-                    background-color: #ff7f7f; /* Light red */
-                }
-            </style>*@
-
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
+    }
 </div>

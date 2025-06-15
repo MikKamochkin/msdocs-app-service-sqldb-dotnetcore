@@ -6,13 +6,13 @@
 
 <div class="row no-gutters">
     @* ——————— Sidebar Column ——————— *@
-    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
     {
         <partial name="_AdminSidebar" />
     }
 
     @* ——————— Main Content Column ——————— *@
-    <div class="@(User.IsInRole("admin") || User.IsInRole("support") ? "col-md-9" : "col-12")">
+    <div class="@(User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant") ? "col-md-9" : "col-12")">
         <h2>Groups List</h2>
 
         <p>
@@ -65,12 +65,8 @@
                             }
 
                             <!-- Deactivate & Copy -->
-                            @using (Html.BeginForm("DeactivateAndCopy", "Groups", FormMethod.Post, new { @class="d-inline ml-1" }))
-                            {
-                                @Html.AntiForgeryToken()
-                                @Html.Hidden("id", group.Id)
-                                <button type="submit" class="btn btn-sm btn-info">Edit</button>
-                            }
+                                <a href="@Url.Action("DeactivateAndCopy", "Groups", new { id = group.Id })" 
+                                class="btn btn-sm btn-info ml-1">Edit</a>
 
                             <!-- Copy Emails -->
                             @{

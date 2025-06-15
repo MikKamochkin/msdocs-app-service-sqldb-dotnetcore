@@ -12,7 +12,7 @@ namespace DotNetCoreSqlDb.Models
         [ForeignKey("Assignment")]
         public Guid AssignmentId { get; set; }
         public Assignments? Assignment { get; set; }
-        
+
         [DisplayName("DateTime")]
         [Required]
         public required DateTime DateTime { get; set; }
@@ -24,5 +24,13 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Duration")]
         [Required]
         public required int Duration { get; set; }
+
+        [DisplayName("Accounted")]
+        [Required]
+        public required bool Accounted { get; set; } = false;
+
+        [DisplayName("LessonAccountingType")]
+        [Required]
+        public required string LessonAccountingType { get; set; } = "S100T100";
     }
 }

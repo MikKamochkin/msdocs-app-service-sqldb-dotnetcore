@@ -79,6 +79,7 @@ builder.Services.AddHttpClient("Wassenger", client =>
 builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
 builder.Services.AddScoped<IZoomApiService, ZoomApiService>();
 builder.Services.AddScoped<IZoomMeetingService, ZoomMeetingService>();
+builder.Services.AddScoped<IUpdateBalanceService, UpdateBalanceService>();
 
 builder.Services.AddHostedService<TimedHostedService>();
 

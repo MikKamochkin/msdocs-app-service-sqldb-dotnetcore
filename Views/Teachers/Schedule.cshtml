@@ -24,140 +24,85 @@
 		/* ---------- PAGE BACKGROUND ---------- */
 		body {
 			font-family: Helvetica, sans-serif;
-			/*background: linear-gradient(to bottom right, #b2e7ff, #ffffff);*/
 			background: #e8ecfc;
 			min-height: 100vh;
 		}
 
-		/* ---------- HEADER / NAV ---------- */
 		header {
-			position: relative;
-			left: 50%;
-			width: 100vw;
-			/* full viewport width */
-			margin-left: -50vw;
-			/* pull it back so it’s centered */
-
-			/* (your existing styles) */
-			background: #6981ec;
-			color: #fff;
-			padding: 10px 0;
-			min-height: 60px;
+			background-color: #6981ec;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 60px;
+			z-index: 1000;
 		}
 
 		.header-container {
-			max-width: 1250px;
+			width: 100%;
+			max-width: 1200px;
 			margin: 0 auto;
-			overflow: hidden;
+			padding: 0 20px;
+			height: 100%;
+			position: relative; /* Needed for absolute positioning of children */
 		}
 
 		#logo {
-			float: left;
-			font-size: 1.5em;
-			color: #fff;
-			padding-top: 5px;
-		}
-
-		nav {
 			position: absolute;
-			left: 25vw;
+			left: 12%;
 			top: 50%;
-			transform: translateY(-50%);
+			transform: translate(-50%, -50%);
+			font-size: 1.5rem;
+			/*font-weight: 700;*/
+			color: #fff; /* Changed to white to match your original */
 		}
 
-		.nav-links {
-			list-style: none;
-			margin: 0;
-			padding: 0;
-		}
-
-		.nav-links li {
-			display: inline-block;
-			margin-left: 20px;
-		}
-
-		.nav-links li a {
-			color: #000;
-			text-decoration: none;
-			padding: 10px 15px;
-			display: inline-block;
+		nav { position: absolute; left: 20%; top: 50%; transform: translateY(-50%); }
+			.nav-links   { list-style: none; margin: 0; padding: 0; }
+			.nav-links li{ display: inline-block; margin-left: 20px; }
+			.nav-links li a{
+			color: #000; text-decoration: none; padding: 10px 15px; display: inline-block;
 			transition: background-color .3s;
-		}
-
-		.nav-links li a:hover {
-			background: #ced6ff;
-			scale: 110%;
-			border-radius: 10%;
-		}
-
-		.nav-links li a.active-page,
-		.nav-links li a.inactive-page {
-			background: #fff;
-			border-radius: 10%;
-		}
+			}
+			.nav-links li a:hover        { background-color: #ced6ff; scale: 110%; border-radius: 10%; }
+			.nav-links li a.active-page,
+			.nav-links li a.inactive-page{ background-color: #fff; border-radius: 10%; }
 
 		.burger {
 			display: none;
 			cursor: pointer;
-			margin-left: 15px;
 		}
 
-		.burger div {
-			width: 25px;
-			height: 3px;
-			background: #fff;
-			margin: 5px;
-			transition: .3s;
-		}
-
-		/* ---------- MOBILE NAV ---------- */
-		/*@@media(max-width:768px) {
-			nav {
-				position: relative;
-				left: 0;
-				top: 0;
-				transform: none;
-				margin-top: 10px;
+		/* Responsive adjustments */
+		@@media (max-width: 768px) {
+			#logo {
+				left: 20px;
+				transform: translateY(-50%);
+				position: static;
 			}
-
+			
+			nav {
+				left: 0;
+				right: 0;
+				padding-right: 20px;
+			}
+			
 			.nav-links {
 				display: none;
-				width: 100%;
-				text-align: center;
-				position: absolute;
-				background: #333;
-				top: 60px;
-				left: 0;
-				z-index: 1;
 			}
-
-			.nav-links.active {
-				display: block;
-			}
-
-			.nav-links li {
-				display: block;
-				margin: 10px 0;
-			}
-
+			
 			.burger {
 				display: block;
-				float: right;
-				margin-top: 15px;
 			}
-
-			.burger.active .line1 {
-				transform: rotate(45deg) translate(-5px, 6px);
+			
+			.burger div {
+				width: 25px;
+				height: 3px;
+				background-color: #fff;
+				margin: 5px;
 			}
-
-			.burger.active .line2 {
-				opacity: 0;
-			}
-
-			.burger.active .line3 {
-				transform: rotate(-45deg) translate(-5px, -6px);
-			}
-		}*/
+		}
 
 		/* ---------- MAIN WRAPPER ---------- */
 		.content-wrapper {
@@ -243,7 +188,7 @@
 		}
 
 		/* ---------- MOBILE TABLE ---------- */
-		@@media(max-width:600px) {
+		/*@@media(max-width:600px) {
 			#entriesTable thead {
 				display: none;
 			}
@@ -265,7 +210,7 @@
 				font-weight: 600;
 				color: #666;
 			}
-		}
+		}*/
 	</style>
 </head>
 <!-- NAV -->
@@ -479,9 +424,14 @@
 						else if (diffMin < windowEnd)           // too late (>15 min after end)
 							actionHtml = '';
 						else {
-							actionHtml = buildBtn('enabled', row.Id, row.Status);
-						}                                    // within join-window
-
+							if (row.Status == "Scheduled" || row.Status == "Ongoing")
+							{
+								actionHtml = buildBtn('enabled', row.Id, row.Status);
+							}
+							else {
+								actionHtml = '';
+							}
+						}                                   
 					}
 
 					tbody.append(`
@@ -536,7 +486,7 @@
 					<button
 						class="btn btn-danger btn-md ml-2 end-lesson-btn ${endBtnStatus}"
 						data-id="${id}"
-						onclick="pingEndLesson('${id}')"
+						onclick="pingEndLesson('${id}'), refreshRows();"
 						<strong>End Lesson</strong>
 					</button>	
 					<a
@@ -612,6 +562,8 @@
 
 			// 2) Open Zoom in a new tab (will follow the server’s redirect → joinUrl)
 			window.open(url, '_blank');
+
+			setTimeout(refreshRows, 1000);
 
 			// 3) Swap this into a “Join Lesson” button
 			$btn

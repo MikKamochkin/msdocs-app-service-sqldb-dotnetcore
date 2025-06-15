@@ -16,7 +16,7 @@ using System.Data;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "support")]
+    [Authorize(Roles = "support, assistant")]
     public class GroupsController : Controller
     {
         private readonly MyDatabaseContext _context;
@@ -31,17 +31,37 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: Groups
         public async Task<IActionResult> Index()
         {
-            var groups = await _context.Group
-                .Where(g => g.StudentGroupCompositions.Count > 1)
-                .Where (g => g.IsActive == true)
-                .Include(g => g.StudentGroupCompositions)
-                .ThenInclude(sgc => sgc.Student)
-                .ThenInclude(s => s.Contacts)
-                .ToListAsync();
-            return View(groups);
+            if (User.IsInRole("support") || User.IsInRole("admin"))
+            {
+                var groups = await _context.Group
+                    .Where(g => g.StudentGroupCompositions.Count > 1)
+                    .Where(g => g.IsActive == true)
+                    .Include(g => g.StudentGroupCompositions)
+                    .ThenInclude(sgc => sgc.Student)
+                    .ThenInclude(s => s.Contacts)
+                    .ToListAsync();
+                return View(groups);
+            }
+            else if (User.IsInRole("assistant"))
+            {
+                var groups = await _context.Group
+                    .Where(g => g.IsActive)
+                    .Where(g => g.StudentGroupCompositions.Count > 1)
+                    .Where(g => g.StudentGroupCompositions.All(sgc => sgc.Student.AccountingGroup == "S"))
+                    .Include(g => g.StudentGroupCompositions)
+                        .ThenInclude(sgc => sgc.Student)
+                            .ThenInclude(s => s.Contacts)
+                    .ToListAsync();
+
+                return View(groups);
+            }
+            else
+            {
+                return Forbid();
+            }
         }
 
-        // GET: Groups/Details/5
+        /*// GET: Groups/Details/5
         public async Task<IActionResult> Details(Guid? id)
         {
             if (id == null)
@@ -53,13 +73,14 @@ namespace DotNetCoreSqlDb.Controllers
                 .Include(g => g.StudentGroupCompositions)
                 .ThenInclude(sgc => sgc.Student)
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (group == null)
             {
                 return NotFound();
             }
 
             return View(group);
-        }
+        }*/
 
         // GET: Groups/Create
         public async Task<IActionResult> Create(Guid? copyFromGroupId = null)
@@ -67,14 +88,33 @@ namespace DotNetCoreSqlDb.Controllers
             // 1) Populate the Students dropdown for the modal
             try
             {
-                var allStudents = await _context.Student
+                if (User.IsInRole("admin") || User.IsInRole("support"))
+                {
+                    var allStudents = await _context.Student
                     .OrderBy(s => s.Name)
                     .ToListAsync();
 
-                if (allStudents.Any())
-                    ViewBag.Students = new SelectList(allStudents, "ID", "Name");
+                    if (allStudents.Any())
+                        ViewBag.Students = new SelectList(allStudents, "ID", "Name");
+                    else
+                        ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
+                }
+                else if (User.IsInRole("assistant"))
+                {
+                    var filteredStudents = await _context.Student
+                        .Where(s => s.AccountingGroup == "S")
+                        .OrderBy(s => s.Name)
+                        .ToListAsync();
+
+                    if (filteredStudents.Any())
+                        ViewBag.Students = new SelectList(filteredStudents, "ID", "Name");
+                    else
+                        ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
+                }
                 else
-                    ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
+                {
+                    return Forbid();
+                }
             }
             catch (Exception ex)
             {
@@ -223,14 +263,37 @@ namespace DotNetCoreSqlDb.Controllers
             if (group == null) return NotFound();
 
             // populate dropdown
-            var students = await _context.Student
+            if (User.IsInRole("admin") || User.IsInRole("support"))
+            {
+                var allStudents = await _context.Student
                 .OrderBy(s => s.Name)
                 .ToListAsync();
-            ViewBag.Students = new SelectList(students, "ID", "Name");
+
+                if (allStudents.Any())
+                    ViewBag.Students = new SelectList(allStudents, "ID", "Name");
+                else
+                    ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
+            }
+            else if (User.IsInRole("assistant"))
+            {
+                var filteredStudents = await _context.Student
+                    .Where(s => s.AccountingGroup == "S")
+                    .OrderBy(s => s.Name)
+                    .ToListAsync();
+
+                if (filteredStudents.Any())
+                    ViewBag.Students = new SelectList(filteredStudents, "ID", "Name");
+                else
+                    ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
+            }
+            else
+            {
+                return Forbid();
+            }
 
             return View(group);
         }
-
+        
         // POST: Groups/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -283,51 +346,6 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.Students = new SelectList(studentsList, "ID", "Name");
             return View(group);
         }
-        /*
-
-        // GET: Groups/Delete/5
-        public async Task<IActionResult> Delete(Guid? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var group = await _context.Group
-                .Include(g => g.StudentGroupCompositions)
-                .ThenInclude(sgc => sgc.Student)
-                .FirstOrDefaultAsync(m => m.Id == id);
-                
-            if (group == null)
-            {
-                return NotFound();
-            }
-
-            return View(group);
-        }
-
-        // POST: Groups/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(Guid id)
-        {
-            var group = await _context.Group
-                .Include(g => g.StudentGroupCompositions)
-                .FirstOrDefaultAsync(m => m.Id == id);
-                
-            if (group != null)
-            {
-                // Remove all student compositions first
-                _context.StudentGroupComposition.RemoveRange(group.StudentGroupCompositions);
-                
-                // Then remove the group
-                _context.Group.Remove(group);
-                await _context.SaveChangesAsync();
-            }
-            
-            return RedirectToAction(nameof(Index));
-        }
-        */
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -355,8 +373,8 @@ namespace DotNetCoreSqlDb.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        // GET: Groups/DeactivateAndCopy/5
+        [HttpGet]
         public async Task<IActionResult> DeactivateAndCopy(Guid id)
         {
             var g = await _context.Group
@@ -364,46 +382,151 @@ namespace DotNetCoreSqlDb.Controllers
                     .ThenInclude(sgc => sgc.Student)
                 .FirstOrDefaultAsync(gp => gp.Id == id);
 
-            if (g != null)
+            if (g == null)
             {
-                g.IsActive = false;
-
-                var assignments = await _context.Assignments
-                    .Where(a => a.GroupId == id && a.IsActive)
-                    .ToListAsync();
-
-                _logger.LogInformation($"DeactivateAndCopy: found {assignments.Count} active assignments for Group {id}");
-
-                foreach (var a in assignments)
-                    a.IsActive = false;
-
-                await _context.SaveChangesAsync();
-
-                // now set up the copy
-                var newGroup = new Group
-                {
-                    Name     = g.Name,
-                    IsActive = true
-                };
-
-                ViewBag.CopyStudents = g.StudentGroupCompositions
-                    .Select(sgc => new {
-                        id            = sgc.StudentId,
-                        name          = sgc.Student.Name,
-                        useMyBalance  = sgc.UseMyBalance
-                    })
-                    .ToList();
-
-                var students = await _context.Student.OrderBy(s => s.Name).ToListAsync();
-                ViewBag.Students = new SelectList(students, "ID", "Name");
-
-                return View("Create", newGroup);
+                return NotFound();
             }
 
-            return RedirectToAction(nameof(Index));
+            // Prepare the new group with copied data
+            var newGroup = new Group
+            {
+                Name = g.Name,
+                IsActive = true
+            };
+
+            ViewBag.CopyStudents = g.StudentGroupCompositions
+                .Select(sgc => new
+                {
+                    id = sgc.StudentId,
+                    name = sgc.Student.Name,
+                    useMyBalance = sgc.UseMyBalance
+                })
+                .ToList();
+
+            // Set flag to indicate this is a copy operation
+            ViewData["IsCopyAction"] = true;
+            ViewData["OriginalGroupId"] = id;
+
+            // Populate students dropdown based on role
+            if (User.IsInRole("admin") || User.IsInRole("support"))
+            {
+                var allStudents = await _context.Student
+                    .OrderBy(s => s.Name)
+                    .ToListAsync();
+
+                ViewBag.Students = allStudents.Any()
+                    ? new SelectList(allStudents, "ID", "Name")
+                    : new SelectList(new List<Student>(), "ID", "Name");
+            }
+            else if (User.IsInRole("assistant"))
+            {
+                var filteredStudents = await _context.Student
+                    .Where(s => s.AccountingGroup == "S")
+                    .OrderBy(s => s.Name)
+                    .ToListAsync();
+
+                ViewBag.Students = filteredStudents.Any()
+                    ? new SelectList(filteredStudents, "ID", "Name")
+                    : new SelectList(new List<Student>(), "ID", "Name");
+            }
+            else
+            {
+                return Forbid();
+            }
+
+            return View("Create", newGroup);
         }
 
+        // POST: Groups/DeactivateAndCopy/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeactivateAndCopy(Guid id, [Bind("Name")] Group newGroup)
+        {
+            // First create the new group (similar to Create POST)
+            if (ModelState.IsValid)
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // 1) Create the new group
+                    newGroup.Id = Guid.NewGuid();
+                    newGroup.IsActive = true;
+                    _context.Add(newGroup);
+                    await _context.SaveChangesAsync();
 
+                    // 2) Deactivate the original group
+                    var originalGroup = await _context.Group.FindAsync(id);
+                    if (originalGroup != null)
+                    {
+                        originalGroup.IsActive = false;
+
+                        // Deactivate its assignments
+                        var assignments = await _context.Assignments
+                            .Where(a => a.GroupId == id && a.IsActive)
+                            .ToListAsync();
+
+                        foreach (var a in assignments)
+                            a.IsActive = false;
+                    }
+
+                    // 3) Add the student compositions
+                    var studentIds = Request.Form["StudentIds"].ToString().Split(',');
+                    var useMyBalanceValues = Request.Form["UseMyBalanceValues"].ToString().Split(',');
+
+                    for (int i = 0; i < studentIds.Length; i++)
+                    {
+                        if (Guid.TryParse(studentIds[i], out Guid studentId))
+                        {
+                            bool useMyBalance = i < useMyBalanceValues.Length 
+                                && useMyBalanceValues[i].ToLower() == "true";
+
+                            _context.StudentGroupComposition.Add(new StudentGroupComposition
+                            {
+                                Id = Guid.NewGuid(),
+                                GroupId = newGroup.Id,
+                                StudentId = studentId,
+                                UseMyBalance = useMyBalance
+                            });
+                        }
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error in DeactivateAndCopy POST action");
+                    ModelState.AddModelError("", "An error occurred while creating the group copy. Please try again.");
+                }
+            }
+
+            // If we get here, something failed - reload necessary data
+            try
+            {
+                if (User.IsInRole("admin") || User.IsInRole("support"))
+                {
+                    var allStudents = await _context.Student.OrderBy(s => s.Name).ToListAsync();
+                    ViewBag.Students = new SelectList(allStudents, "ID", "Name");
+                }
+                else if (User.IsInRole("assistant"))
+                {
+                    var filteredStudents = await _context.Student
+                        .Where(s => s.AccountingGroup == "S")
+                        .OrderBy(s => s.Name)
+                        .ToListAsync();
+                    ViewBag.Students = new SelectList(filteredStudents, "ID", "Name");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading students in DeactivateAndCopy POST action");
+                ViewBag.Students = new SelectList(new List<Student>(), "ID", "Name");
+            }
+
+            return View("Create", newGroup);
+        }
 
         private bool GroupExists(Guid id)
         {

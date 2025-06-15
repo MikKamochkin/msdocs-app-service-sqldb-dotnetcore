@@ -21,14 +21,15 @@ namespace DotNetCoreSqlDb.Controllers
     {
         private readonly MyDatabaseContext _context;
         private readonly ILogger<TeachersController> _logger;
+        private readonly IZoomMeetingService _zoomSvc;
+        private readonly IUpdateBalanceService _balanceSvc;
 
-        private readonly IZoomMeetingService _svc;
-
-        public TeachersController(MyDatabaseContext context, ILogger<TeachersController> logger, IZoomMeetingService svc)
+        public TeachersController(MyDatabaseContext context, ILogger<TeachersController> logger, IZoomMeetingService zoomSvc, IUpdateBalanceService balanceSvc)
         {
             _context = context;
             _logger = logger;
-            _svc = svc;
+            _zoomSvc = zoomSvc;
+            _balanceSvc = balanceSvc;
         }
 
         // GET: Teacher/Index
@@ -249,7 +250,7 @@ namespace DotNetCoreSqlDb.Controllers
                 var prevSchedId = previousLesson.ScheduleId
                     ?? throw new InvalidOperationException("ZoomMeeting.ScheduleId was null");
 
-                await _svc.EndMeetingsAsync(prevSchedId);
+                await _zoomSvc.EndMeetingsAsync(prevSchedId);
             }
             else
             {
@@ -260,11 +261,24 @@ namespace DotNetCoreSqlDb.Controllers
 
             // 3) now start the new meeting    
             _logger.LogInformation("Called StartLesson for schedule {ScheduleId}", id);
-            await _svc.AssignMeetingsAsync(id);
+            await _zoomSvc.AssignMeetingsAsync(id);
 
+            var sched = await _context.Schedule
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            //If a schedule was marked as cancelled with pay before lesson starts with StudentCharge = 0, accounted set to true
+            //Then, we "uncancel" this lesson, set it back to scheduled, and set StudentCharge = 100, accounted is still true
+            //We don't want to charge them again when we start this lesson
+            //Otherwise, all scheduled lessons will have accounted == false
+            if (sched != null && sched.Accounted == false)
+            {
+                await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, id);
+            }
+                
             var lesson = await _context.ZoomMeetings
                 .FirstOrDefaultAsync(z => z.ScheduleId == id);
             if (lesson == null)
+                //TODO: Add error handling here
                 return NotFound();
 
             return Redirect(lesson.JoinUrl);
@@ -277,7 +291,7 @@ namespace DotNetCoreSqlDb.Controllers
         {
             _logger.LogInformation("Called end lesson with id: {id}", id);
 
-            await _svc.EndMeetingsAsync(id);
+            await _zoomSvc.EndMeetingsAsync(id);
 
             return Ok(new { message = "EndLesson triggered" }); // returns HTTP 200
         }

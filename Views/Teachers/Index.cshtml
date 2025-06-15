@@ -23,34 +23,46 @@
     }
 
     /* ---------- HEADER / NAV ---------- */
-		header {
-			position: relative;
-			left: 50%;
-			width: 100vw;
-			/* full viewport width */
-			margin-left: -50vw;
-			/* pull it back so it’s centered */
-
-			/* (your existing styles) */
-			background: #6981ec;
-			color: #fff;
-			padding: 10px 0;
-			min-height: 60px;
+				header {
+			background-color: #6981ec;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 60px;
+			z-index: 1000;
 		}
-    .header-container { max-width: 1250px; margin: 0 auto; overflow: hidden; }
-    #logo { float: left; font-size: 1.5em; color: #ffffff; padding-top: 5px; }
 
-    /* desktop nav fixed 40 % from viewport left */
-    nav { position: absolute; left: 25vw; top: 50%; transform: translateY(-50%); }
-    .nav-links   { list-style: none; margin: 0; padding: 0; }
-    .nav-links li{ display: inline-block; margin-left: 20px; }
-    .nav-links li a{
-      color: #000; text-decoration: none; padding: 10px 15px; display: inline-block;
-      transition: background-color .3s;
-    }
-    .nav-links li a:hover        { background-color: #ced6ff; scale: 110%; border-radius: 10%; }
-    .nav-links li a.active-page,
-    .nav-links li a.inactive-page{ background-color: #fff; border-radius: 10%; }
+		.header-container {
+			width: 100%;
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 0 20px;
+			height: 100%;
+			position: relative; /* Needed for absolute positioning of children */
+		}
+
+		#logo {
+			position: absolute;
+			left: 12%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+			font-size: 1.5rem;
+			/*font-weight: 700;*/
+			color: #fff; /* Changed to white to match your original */
+		}
+
+		nav { position: absolute; left: 20%; top: 50%; transform: translateY(-50%); }
+			.nav-links   { list-style: none; margin: 0; padding: 0; }
+			.nav-links li{ display: inline-block; margin-left: 20px; }
+			.nav-links li a{
+			color: #000; text-decoration: none; padding: 10px 15px; display: inline-block;
+			transition: background-color .3s;
+			}
+			.nav-links li a:hover        { background-color: #ced6ff; scale: 110%; border-radius: 10%; }
+			.nav-links li a.active-page,
+			.nav-links li a.inactive-page{ background-color: #fff; border-radius: 10%; }
 
     /* burger (desktop hidden) */
     .burger{ display:none; cursor:pointer; margin-left:15px; }

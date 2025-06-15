@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using DotNetCoreSqlDb.Services;   // IZoomMeetingService
+using DotNetCoreSqlDb.Services;
 
 /// <summary>
 /// Runs every 5-minute block **one minute before** the block boundary,
@@ -40,10 +40,10 @@ public sealed class TimedHostedService : BackgroundService
                 TimeSpan delay = GetDelayUntilNextRun(DateTime.Now);
                 if (delay < TimeSpan.Zero)
                 {
-                    _logger.LogWarning("Calculated negative delay {Delay}, clamping to zero", delay);
+                    //_logger.LogWarning("Calculated negative delay {Delay}, clamping to zero", delay);
                     delay = TimeSpan.Zero;
                 }
-                _logger.LogInformation("Waiting {Delay} until next run. Fired at {now} v1", delay, DateTime.Now);
+                //_logger.LogInformation("Waiting {Delay} until next run. Fired at {now} v1", delay, DateTime.Now);
                 await Task.Delay(delay, stoppingToken);
                 //_logger.LogInformation("Waiting {Delay} until next run. Fired at {now} v2", delay, DateTime.Now);
 
@@ -59,7 +59,7 @@ public sealed class TimedHostedService : BackgroundService
         }
         finally
         {
-            _logger.LogInformation("TimedHostedService stopping");
+            //_logger.LogInformation("TimedHostedService stopping");
         }
     }
 
@@ -68,21 +68,36 @@ public sealed class TimedHostedService : BackgroundService
     // ------------------------------------------------------------------
     private async Task DoWorkAsync(CancellationToken ct)
     {
-        _logger.LogInformation("Zoom slot service fired at {UtcNow}", DateTime.UtcNow);
+       // _logger.LogInformation("Zoom slot service fired at {UtcNow}", DateTime.UtcNow);
 
         try
         {
             // Create a DI scope so scoped services (e.g. DbContext) work.
-            using var scope   = _scopeFactory.CreateScope();
-            var zoomSvc       = scope.ServiceProvider.GetRequiredService<IZoomMeetingService>();
-
-            //await zoomSvc.AssignMeetingsAsyncFromTimer();
+            using var scope = _scopeFactory.CreateScope();
+            var zoomSvc = scope.ServiceProvider.GetRequiredService<IZoomMeetingService>();
             await zoomSvc.CleanupMeetingsAsync();
+            
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error running ZoomMeetingService in background");
+            //_logger.LogError(ex, "Error running ZoomMeetingService in background");
         }
+        /*try
+        {
+            // Create a DI scope so scoped services (e.g. DbContext) work.
+            using var scope = _scopeFactory.CreateScope();
+            var balanceSvc = scope.ServiceProvider.GetRequiredService<IUpdateBalanceService>();
+            await balanceSvc.UpdateStudentBalanceAsync(ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogInformation("UpdateStudentBalanceAsync was canceled.");
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error running UpdateBalanceService in background");
+        }*/
     }
 
     // ------------------------------------------------------------------

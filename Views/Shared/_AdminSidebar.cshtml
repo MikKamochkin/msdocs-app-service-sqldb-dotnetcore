@@ -29,20 +29,22 @@
         </a>
 
         @* Manage Groups *@
-        @{
+        @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
+        {
             var cssGroups = btnClass("Groups", "Index");
+            <a href="@Url.Action("Index", "Groups")" class="@cssGroups" title="Manage Groups">
+                <i class="fas fa-users"></i>
+            </a>
         }
-        <a href="@Url.Action("Index", "Groups")" class="@cssGroups" title="Manage Groups">
-            <i class="fas fa-users"></i>
-        </a>
 
         @* Schedule *@
-        @{
+        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        {
             var cssSchedule = btnClass("Schedule", "Manage");
+            <a href="@Url.Action("Manage", "Schedule")" class="@cssSchedule" title="Schedule">
+                <i class="hgi hgi-stroke hgi-calendar-03"></i>
+            </a>
         }
-        <a href="@Url.Action("Manage", "Schedule")" class="@cssSchedule" title="Schedule">
-            <i class="hgi hgi-stroke hgi-calendar-03"></i>
-        </a>
 
         @* WhatsApp *@
         @{
@@ -53,14 +55,15 @@
         </a>
 
         @* Assignments *@
-        @{
+        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        {
             var cssAssignments = btnClass("Assignments", "Index");
+            <a href="@Url.Action("Index", "Assignments")" class="@cssAssignments" title="Assignments">
+                <i class="fas fa-tasks"></i>
+            </a>
         }
-        <a href="@Url.Action("Index", "Assignments")" class="@cssAssignments" title="Assignments">
-            <i class="fas fa-tasks"></i>
-        </a>
 
-        @* Teacher Management (only for admin/support) *@
+        @* Teacher Management*@
         @if (User.IsInRole("admin") || User.IsInRole("support"))
         {
             var cssTeachers = btnClass("TeacherManagement", "Index");
@@ -69,7 +72,7 @@
             </a>
         }
 
-        @* Logging (only for admin/support) *@
+        @* Logging*@
         @if (User.IsInRole("admin") || User.IsInRole("support"))
         {
             var cssLog = btnClass("Logging", "Index");
@@ -83,6 +86,14 @@
             var cssDataConversion = btnClass("DataConversion", "Index");
             <a href="@Url.Action("Index", "DataConversion")" class="@cssDataConversion" title="DataConversion">
                 <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </a>
+        }
+
+        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        {
+            var cssZoomMeetings = btnClass("ZoomMeetings", "Index");
+            <a href="@Url.Action("Index", "ZoomMeetings")" class="@cssZoomMeetings" title="ZoomMeetings">
+                <i class="hgi hgi-stroke hgi-zoom"></i>
             </a>
         }
     </div>

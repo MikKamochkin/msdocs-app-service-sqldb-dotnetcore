@@ -79,6 +79,27 @@ namespace DotNetCoreSqlDb.Controllers
             }
             ViewBag.TimeZones = timeZones;
 
+            var groupIds = await _context.StudentGroupComposition
+                .Where(c => c.StudentId == studentId)
+                .Select(c => c.GroupId)
+                .Distinct()
+                .ToListAsync();
+
+            var assignments = await _context.Assignments
+                .Include(a => a.Group)
+                .Include(t => t.Teacher)
+                .Where(a => groupIds.Contains(a.GroupId))
+                .Distinct()
+                .ToListAsync();
+
+            foreach (var a in assignments)
+            {
+                //_logger.LogInformation("AssignmentId: {1} ||| StudentName: {2} ||| TeacherName: {3} Balance: {4}", a.Id, a.Group?.Name, a.Teacher?.Name, a.StudentUnitBalance);
+            }
+
+            ViewBag.Assignments = assignments;
+
+
             return View(student);
         }
 

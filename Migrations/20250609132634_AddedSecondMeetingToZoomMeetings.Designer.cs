@@ -4,6 +4,7 @@ using DotNetCoreSqlDb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DotNetCoreSqlDb.Migrations
 {
     [DbContext(typeof(MyDatabaseContext))]
-    partial class MyDatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20250609132634_AddedSecondMeetingToZoomMeetings")]
+    partial class AddedSecondMeetingToZoomMeetings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -169,9 +172,6 @@ namespace DotNetCoreSqlDb.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool>("Accounted")
-                        .HasColumnType("bit");
-
                     b.Property<Guid>("AssignmentId")
                         .HasColumnType("uniqueidentifier");
 
@@ -180,10 +180,6 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.Property<int>("Duration")
                         .HasColumnType("int");
-
-                    b.Property<string>("LessonAccountingType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -423,6 +419,9 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Property<int?>("Duration")
                         .HasColumnType("int");
 
+                    b.Property<int?>("Duration2")
+                        .HasColumnType("int");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -430,22 +429,43 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Property<bool>("IsBusy")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsBusy2")
+                        .HasColumnType("bit");
+
                     b.Property<string>("JoinUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JoinUrl2")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("MeetingId")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("MeetingId2")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("MeetingPassword")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MeetingPassword2")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("ScheduleId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("ScheduleId2")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("StartTime2")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("UUid")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UUid2")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ZoomId")
@@ -455,6 +475,8 @@ namespace DotNetCoreSqlDb.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ScheduleId");
+
+                    b.HasIndex("ScheduleId2");
 
                     b.ToTable("ZoomMeetings");
                 });
@@ -534,7 +556,13 @@ namespace DotNetCoreSqlDb.Migrations
                         .WithMany()
                         .HasForeignKey("ScheduleId");
 
+                    b.HasOne("DotNetCoreSqlDb.Models.Schedule", "Schedule2")
+                        .WithMany()
+                        .HasForeignKey("ScheduleId2");
+
                     b.Navigation("Schedule");
+
+                    b.Navigation("Schedule2");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Assignments", b =>

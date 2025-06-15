@@ -182,7 +182,8 @@ namespace DotNetCoreSqlDb.Services
                 resp.EnsureSuccessStatusCode();                     // 200 or 204
 
                 using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-
+                Console.WriteLine($" GETLIVEMEETINGUUID ({resp.StatusCode}) – {await resp.Content.ReadAsStringAsync()}");
+            
                 var list = new List<string>();
                 if (doc.RootElement.TryGetProperty("meetings", out var meetings))
                 {
@@ -208,7 +209,7 @@ namespace DotNetCoreSqlDb.Services
 
         //Entry point from ZoomMeetingService
         //Calls Zoom api to end meeting with uuid as param
-        public async Task EndZoomMeetingAsync(string meetingUuid)
+        public async Task EndZoomMeetingAsync(string meetingId)
         {
             await _throttle.WaitAsync();
             try
@@ -216,8 +217,8 @@ namespace DotNetCoreSqlDb.Services
                 using var client = await BuildClientAsync();
 
                 //encoded is the meetingUuid made safe to embed into url (percent-encoded / URL-encoded)
-                string encoded = Uri.EscapeDataString(meetingUuid);
-                Console.WriteLine($"→ PUT /meetings/{encoded}/status  (raw = {meetingUuid})");
+                string encoded = Uri.EscapeDataString(meetingId);
+                Console.WriteLine($"→ PUT /meetings/{encoded}/status  (raw = {meetingId})");
 
                 var body = new { action = "end" };
                 var resp = await client.PutAsJsonAsync(
@@ -225,7 +226,7 @@ namespace DotNetCoreSqlDb.Services
                     body);
 
                 Console.WriteLine(resp.IsSuccessStatusCode
-                    ? $"Meeting {meetingUuid} ended."
+                    ? $"Meeting {meetingId} ended."
                     : $"Failed ({resp.StatusCode}) – {await resp.Content.ReadAsStringAsync()}");
             }
             finally
