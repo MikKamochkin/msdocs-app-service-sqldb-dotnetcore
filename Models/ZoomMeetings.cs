@@ -39,6 +39,7 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("UUid")]
         public string? UUid { get; set; } = "";
 
+
         public virtual Schedule? Schedule { get; set; }
     }
 } 

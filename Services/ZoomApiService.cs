@@ -189,14 +189,14 @@ namespace DotNetCoreSqlDb.Services
                 {
                     foreach (var m in meetings.EnumerateArray())
                     {
-                        // ── numeric meeting number ───────────────────────────────
-                        var idProp = m.GetProperty("id");
-                        string meetingNumber = idProp.ValueKind == JsonValueKind.String
-                                            ? idProp.GetString()!
-                                            : idProp.GetInt64().ToString();
-
-                        list.Add(meetingNumber);
-
+                        if (m.TryGetProperty("uuid", out var uuidProp))
+                        {
+                            var uuid = uuidProp.GetString();
+                            if (!string.IsNullOrWhiteSpace(uuid))
+                            {
+                                list.Add(uuid);
+                            }
+                        }
                     }
                 }
                 return list;

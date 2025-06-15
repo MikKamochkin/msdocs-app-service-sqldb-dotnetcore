@@ -201,7 +201,7 @@ namespace DotNetCoreSqlDb.Services
                                               .AddMinutes(slot.Duration!.Value)
                                               .AddMinutes(bufferAfterMeetingEnd);
 
-                _logger.LogInformation("endMoment is {End} for slot {SlotId}", endMoment, slot.Id);
+                    _logger.LogInformation("endMoment is {End} for slot {SlotId}", endMoment, slot.Id);
 
                 if (nowUtc < endMoment) continue;
 
@@ -219,11 +219,10 @@ namespace DotNetCoreSqlDb.Services
                         slot.Id);
                 }
 
-                // ── clear the slot in DB ────────────────────────────────────────
                 try
                 {
                     using var tx = await _context.Database
-                                                 .BeginTransactionAsync(IsolationLevel.Serializable);
+                        .BeginTransactionAsync(IsolationLevel.Serializable);
 
                         slot.IsBusy = false;
                         slot.ScheduleId = null;
