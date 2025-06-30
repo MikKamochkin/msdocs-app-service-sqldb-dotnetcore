@@ -13,6 +13,9 @@ namespace DotNetCoreSqlDb.Models
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime CreatedDate { get; set; }
 
+        [DisplayName("Email")]
+        public string? Email { get; set; } = "";
+
         [DisplayName("Name")]
         [Required]
         public required string Name { get; set; } 
