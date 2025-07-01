@@ -55,7 +55,6 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 StudentUnitCost     = 0f,
                 StudentUnitType     = "CAD",
-                StudentUnitBalance  = 0f,
                 StudentUnitDuration = 60f,
                 TeacherPayForUnit   = 0f,
                 TeacherPayUnitType  = "CAD",
@@ -86,6 +85,31 @@ namespace DotNetCoreSqlDb.Controllers
 
             assignment.Id = Guid.NewGuid();
             _context.Assignments.Add(assignment);
+
+            //Create a studentBalance entry for this assignment for all students in the group
+
+            var group = await _context.Group
+                .Include(g => g.StudentGroupCompositions)
+                .FirstOrDefaultAsync(g => g.Id == assignment.GroupId);
+
+            if (group != null)
+            {
+                foreach (var sgc in group.StudentGroupCompositions)
+                {
+                    Guid studentId = sgc.StudentId;
+                    Guid studentBalanceId = Guid.NewGuid();
+                    _context.StudentBalance.Add(new StudentBalance
+                    {
+                        Id = studentBalanceId,
+                        StudentId = studentId,
+                        AssignmentId = assignment.Id,
+                        Balance = 0
+                    });
+
+                    _logger.LogInformation("Created a studentBalance entry with Id: {a} for AssignmentId: {a} for StudentId: {b}", studentBalanceId, assignment.Id, studentId);
+                }
+            }
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
@@ -130,7 +154,6 @@ namespace DotNetCoreSqlDb.Controllers
                     a => a.TeacherId,
                     a => a.StudentUnitCost,
                     a => a.StudentUnitType,
-                    a => a.StudentUnitBalance,
                     a => a.StudentUnitDuration,
                     a => a.TeacherPayForUnit,
                     a => a.TeacherPayUnitType,

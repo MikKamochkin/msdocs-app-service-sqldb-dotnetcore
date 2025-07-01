@@ -10,6 +10,8 @@ using DotNetCoreSqlDb.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.Storage;
+using DotNetCoreSqlDb.Services;
+using DotNetCoreSqlDb.Helpers;
 
 
 
@@ -19,13 +21,16 @@ namespace DotNetCoreSqlDb.Services
     {
         private readonly MyDatabaseContext _context;
         private readonly ILogger<UpdateBalanceService> _logger;
+        private readonly LogHelper _logHelper;
 
         public UpdateBalanceService(
             MyDatabaseContext context,
-            ILogger<UpdateBalanceService> logger)
+            ILogger<UpdateBalanceService> logger,
+            LogHelper logHelper)
         {
             _context = context;
             _logger = logger;
+            _logHelper = logHelper;
         }
 
         //Creates a meeting based on scheduleId param
@@ -79,6 +84,7 @@ namespace DotNetCoreSqlDb.Services
                 var lesson = await _context.Schedule
                     .Include(s => s.Assignment)
                         .ThenInclude(a => a.Group)
+                            .ThenInclude(g => g.StudentGroupCompositions)
                     .SingleOrDefaultAsync(s => s.Id == scheduleId);
 
                 if (lesson != null)
@@ -107,12 +113,25 @@ namespace DotNetCoreSqlDb.Services
                                 break;
                         }
 
-                        var spent = (lesson.Duration / a.StudentUnitDuration) * studentCostMutliplier;
-                        a.StudentUnitBalance -= spent;
+                        float spent = (float)(lesson.Duration / a.StudentUnitDuration) * studentCostMutliplier;
+                        foreach (var sgc in a.Group.StudentGroupCompositions.Where(sgc => sgc.UseMyBalance == true))
+                        {
+                            Guid studentId = sgc.StudentId;
+
+                            // 1) fetch (or create) the StudentBalance row for this student & assignment
+                            var sb = await _context.StudentBalance
+                                .SingleOrDefaultAsync(b => b.StudentId == studentId &&
+                                                        b.AssignmentId == a.Id);
+                            // 2) decrease the balance
+                            if (sb != null)
+                            {
+                                sb.Balance -= spent;
+                                await _logHelper.LogStudentBalanceAsync(studentId, a.Id, scheduleId, spent, sb.Balance);
+                            }
+                            
+                        }
                         lesson.Accounted = true;
-                        _logger.LogInformation("lessonid: {1} assignment Id: {2} student name: {3} balance: {4}", lesson.Id, a?.Id, a?.Group?.Name, a?.StudentUnitBalance);
-                    }
-                
+                    }  
                 }
 
                 // 3) Persist and release lock
@@ -179,8 +198,10 @@ namespace DotNetCoreSqlDb.Services
 
                 var lesson = await _context.Schedule
                     .Include(s => s.Assignment)
+                        .ThenInclude(a => a.Group)
+                            .ThenInclude(g => g.StudentGroupCompositions)
                     .SingleOrDefaultAsync(s => s.Id == scheduleId);
-
+                    
                 if (lesson != null)
                 {
 
@@ -189,31 +210,42 @@ namespace DotNetCoreSqlDb.Services
                         var a = lesson.Assignment;
                         if (a!.StudentUnitDuration > 0)
                         {
-                            float studentCostMutliplier = 1;
+                            float studentCostMultiplier = 1;
                             string lessonType = originalAccountingType;
                             switch (lessonType)
                             {
                                 case "S100T100":
-                                    studentCostMutliplier = 1;
+                                    studentCostMultiplier = 1;
                                     break;
                                 case "S50T100":
-                                    studentCostMutliplier = 0.5f;
+                                    studentCostMultiplier = 0.5f;
                                     break;
                                 case "S0T0":
-                                    studentCostMutliplier = 0;
+                                    studentCostMultiplier = 0;
                                     break;
                                 case "S0T100":
-                                    studentCostMutliplier = 0;
+                                    studentCostMultiplier = 0;
                                     break;
                                 default:
-                                    studentCostMutliplier = 1;
+                                    studentCostMultiplier = 1;
                                     break;
                             }
 
-                            var spent = (lesson.Duration / a.StudentUnitDuration) * studentCostMutliplier;
-                            a.StudentUnitBalance += spent;
+                            float spent = (float)(lesson.Duration / a.StudentUnitDuration) * studentCostMultiplier;
+                            foreach (var sgc in a.Group.StudentGroupCompositions.Where(sgc => sgc.UseMyBalance == true))
+                            {
+                                Guid studentId = sgc.StudentId;
+
+                                var sb = await _context.StudentBalance
+                                    .SingleOrDefaultAsync(b => b.StudentId == studentId && b.AssignmentId == a.Id);
+
+                                if (sb != null)
+                                {
+                                    sb.Balance += spent;
+                                    await _logHelper.LogStudentBalanceAsync(studentId, a.Id, scheduleId, -spent, sb.Balance);
+                                }
+                            }
                             lesson.Accounted = true;
-                            _logger.LogInformation("UNDO: lessonid: {1} assignment Id: {2} balance: {4}", lesson.Id, a?.Id, a?.StudentUnitBalance);
                         }
                     }
                 } 

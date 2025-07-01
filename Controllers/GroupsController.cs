@@ -449,7 +449,8 @@ namespace DotNetCoreSqlDb.Controllers
                 try
                 {
                     // 1) Create the new group
-                    newGroup.Id = Guid.NewGuid();
+                    Guid newGroupId = Guid.NewGuid();
+                    newGroup.Id = newGroupId;
                     newGroup.IsActive = true;
                     _context.Add(newGroup);
                     await _context.SaveChangesAsync();
@@ -459,14 +460,43 @@ namespace DotNetCoreSqlDb.Controllers
                     if (originalGroup != null)
                     {
                         originalGroup.IsActive = false;
-
-                        // Deactivate its assignments
+                        
+                        // Deactivate its assignments and create a copy with the new groupId and isActive = 1;
                         var assignments = await _context.Assignments
                             .Where(a => a.GroupId == id && a.IsActive)
                             .ToListAsync();
 
+
                         foreach (var a in assignments)
+                        {
+                            Guid assignmentId = Guid.NewGuid();
+                            
+                            var studentBalances = await _context.StudentBalance
+                                .Where(s => s.AssignmentId == a.Id)
+                                .ToListAsync();
+
+                            foreach (var s in studentBalances)
+                            {
+                                s.AssignmentId = assignmentId;
+                            }
+
                             a.IsActive = false;
+
+                            _context.Assignments.Add(new Assignments
+                            {
+                                Id = assignmentId,
+                                GroupId = newGroupId,
+                                TeacherId = a.TeacherId,
+                                StudentUnitCost = a.StudentUnitCost,
+                                StudentUnitType = a.StudentUnitType,
+                                StudentUnitDuration = a.StudentUnitDuration,
+                                TeacherPayForUnit = a.TeacherPayForUnit,
+                                TeacherPayUnitType = a.TeacherPayUnitType,
+                                IsActive = true,
+                                Schedules = a.Schedules
+                            });
+                        }
+                           
                     }
 
                     // 3) Add the student compositions
@@ -477,7 +507,7 @@ namespace DotNetCoreSqlDb.Controllers
                     {
                         if (Guid.TryParse(studentIds[i], out Guid studentId))
                         {
-                            bool useMyBalance = i < useMyBalanceValues.Length 
+                            bool useMyBalance = i < useMyBalanceValues.Length
                                 && useMyBalanceValues[i].ToLower() == "true";
 
                             _context.StudentGroupComposition.Add(new StudentGroupComposition

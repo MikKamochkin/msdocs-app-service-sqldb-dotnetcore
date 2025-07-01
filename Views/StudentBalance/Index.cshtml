@@ -1,0 +1,107 @@
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Search Payer and Student";
+    var payers = ViewBag.Payers as List<SelectListItem>;
+}
+
+<div class="row no-gutters">
+    <partial name="_AdminSidebar" />
+    <div class="col-md-9">
+        <h2>Select Payer and Student</h2>
+
+        <div class="form-group position-relative">
+            <label for="payerInput">Payer:</label>
+            <input id="payerInput" class="form-control" placeholder="Start typing payer name..." autocomplete="off" />
+            <ul id="payerSuggestions" class="list-group position-absolute w-100" style="z-index: 1000; display: none; max-height: 200px; overflow-y: auto;"></ul>
+        </div>
+
+        <div class="form-group" id="studentSection" style="display: none;">
+            <label for="studentSelect">Student:</label>
+            <select id="studentSelect" class="form-control">
+                <option value="">— Select Student —</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const payers = @Html.Raw(JsonSerializer.Serialize(
+            payers.Select(p => new { id = p.Value, name = p.Text })
+        ));
+
+        const payerInput = document.getElementById('payerInput');
+        const suggestionBox = document.getElementById('payerSuggestions');
+
+        payerInput.addEventListener('input', function () {
+            const query = this.value.toLowerCase().trim();
+            suggestionBox.innerHTML = '';
+            if (!query) {
+                suggestionBox.style.display = 'none';
+                return;
+            }
+
+            const matches = payers.filter(p => p.name.toLowerCase().includes(query)).slice(0, 10);
+
+            if (matches.length === 0) {
+                suggestionBox.style.display = 'none';
+                return;
+            }
+
+            matches.forEach(p => {
+                const item = document.createElement('li');
+                item.className = 'list-group-item list-group-item-action';
+                item.textContent = p.name;
+                item.dataset.id = p.id;
+                item.addEventListener('click', () => {
+                    payerInput.value = p.name;
+                    suggestionBox.style.display = 'none';
+                    loadStudentsForPayer(p.id);
+                });
+                suggestionBox.appendChild(item);
+            });
+
+            suggestionBox.style.display = 'block';
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!payerInput.contains(e.target) && !suggestionBox.contains(e.target)) {
+                suggestionBox.style.display = 'none';
+            }
+        });
+
+        function loadStudentsForPayer(payerId) {
+            const studentSection = document.getElementById('studentSection');
+            const studentSelect = document.getElementById('studentSelect');
+            studentSelect.innerHTML = '<option value="">— Loading... —</option>';
+
+            fetch(`/StudentBalance/GetStudentsByPayer?payerId=${payerId}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Failed to fetch students");
+                    return response.json();
+                })
+                .then(data => {
+                    studentSelect.innerHTML = '<option value="">— Select Student —</option>';
+                    data.forEach(s => {
+                        const opt = document.createElement("option");
+                        opt.value = s.id || s.ID;
+                        opt.text = s.fullName || s.Name || s.name || "Unnamed Student";
+                        studentSelect.appendChild(opt);
+                    });
+                    studentSection.style.display = 'block';
+                })
+                .catch(err => {
+                    console.error("Error fetching students:", err);
+                    studentSelect.innerHTML = '<option value="">— No Students Found —</option>';
+                    studentSection.style.display = 'block';
+                });
+        }
+
+        document.getElementById('studentSelect').addEventListener('change', function () {
+            const studentId = this.value;
+            if (studentId) {
+                window.location.href = `/StudentBalance/GoToStudent?id=${studentId}`;
+            }
+        });
+    </script>
+}

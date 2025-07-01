@@ -44,6 +44,13 @@ namespace DotNetCoreSqlDb.Data
         
         public DbSet<DotNetCoreSqlDb.Models.SignInLog> SignInLog { get; set; } = default!;
 
+        public DbSet<DotNetCoreSqlDb.Models.StudentBalance> StudentBalance { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.StudentBalanceTransactionLog> StudentBalanceTransactionLog { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.Payer> Payer { get; set; } = default!;
+
+
         // method defines model-level constraints like unique indexes
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -96,5 +96,13 @@
                 <i class="hgi hgi-stroke hgi-zoom"></i>
             </a>
         }
+
+        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        {
+            var cssDepositIntoStudent = btnClass("StudentBalance", "Index");
+            <a href="@Url.Action("Index", "StudentBalance")" class="@cssDepositIntoStudent" title="StudentBalance">
+                <i class="fa-solid fa-money-bill-transfer"></i>
+            </a>
+        }
     </div>
 </div>

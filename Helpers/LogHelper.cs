@@ -86,5 +86,56 @@ namespace DotNetCoreSqlDb.Helpers
             _context.SignInLog.Add(log);
             await _context.SaveChangesAsync();
         }
+
+        //Depositing
+        public async Task LogStudentBalanceAsync(
+            Guid studentId,
+            Guid assignmentId,
+            string currency,
+            string paymentType,
+            string paymentReference,
+            string payerNotes,
+            string adminNotes,
+            float transactionAmount,
+            float amountPaid
+            )
+        {
+            var log = new StudentBalanceTransactionLog
+            {
+                StudentId = studentId,
+                AssignmentId = assignmentId,
+                DateTime = DateTime.Now,
+                Currency = currency,
+                PaymentType = paymentType,
+                PaymentReference = paymentReference,
+                PayerNotes = payerNotes,
+                AdminNotes = adminNotes,
+                TransactionAmount = transactionAmount,
+                AmountPaid = amountPaid
+            };
+            _context.StudentBalanceTransactionLog.Add(log);
+            await _context.SaveChangesAsync();
+        }
+
+        //Used on lesson
+        public async Task LogStudentBalanceAsync(
+            Guid studentId,
+            Guid assignmentId,
+            Guid scheduleId,
+            float transactionAmount,
+            float currentBalance)
+        {
+            var log = new StudentBalanceTransactionLog
+            {
+                StudentId = studentId,
+                AssignmentId = assignmentId,
+                DateTime = DateTime.Now,
+                ScheduleId = scheduleId,
+                CurrentBalance = currentBalance,
+                TransactionAmount = transactionAmount
+            };
+            _context.StudentBalanceTransactionLog.Add(log);
+            await _context.SaveChangesAsync();
+        }
     }
 }

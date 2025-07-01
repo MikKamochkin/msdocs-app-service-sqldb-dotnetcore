@@ -267,53 +267,68 @@
         // Disable the submit button on a valid first click to prevent double-submits
         $("form").on("submit", async function (e) {
 
-            /* 0️⃣  – Guard: at least one contact */
+            // 0️⃣ – Guard: at least one contact
             if ($("#contactsSummary tbody tr").length === 0) {
                 alert("Please add at least one contact.");
                 e.preventDefault();
                 return;
             }
 
-            /* 1️⃣  – If we already confirmed once, let it go through */
+            // 1️⃣ – If already confirmed once, allow submission
             if ($("#SkipDuplicateCheck").val() === "true")
-                return;      // normal post, no duplicate check
-
-            /* 2️⃣  – Ask the server if the name exists */
-            e.preventDefault();          // halt the real submit
-
-            const name = $("#Name").val();
-            const url  = '@Url.Action("CheckDuplicate", "StudentManagement")'
-                    + '?name=' + encodeURIComponent(name);
-
-            const res  = await fetch(url,
-                { headers: { "Accept": "application/json" } });
-
-            if (!res.ok) {                       // 404, 401, 500, …
-                alert("Unable to validate the name. Try again later.");
                 return;
-            }
-            const data = await res.json();
 
-        
-            if (data.duplicate) {
-                const names = data.closeMatches?.join(", ") || "(no names)";
-                if (confirm("A student with a very similar name already exists: " + names + ". Create anyway?")) {
-                    // ⬇️ Disable the "Create" button so the user cannot click it again while the form is submitting
-                    $("#submitButton").prop("disabled", true);
+            e.preventDefault(); // Halt real submission
 
-                    /* 4️⃣  – Either not duplicate or the user accepted */
-                    $("#SkipDuplicateCheck").val("true");   // tell the server to skip next time
-                    $(this).off("submit")                   // prevent recursion
-                            .submit();                       // fire the real post
+            const rows = $("#contactsSummary tbody tr.contact-summary");
+            let hasDuplicate = false;
+            let duplicates = [];
+
+            for (let i = 0; i < rows.length; i++) {
+                const type = $(rows[i]).data("contacttype");
+                const value = $(rows[i]).data("contactvalue");
+
+                // Route based on contact type
+                let endpoint = "";
+                switch (type) {
+                    case "Email":
+                        endpoint = '@Url.Action("CheckDuplicateEmail", "StudentManagement")';
+                        break;
+                    case "Phone":
+                        endpoint = '@Url.Action("CheckDuplicatePhone", "StudentManagement")';
+                        break;
+                    default:
+                        continue; // skip check for unknown or unchecked types
                 }
-                // If they hit “Cancel”, do nothing; user can re-edit or change name
+
+                const url = endpoint + "?value=" + encodeURIComponent(value);
+
+                const res = await fetch(url, { headers: { "Accept": "application/json" } });
+
+                if (!res.ok) {
+                    alert("Error checking contact value: " + value);
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.duplicate) {
+                    hasDuplicate = true;
+                    duplicates.push(type + ": " + value + " is similar to: " + data.closeMatches.join(", "));
+                }
             }
-            else {
-                // No duplicate → submit normally
-                $("#SkipDuplicateCheck").val("true");
-                $(this).off("submit")
-                        .submit();
-            }                    // fire the real post
+
+            if (hasDuplicate) {
+                const msg = "There are already students with similar contacts:\n\n" + duplicates.join("\n") + "\n\nContinue anyway?";
+                if (!confirm(msg)) {
+                    return; // user hit cancel
+                }
+            }
+
+            // Proceed with submission
+            $("#submitButton").prop("disabled", true);
+            $("#SkipDuplicateCheck").val("true");
+            $(this).off("submit").submit();
         });
+
     </script>
 }

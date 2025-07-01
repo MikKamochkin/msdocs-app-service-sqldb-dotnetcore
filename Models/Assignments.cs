@@ -27,10 +27,6 @@ namespace DotNetCoreSqlDb.Models
         [Required]
         public required string StudentUnitType { get; set; }
 
-        [DisplayName("StudentUnitBalance")]
-        [Required]
-        public required float StudentUnitBalance { get; set; }
-
         [DisplayName("StudentUnitDuration")]
         [Required]
         public required float StudentUnitDuration { get; set; }

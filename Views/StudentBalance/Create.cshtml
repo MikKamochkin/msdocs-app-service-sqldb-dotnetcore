@@ -1,0 +1,24 @@
+@model DotNetCoreSqlDb.Models.StudentBalance
+@{
+    ViewData["Title"] = "Edit Balance";
+}
+
+<h1>@ViewData["Title"] for @Model.Student?.Name</h1>
+
+<form asp-action="Edit" method="post" class="mt-4">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="StudentId" />
+
+    <div class="form-group">
+        <label asp-for="Balance"></label>
+        <input asp-for="Balance" class="form-control" />
+        <span asp-validation-for="Balance" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-success">Save</button>
+    <a asp-action="Index" class="btn btn-link">← Back to Search</a>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

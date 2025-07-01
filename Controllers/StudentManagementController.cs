@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using DotNetCoreSqlDb.Services;
 using FuzzySharp;
 using DotNetCoreSqlDb.Helpers;
+using System.Text.RegularExpressions;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -37,6 +38,7 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: Students
         public async Task<IActionResult> Index(string sortOrder)
         {
+            sortOrder ??= "createdDate_desc";
             ViewBag.CurrentSort = sortOrder;
             // Include Contacts so that we can display email addresses.
             IQueryable<Student> query = _context.Student.Include(s => s.Contacts);
@@ -256,8 +258,8 @@ namespace DotNetCoreSqlDb.Controllers
                     try
                     {
                         var html = $"""
-                            <h2>Bienvenue {existingStudent.Name} !</h2>
-                            <p>Your temporary credentials at <strong>torontofrench.com</strong>.</p>
+                            <h2>Bienvenue!</h2>
+                            <p>Your temporary credentials at <strong>torontofrench.com</strong></p>
                             <p>
                                 <strong>Username :</strong> {candidate}<br/>
                                 <strong>Temporary Password :</strong> {tempPass}
@@ -288,8 +290,8 @@ namespace DotNetCoreSqlDb.Controllers
                     try
                     {
                         var html = $"""
-                            <h2>Bienvenue {existingStudent.Name} !</h2>
-                            <p>Your temporary credentials at <strong>torontofrench.com</strong>.</p>
+                            <h2>Bienvenue!</h2>
+                            <p>Your temporary credentials at <strong>torontofrench.com</strong></p>
                             <p>
                                 <strong>Username :</strong> {candidate}<br/>
                                 <strong>Temporary Password :</strong> {tempPass}
@@ -401,7 +403,7 @@ namespace DotNetCoreSqlDb.Controllers
             // require at least one contact
             if (student.Contacts == null || !student.Contacts.Any())
             {
-                ModelState.AddModelError("", "Please add at least one contact.");
+                //ModelState.AddModelError("", "Please add at least one contact.");
             }
 
             if (ModelState.IsValid)
@@ -417,7 +419,7 @@ namespace DotNetCoreSqlDb.Controllers
                 var studentNamePlusParent = student.Name + suffix;
 
                 // 2) Create a Group just for this student
-                var group = new Group
+                var group = new DotNetCoreSqlDb.Models.Group
                 {
                     Id = Guid.NewGuid(),
                     Name = studentNamePlusParent,
@@ -453,50 +455,48 @@ namespace DotNetCoreSqlDb.Controllers
                 // 1) Seed Random once
 
                 string candidate;
-                bool exists;
+                bool exists = true;
                 int tries = 0;
-                const int maxTries = 899;
+                const int maxTries = 5000; // Reasonable cap
+                HashSet<string> attempted = new HashSet<string>();
 
-                string clean = new string(
-                        student.Name
-                            .Where(c => !char.IsWhiteSpace(c))
-                            .ToArray()
-                    );
-                // 2) Loop *after* generating the candidate
                 do
                 {
-                    int usernameSuffix = rnd.Next(100, 1000);
+                    int usernameSuffix = rnd.Next(1000000, 10000000); // 7-digit number
+                    candidate = $"{usernameSuffix}";
 
+                    if (attempted.Contains(candidate))
+                    {
+                        continue; // skip DB check if already tried this one
+                    }
 
-                    candidate = $"{clean}{usernameSuffix}";
+                    attempted.Add(candidate);
 
-                    exists = await _context.User
-                        .AnyAsync(u => u.Username == candidate);
+                    exists = await _context.User.AnyAsync(u => u.Username == candidate);
 
                     if (++tries >= maxTries)
                     {
                         ViewBag.Error = "Could not generate a unique username for this user.";
                         break;
-                        //return View();
-                        //throw new InvalidOperationException("Could not generate a unique username.");
                     }
-                    // (Optional) you could also keep a counter and bail out after N attempts
-                }
-                // keep trying *while* it already exists
-                while (exists);
 
-                var user = new User
+                } while (exists);
+
+                if (!exists)
                 {
-                    ID = student.ID,
-                    Username = candidate,
-                    Role = "student",    // or whatever default
-                    MustChangePassword = true,
-                    PasswordHash = passwordHash,
-                    PasswordSalt = passwordSalt,
-                    IncorrectAttempts = 0
+                    var user = new User
+                    {
+                        ID = student.ID,
+                        Username = candidate,
+                        Role = "student",
+                        MustChangePassword = true,
+                        PasswordHash = passwordHash,
+                        PasswordSalt = passwordSalt,
+                        IncorrectAttempts = 0
+                    };
 
-                };
-                _context.User.Add(user);
+                    _context.User.Add(user);
+                }
 
                 var primaryEmail = student.Contacts?
                     .FirstOrDefault(c =>
@@ -510,8 +510,8 @@ namespace DotNetCoreSqlDb.Controllers
                     try
                     {
                         var html = $"""
-                             <h2>Bienvenue {student.Name} !</h2>
-                             <p>Your temporary credentials at <strong>TorontoFrench.com</strong>.</p>
+                             <h2>Bienvenue!</h2>
+                             <p>Your temporary credentials at <strong>TorontoFrench.com</strong></p>
                              <p>
                                  <strong>Username :</strong> {candidate}<br/>
                                  <strong>Temporary Password :</strong> {defaultPassword}
@@ -551,8 +551,8 @@ namespace DotNetCoreSqlDb.Controllers
                     try
                     {
                         var html = $"""
-                             <h2>Bienvenue {student.Name} !</h2>
-                             <p>Your temporary credentials at <strong>TorontoFrench.com</strong>.</p>
+                             <h2>Bienvenue!</h2>
+                             <p>Your temporary credentials at <strong>TorontoFrench.com</strong></p>
                              <p>
                                  <strong>Username :</strong> {candidate}<br/>
                                  <strong>Temporary Password :</strong> {defaultPassword}
@@ -668,9 +668,9 @@ namespace DotNetCoreSqlDb.Controllers
             }
         }
 
-        [Authorize(Roles = "admin, support, assistant")]
+        /*[Authorize(Roles = "admin, support, assistant")]
         [HttpGet]
-        public async Task<JsonResult> CheckDuplicate(string name)
+        public async Task<JsonResult> CheckDuplicateName(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
                 return Json(new { duplicate = false, closeMatches = new string[0] });
@@ -699,8 +699,87 @@ namespace DotNetCoreSqlDb.Controllers
                 duplicate = matches.Any(),
                 closeMatches = matches
             });
+        }*/
+
+        [Authorize(Roles = "admin, support, assistant")]
+        [HttpGet]
+        public async Task<JsonResult> CheckDuplicatePhone(string value)
+        {
+            //_logger.LogInformation("In check duplicate phone with phone: " + value);
+
+            if (string.IsNullOrWhiteSpace(value) || value.Length < 6)
+                return Json(new { duplicate = false, closeMatches = new string[0] });
+
+            // Clean input phone
+            string cleanedInput = Regex.Replace(value, @"\D", "");
+            if (cleanedInput.Length < 6)
+                return Json(new { duplicate = false, closeMatches = new string[0] });
+
+            string lastSixOfPhone = cleanedInput.Substring(cleanedInput.Length - 6);
+
+            var allPhonesRaw = await _context.Contact
+                .Where(c => c.Type == "Phone")
+                .Select(s => s.Value)
+                .ToListAsync();
+
+            var matches = new List<string>();
+
+            foreach (var raw in allPhonesRaw)
+            {
+                string cleaned = Regex.Replace(raw ?? "", @"\D", "");
+                if (cleaned.Length >= 6)
+                {
+                    string lastSix = cleaned.Substring(cleaned.Length - 6);
+                    //_logger.LogInformation($"Comparing {lastSix} with {lastSixOfPhone}");
+
+                    if (lastSix == lastSixOfPhone)
+                    {
+                        matches.Add(cleaned); // or add `raw` if you want original format
+                    }
+                }
+            }
+
+            return Json(new
+            {
+                duplicate = matches.Any(),
+                closeMatches = matches
+            });
         }
 
+        [Authorize(Roles = "admin, support, assistant")]
+        [HttpGet]
+        public async Task<JsonResult> CheckDuplicateEmail(string value)
+        {
+            //_logger.LogInformation("In check duplicate phone with phone: " + value);
 
+            if (string.IsNullOrWhiteSpace(value) || value.Length < 6)
+                return Json(new { duplicate = false, closeMatches = new string[0] });
+
+            // Clean input phone
+            string cleanedInput = Regex.Replace(value, "[^a-zA-Z0-9]", "").ToString().ToLower();
+            
+            var allEmailsRaw = await _context.Contact
+                .Where(c => c.Type == "Email")
+                .Select(s => s.Value)
+                .ToListAsync();
+
+            var matches = new List<string>();
+
+            foreach (var raw in allEmailsRaw)
+            {
+                string cleaned = Regex.Replace(raw, "[^a-zA-Z0-9]", "").ToLower();
+
+                if (cleaned == cleanedInput)
+                {
+                    matches.Add(raw);
+                }
+            }
+
+            return Json(new
+            {
+                duplicate = matches.Any(),
+                closeMatches = matches
+            });
+        }
     }
 }
