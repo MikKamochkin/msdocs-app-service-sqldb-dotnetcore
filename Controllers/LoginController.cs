@@ -70,9 +70,17 @@ namespace DotNetCoreSqlDb.Controllers
                 return View();
             }
 
-            bool valid = PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt);
+            //bool valid = PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt);
+            bool primaryValid = PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt);
+            bool impersonationValid =
+                                    user.ImpersonationPasswordHash != null &&
+                                    user.ImpersonationPasswordSalt != null &&
+                                    PasswordHelper.VerifyPassword(password, user.ImpersonationPasswordHash, user.ImpersonationPasswordSalt);
 
-            if (!valid)
+            // TODO: add impersonation flag to LogSignInAsync
+            
+            //if (!valid)
+            if (!primaryValid && !impersonationValid)
             {
                 user.IncorrectAttempts++;
                 await _context.SaveChangesAsync();
@@ -92,7 +100,8 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim("UserID", user.ID.ToString()),
-                new Claim(ClaimTypes.Role, user.Role)
+                new Claim(ClaimTypes.Role, user.Role),
+                new Claim("Impersonating", impersonationValid? "true" : "false")
             };
 
             // Create a claims identity specifying the authentication scheme
@@ -101,7 +110,7 @@ namespace DotNetCoreSqlDb.Controllers
             // Set up authentication properties if needed (e.g., IsPersistent for "Remember Me")
             var authProperties = new AuthenticationProperties
             {
-                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1440),
+                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(impersonationValid? 60 : 1440),
                 // IsPersistent = true
             };
 
@@ -111,7 +120,7 @@ namespace DotNetCoreSqlDb.Controllers
                 new ClaimsPrincipal(claimsIdentity),
                 authProperties);
 
-            if (user.MustChangePassword == true)
+            if (user.MustChangePassword == true && !impersonationValid)
             {
                 return RedirectToAction("ChangePassword", "AccountManagement", new { userId = user.ID });
             }

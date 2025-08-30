@@ -4,6 +4,7 @@ using DotNetCoreSqlDb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DotNetCoreSqlDb.Migrations
 {
     [DbContext(typeof(MyDatabaseContext))]
-    partial class MyDatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20250728174512_emptyMigrationTest")]
+    partial class emptyMigrationTest
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -101,9 +104,6 @@ namespace DotNetCoreSqlDb.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsManualGroup")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -431,12 +431,6 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Property<Guid>("ID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<byte[]>("ImpersonationPasswordHash")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("ImpersonationPasswordSalt")
-                        .HasColumnType("varbinary(max)");
 
                     b.Property<int>("IncorrectAttempts")
                         .HasColumnType("int");

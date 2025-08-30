@@ -1,0 +1,38 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.Payer>
+
+@{
+    ViewData["Title"] = "Payers";
+}
+
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+        
+        <div class="col">
+            <h2>Payers</h2>
+            
+            <p>
+                <a asp-action="Create" class="btn btn-primary">Create New</a>
+            </p>
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Payer Name</th>
+                        <th>Student</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Student.Name)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

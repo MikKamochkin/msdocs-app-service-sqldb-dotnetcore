@@ -34,7 +34,7 @@ namespace DotNetCoreSqlDb.Controllers
             if (User.IsInRole("support") || User.IsInRole("admin"))
             {
                 var groups = await _context.Group
-                    .Where(g => g.StudentGroupCompositions.Count > 1)
+                    .Where(g => g.StudentGroupCompositions.Count > 1 || g.IsManualGroup)
                     .Where(g => g.IsActive == true)
                     .Include(g => g.StudentGroupCompositions)
                     .ThenInclude(sgc => sgc.Student)
@@ -46,7 +46,7 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 var groups = await _context.Group
                     .Where(g => g.IsActive)
-                    .Where(g => g.StudentGroupCompositions.Count > 1)
+                    .Where(g => g.StudentGroupCompositions.Count > 1 || g.IsManualGroup)
                     .Where(g => g.StudentGroupCompositions.All(sgc => sgc.Student.AccountingGroup == "S"))
                     .Include(g => g.StudentGroupCompositions)
                         .ThenInclude(sgc => sgc.Student)
@@ -170,6 +170,7 @@ namespace DotNetCoreSqlDb.Controllers
                     // 1) Create the group
                     group.Id = Guid.NewGuid();
                     group.IsActive = true;
+                    group.IsManualGroup = true;
                     _context.Add(group);
                     await _context.SaveChangesAsync();
 
@@ -391,7 +392,8 @@ namespace DotNetCoreSqlDb.Controllers
             var newGroup = new Group
             {
                 Name = g.Name,
-                IsActive = true
+                IsActive = true,
+                IsManualGroup = true
             };
 
             ViewBag.CopyStudents = g.StudentGroupCompositions
@@ -452,6 +454,7 @@ namespace DotNetCoreSqlDb.Controllers
                     Guid newGroupId = Guid.NewGuid();
                     newGroup.Id = newGroupId;
                     newGroup.IsActive = true;
+                    newGroup.IsManualGroup = true;
                     _context.Add(newGroup);
                     await _context.SaveChangesAsync();
 

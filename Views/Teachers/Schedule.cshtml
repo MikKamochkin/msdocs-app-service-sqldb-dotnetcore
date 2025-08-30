@@ -4,6 +4,7 @@
 	ViewData["Title"] = "My Schedule";
 	var existingJson = ViewBag.ExistingJson as string ?? "[]";
 	var timeZones = ViewBag.TimeZones as List<SelectListItem>;
+	var impersonating = ViewBag.Impersonating;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -291,6 +292,13 @@
 		</table>
 	</div>
 </div>
+
+@if(impersonating == true)
+{
+	<partial name="_ImpersonatingBanner" />
+}
+
+
 
 @* ---------- SCRIPTS ---------- *@
 @section Scripts {

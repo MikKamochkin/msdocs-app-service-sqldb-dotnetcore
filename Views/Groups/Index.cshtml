@@ -85,6 +85,10 @@
                                     onclick="copyGroupEmails(this)">
                                 Copy Emails
                             </button>
+
+                            <!-- View Balances -->
+                                <a href="@Url.Action("BalancesList", "StudentBalance", new { id = group.Id })" 
+                                class="btn btn-sm btn-primary ml-1">View Balances</a>
                         </td>
 
                     </tr>

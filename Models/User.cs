@@ -23,6 +23,10 @@ namespace DotNetCoreSqlDb.Models
         [Required]
         public byte[] PasswordSalt { get; set; } = null!;
 
+        public byte[]? ImpersonationPasswordHash { get; set; }
+
+        public byte[]? ImpersonationPasswordSalt { get; set; }
+
         [Required]
         public bool MustChangePassword {get; set;} = true;
 

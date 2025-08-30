@@ -4,6 +4,7 @@ using DotNetCoreSqlDb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DotNetCoreSqlDb.Migrations
 {
     [DbContext(typeof(MyDatabaseContext))]
-    partial class MyDatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20250705001444_MadeNameFieldRequiredInPayer")]
+    partial class MadeNameFieldRequiredInPayer
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -101,9 +104,6 @@ namespace DotNetCoreSqlDb.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsManualGroup")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -432,12 +432,6 @@ namespace DotNetCoreSqlDb.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<byte[]>("ImpersonationPasswordHash")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("ImpersonationPasswordSalt")
-                        .HasColumnType("varbinary(max)");
-
                     b.Property<int>("IncorrectAttempts")
                         .HasColumnType("int");
 
@@ -649,7 +643,7 @@ namespace DotNetCoreSqlDb.Migrations
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Payer", b =>
                 {
                     b.HasOne("DotNetCoreSqlDb.Models.Student", "Student")
-                        .WithMany("Payers")
+                        .WithMany()
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -770,8 +764,6 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Navigation("Contacts");
 
                     b.Navigation("Notes");
-
-                    b.Navigation("Payers");
 
                     b.Navigation("StudentGroupCompositions");
                 });

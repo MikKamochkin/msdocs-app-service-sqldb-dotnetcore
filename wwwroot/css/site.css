@@ -404,6 +404,99 @@ span.ms-2.small {
   background-color: #ff7f7f; /* Light green */
 }
 
+/* Transaction History Section - Self-contained styles */
+.student-balance-transactions-container {
+    margin: 30px auto;
+    max-width: 800px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+.student-balance-transactions-container h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.student-balance-transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.student-balance-transactions-table thead th {
+    background-color: #343a40;
+    color: white;
+    padding: 12px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+}
+
+.student-balance-transactions-table tbody {
+    display: block;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.student-balance-transactions-table thead,
+.student-balance-transactions-table tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.student-balance-transactions-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.student-balance-transactions-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.student-balance-transactions-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.transaction-layout {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+.transaction-history {
+    flex: 1;
+    max-width: 100%;
+}
+
+.transaction-details {
+    flex: 1;
+    max-width: 50%;
+}
+
+.transaction-details-table th,
+.transaction-details-table td {
+    padding: 8px 10px;
+    border: 1px solid #dee2e6;
+}
+
+.impersonating-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #c62828; /* pick any solid color, e.g. red */
+    color: #fff;              /* white text for contrast */
+    text-align: center;       /* center the text horizontally */
+    padding: 10px 0;          /* vertical padding for better height */
+    font-weight: bold;
+    z-index: 9999;            /* keep it on top of other content */
+}
+
+
 
 /* make the date picker indicator cover the entire input */
 #selectedDate {

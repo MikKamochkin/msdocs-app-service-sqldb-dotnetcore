@@ -42,8 +42,12 @@ namespace DotNetCoreSqlDb.Models
         // Navigation property for one-to-many relationship with Contact
         public virtual ICollection<Contact> Contacts { get; set; } = new List<Contact>();
 
-         // Navigation property for one-to-many relationship with Note
+        // Navigation property for one-to-many relationship with Note
         public virtual ICollection<Notes> Notes { get; set; } = new List<Notes>();
+
+        // Navigation property for one-to-many relationship with Payer
+        public virtual ICollection<Payer> Payers { get; set; } = new List<Payer>();
+
 
         // Navigation property for one-to-many relationship with StudentGroupComposition
         public virtual ICollection<StudentGroupComposition> StudentGroupCompositions { get; set; } = new List<StudentGroupComposition>();

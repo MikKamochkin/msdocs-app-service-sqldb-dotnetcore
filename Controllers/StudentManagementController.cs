@@ -78,6 +78,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             var student = await _context.Student
                 .Include(s => s.Contacts)
+                .Include(s => s.Payers)
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
                 return NotFound();
@@ -97,6 +98,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             var student = await _context.Student
                 .Include(s => s.Contacts)
+                .Include(s => s.Payers)
                 .FirstOrDefaultAsync(s => s.ID == id);
             if (student == null)
                 return NotFound();
@@ -131,6 +133,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             var existingStudent = await _context.Student
                 .Include(s => s.Contacts)
+                .Include(s => s.Payers)
                 .FirstOrDefaultAsync(s => s.ID == id);
 
             if (existingStudent == null)
@@ -199,6 +202,40 @@ namespace DotNetCoreSqlDb.Controllers
                     _context.Entry(c).State = EntityState.Deleted;
             }
 
+            if (updatedStudent.Payers != null && updatedStudent.Payers.Any())
+            {
+                // add or update
+                foreach (var payer in updatedStudent.Payers)
+                {
+                    if (payer.Id == Guid.Empty)
+                    {
+                        payer.Id = Guid.NewGuid();
+                        payer.StudentId = existingStudent.ID;
+                        _context.Entry(payer).State = EntityState.Added;
+                        existingStudent.Payers.Add(payer);
+                    }
+                    else
+                    {
+                        var existingPayer = existingStudent.Payers.FirstOrDefault(p => p.Id == payer.Id);
+                        if (existingPayer != null)
+                            existingPayer.Name = payer.Name;
+                    }
+                }
+
+                // delete removed
+                var postedIds = updatedStudent.Payers
+                    .Where(p => p.Id != Guid.Empty)
+                    .Select(p => p.Id)
+                    .ToList();
+
+                var toRemove = existingStudent.Payers
+                    .Where(p => p.Id != Guid.Empty && !postedIds.Contains(p.Id))
+                    .ToList();
+
+                foreach (var p in toRemove)
+                    _context.Entry(p).State = EntityState.Deleted;
+            }
+
             // --- NEW: create user if missing ---
             bool userExists = await _context.User.AnyAsync(u => u.ID == existingStudent.ID);
             if (!userExists)
@@ -208,42 +245,49 @@ namespace DotNetCoreSqlDb.Controllers
 
                 PasswordHelper.CreatePasswordHash(tempPass, out byte[] hash, out byte[] salt);
 
-                const int maxTries = 899;
-                int tries = 0;
-                string clean = new string(existingStudent.Name.Where(c => !char.IsWhiteSpace(c)).ToArray());
                 string candidate;
-                bool candidateExists;
+                bool exists = true;
+                int tries = 0;
+                const int maxTries = 5000; // Reasonable cap
+                HashSet<string> attempted = new HashSet<string>();
+
                 do
                 {
-                    int suffixNum = rnd.Next(100, 1000);
-                    candidate = $"{clean}{suffixNum}";
-                    candidateExists = await _context.User.AnyAsync(u => u.Username == candidate);
-                }
-                while (candidateExists && ++tries < maxTries);
+                    int usernameSuffix = rnd.Next(1000000, 10000000); // 7-digit number
+                    candidate = $"{usernameSuffix}";
 
-                if (tries >= maxTries)
+                    if (attempted.Contains(candidate))
+                    {
+                        continue; // skip DB check if already tried this one
+                    }
+
+                    attempted.Add(candidate);
+
+                    exists = await _context.User.AnyAsync(u => u.Username == candidate);
+
+                    if (++tries >= maxTries)
+                    {
+                        ViewBag.Error = "Could not generate a unique username for this user.";
+                        break;
+                    }
+
+                } while (exists);
+
+                if (!exists)
                 {
-                    ViewBag.Error = "Could not generate a unique username for this user.";
-                    ViewBag.ContactTypes = DropdownOptions.ContactTypes;
-                    ViewBag.SourceTypes = DropdownOptions.SourceTypes;
-                    ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-                    ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-                    return View(updatedStudent);
+                    var newUser = new User
+                    {
+                        ID = existingStudent.ID,
+                        Username = candidate,
+                        Role = "student",
+                        MustChangePassword = true,
+                        PasswordHash = hash,
+                        PasswordSalt = salt,
+                        IncorrectAttempts = 0
+                    };
+
+                    _context.User.Add(newUser);
                 }
-
-                var newUser = new User
-                {
-                    ID = existingStudent.ID,
-                    Username = candidate,
-                    Role = "student",
-                    MustChangePassword = true,
-                    PasswordHash = hash,
-                    PasswordSalt = salt,
-                    IncorrectAttempts = 0
-                };
-                _context.User.Add(newUser);
-
-
 
                 var primaryEmail = updatedStudent.Contacts?
                     .FirstOrDefault(c =>
@@ -361,7 +405,7 @@ namespace DotNetCoreSqlDb.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
-            [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts")]
+            [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts,Payers")]
             Student student)
         {
             // 1) Validate your one-time token
@@ -400,6 +444,10 @@ namespace DotNetCoreSqlDb.Controllers
                 student.AccountingGroup = "S";
             }
 
+            /*_logger.LogInformation("Create POST received {ContactCount} contacts and {PayerCount} payers",
+                     student.Contacts?.Count ?? 0,
+                     student.Payers?.Count ?? 0);*/
+
             // require at least one contact
             if (student.Contacts == null || !student.Contacts.Any())
             {
@@ -423,7 +471,8 @@ namespace DotNetCoreSqlDb.Controllers
                 {
                     Id = Guid.NewGuid(),
                     Name = studentNamePlusParent,
-                    IsActive = true
+                    IsActive = true,
+                    IsManualGroup = false
 
                 };
                 _context.Group.Add(group);
@@ -637,13 +686,27 @@ namespace DotNetCoreSqlDb.Controllers
                 }
 
             }
+            else
+            {
+                foreach (var kvp in ModelState)
+                {
+                    var key = kvp.Key;
+                    var errors = kvp.Value.Errors;
+                    foreach (var err in errors)
+                    {
+                        _logger.LogWarning("ModelState error for '{Key}': {ErrorMessage}", key, err.ErrorMessage);
+                    }
+                }
 
-            // if we hit errors, repopulate the dropdowns and show the form again
-            ViewBag.ContactTypes = DropdownOptions.ContactTypes;
-            ViewBag.SourceTypes = DropdownOptions.SourceTypes;
-            ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-            ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
-            return View(student);
+                // if we hit errors, repopulate the dropdowns and show the form again
+                ViewBag.ContactTypes = DropdownOptions.ContactTypes;
+                ViewBag.SourceTypes = DropdownOptions.SourceTypes;
+                ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
+                ViewBag.Timezones = TimeZoneMapping.GetTimeZones();
+                return View(student);
+            }
+
+
         }
 
         // DeleteContact action for deleting a single contact.
@@ -667,6 +730,27 @@ namespace DotNetCoreSqlDb.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+        [HttpPost]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> DeletePayer(Guid payerId)
+        {
+            var payer = await _context.Payer.FindAsync(payerId);
+            if (payer == null)
+                return Json(new { success = false, message = "Payer not found." });
+
+            _context.Payer.Remove(payer);
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
 
         /*[Authorize(Roles = "admin, support, assistant")]
         [HttpGet]
@@ -734,7 +818,7 @@ namespace DotNetCoreSqlDb.Controllers
 
                     if (lastSix == lastSixOfPhone)
                     {
-                        matches.Add(cleaned); // or add `raw` if you want original format
+                        matches.Add(cleaned); // or add raw if you want original format
                     }
                 }
             }
@@ -757,7 +841,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             // Clean input phone
             string cleanedInput = Regex.Replace(value, "[^a-zA-Z0-9]", "").ToString().ToLower();
-            
+
             var allEmailsRaw = await _context.Contact
                 .Where(c => c.Type == "Email")
                 .Select(s => s.Value)

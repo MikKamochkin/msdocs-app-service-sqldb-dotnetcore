@@ -1,0 +1,42 @@
+@model DotNetCoreSqlDb.Models.Payer
+
+@{
+    ViewData["Title"] = "Create Payer";
+}
+
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+        
+        <div class="col">
+            <h2>Create Payer</h2>
+            @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="form-group">
+                    @Html.LabelFor(m => m.Name)
+                    @Html.EditorFor(m => m.Name, new { htmlAttributes = new { @class = "form-control" } })
+                    @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+                </div>
+
+                <div class="form-group">
+                    @Html.LabelFor(m => m.StudentId, "Student")
+                    @Html.DropDownListFor(
+                        m => m.StudentId, 
+                        (SelectList)ViewBag.Students, 
+                        "Select a Student", 
+                        new { @class = "form-control" }
+                    )
+                    @Html.ValidationMessageFor(m => m.StudentId, "", new { @class = "text-danger" })
+                </div>
+
+                <button type="submit" class="btn btn-primary">Create</button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            }
+        </div>
+    }
+</div>

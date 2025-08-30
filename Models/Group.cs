@@ -16,6 +16,8 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("IsActive")]
         public bool IsActive { get; set;} = false;
 
+        public bool IsManualGroup { get; set; }
+
 
 
         // Navigation properties

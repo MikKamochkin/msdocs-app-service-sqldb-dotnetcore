@@ -1,3 +1,36 @@
+DONE: usemybalance = true by default
+
+add link to studentbalance/updatebalance from student details/studentid
+
+add to balance modal has cad as default currency (dropdown)
+
+TODO:
+
+add "view balances" button to /groups index page next to each group; new page that has dropdown of all assignments with that groupid where isActive == true; show table foreach student in that assignment show their student balance (name: units)
+
+add isrealgroup to dbo.Group bool, if created from /groups/create set it to true, if a solo group for a student set it to false. in /group keep groups that has isrealgroup == true even when <=1 students:
+
+.Where(g => g.StudentGroupCompositions.Count > 1 || g.IsRealGroup == true)
+
+
+
+TODO: when inviation == true, username is their name appended instead of a 7 digit num, fix
+
+
+
+in studentbalance/update balance show teacher, student unit cost and unit type
+
+
+
+enter payer, click search, find payer by exact name match, show students of that/those payers
+
+
+from students:
+under contact info, show payers, from there select a payer and go to StudentBalance/UpdateBalance
+
+
+
+
 schedule page refreshef when clicking account; either do it through timer service or save the changes to the db like in teacher/index for timezone selection
 
 

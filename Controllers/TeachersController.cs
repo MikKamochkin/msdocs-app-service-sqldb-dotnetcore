@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using TimeZoneConverter;
 using DotNetCoreSqlDb.Services;
+using DotNetCoreSqlDb.Helpers;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -131,8 +132,13 @@ namespace DotNetCoreSqlDb.Controllers
             }
             ViewBag.TimeZones = timeZones;
 
+            if (User.IsImpersonating())
+            {
+                ViewBag.Impersonating = true;
+            }
+
             // 6) Pass the raw schedule entries into the Razor view
-            return View(scheduleEntries);
+                return View(scheduleEntries);
         }
 
         // GET: /Teachers/Zoom

@@ -1,103 +1,50 @@
-@using System.Text.Json
+@model string
 @{
     ViewData["Title"] = "Search Payer and Student";
-    var payers = ViewBag.Payers as List<SelectListItem>;
+    var students = ViewBag.Students as List<SelectListItem>;
+    var payerNameSearched = ViewBag.payerNameSearched;
 }
 
 <div class="row no-gutters">
     <partial name="_AdminSidebar" />
     <div class="col-md-9">
-        <h2>Select Payer and Student</h2>
+        <h2>Find Payer by Name</h2>
 
-        <div class="form-group position-relative">
-            <label for="payerInput">Payer:</label>
-            <input id="payerInput" class="form-control" placeholder="Start typing payer name..." autocomplete="off" />
-            <ul id="payerSuggestions" class="list-group position-absolute w-100" style="z-index: 1000; display: none; max-height: 200px; overflow-y: auto;"></ul>
-        </div>
+        <form method="get" asp-action="SearchByPayer" asp-controller="StudentBalance" class="form-inline mb-4">
+            <div class="form-group mr-2">
+                <input type="text" name="payerName" class="form-control" placeholder="Enter payer name" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
 
-        <div class="form-group" id="studentSection" style="display: none;">
-            <label for="studentSelect">Student:</label>
-            <select id="studentSelect" class="form-control">
-                <option value="">— Select Student —</option>
-            </select>
-        </div>
+        @if(payerNameSearched != null)
+        {
+            <b><h4><div>Students for: @payerNameSearched</div></h4></b>
+        }
+        @if (students != null && students.Count > 0)
+        {
+            <div class="list-group">
+                @foreach (var student in students)
+                {
+                    <a asp-controller="StudentBalance"
+                       asp-action="GoToStudent"
+                       asp-route-id="@student.Value"
+                       class="list-group-item list-group-item-action">
+                        @student.Text
+                    </a>
+                }
+            </div>
+        }
+        else if (Model != null)
+        {
+            <p>No students found for payer name: <strong>@Model</strong></p>
+        }
     </div>
 </div>
 
 @section Scripts {
     <script>
-        const payers = @Html.Raw(JsonSerializer.Serialize(
-            payers.Select(p => new { id = p.Value, name = p.Text })
-        ));
-
-        const payerInput = document.getElementById('payerInput');
-        const suggestionBox = document.getElementById('payerSuggestions');
-
-        payerInput.addEventListener('input', function () {
-            const query = this.value.toLowerCase().trim();
-            suggestionBox.innerHTML = '';
-            if (!query) {
-                suggestionBox.style.display = 'none';
-                return;
-            }
-
-            const matches = payers.filter(p => p.name.toLowerCase().includes(query)).slice(0, 10);
-
-            if (matches.length === 0) {
-                suggestionBox.style.display = 'none';
-                return;
-            }
-
-            matches.forEach(p => {
-                const item = document.createElement('li');
-                item.className = 'list-group-item list-group-item-action';
-                item.textContent = p.name;
-                item.dataset.id = p.id;
-                item.addEventListener('click', () => {
-                    payerInput.value = p.name;
-                    suggestionBox.style.display = 'none';
-                    loadStudentsForPayer(p.id);
-                });
-                suggestionBox.appendChild(item);
-            });
-
-            suggestionBox.style.display = 'block';
-        });
-
-        document.addEventListener('click', function (e) {
-            if (!payerInput.contains(e.target) && !suggestionBox.contains(e.target)) {
-                suggestionBox.style.display = 'none';
-            }
-        });
-
-        function loadStudentsForPayer(payerId) {
-            const studentSection = document.getElementById('studentSection');
-            const studentSelect = document.getElementById('studentSelect');
-            studentSelect.innerHTML = '<option value="">— Loading... —</option>';
-
-            fetch(`/StudentBalance/GetStudentsByPayer?payerId=${payerId}`)
-                .then(response => {
-                    if (!response.ok) throw new Error("Failed to fetch students");
-                    return response.json();
-                })
-                .then(data => {
-                    studentSelect.innerHTML = '<option value="">— Select Student —</option>';
-                    data.forEach(s => {
-                        const opt = document.createElement("option");
-                        opt.value = s.id || s.ID;
-                        opt.text = s.fullName || s.Name || s.name || "Unnamed Student";
-                        studentSelect.appendChild(opt);
-                    });
-                    studentSection.style.display = 'block';
-                })
-                .catch(err => {
-                    console.error("Error fetching students:", err);
-                    studentSelect.innerHTML = '<option value="">— No Students Found —</option>';
-                    studentSection.style.display = 'block';
-                });
-        }
-
-        document.getElementById('studentSelect').addEventListener('change', function () {
+        document.getElementById("studentSelect")?.addEventListener("change", function () {
             const studentId = this.value;
             if (studentId) {
                 window.location.href = `/StudentBalance/GoToStudent?id=${studentId}`;

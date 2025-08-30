@@ -10,12 +10,14 @@ namespace DotNetCoreSqlDb.Models
         [Key]
         public Guid Id { get; set; }
 
+        [Required]
         public string Name { get; set; }
 
+        [Required]
         [ForeignKey("Student")]
         public Guid StudentId { get; set; }
 
         // Navigation properties
-        public Student Student { get; set; } = null!;
+        public virtual Student? Student { get; set; } = null!;
     }
 }

@@ -124,12 +124,42 @@
                     </tbody>
 
                 </table>
-                <button type="button" id="addContactBtn" class="btn btn-secondary">Add Contact</button>
+                <button type="button" id="addContactBtn" class="btn btn-success">Add Contact</button>
                 <br /><br />
+
+                <h4>Payers</h4>
+                <table class="table table-bordered" id="payersTable">
+                    <thead>
+                        <tr>
+                            <th>Payer Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Payers != null && Model.Payers.Any())
+                        {
+                            for (int i = 0; i < Model.Payers.Count; i++)
+                            {
+                                var p = Model.Payers.ElementAt(i);
+                                <tr class="payer-summary" data-index="@i">
+                                    <td>
+                                        <span class="payer-name">@p.Name</span>
+                                        @Html.Hidden($"Payers[{i}].Name", p.Name)
+                                    </td>
+                                    @* keep the ID for sync *@
+                                    @Html.Hidden($"Payers[{i}].Id", p.Id)
+                                    @* tell the model‐binder this index exists *@
+                                    <input type="hidden" name="Payers.Index" value="@i" />
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+                <button type="button" id="addPayerBtn" class="btn btn-success">Add Payer</button>
+
 
                 <div class="form-group">
                     <div class="col-md-offset-2 col-md-10">
-                        <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-secondary">Cancel</a>
+                        <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-danger">Cancel</a>
                         <input type="submit" value="Save Student" class="btn btn-primary" />
                     </div>
                 </div>
@@ -179,6 +209,26 @@
             </div>
           </div>
         </div>
+        
+        <div id="payerModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog"><div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="payerModalLabel">Add Payer</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="control-label">Name</label>
+                        <input type="text" id="modalPayerName" class="form-control" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="modalPayerDelete" class="btn btn-danger">Delete</button>
+                    <button type="button" id="modalPayerCancel" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="modalPayerSave" class="btn btn-primary">Save</button>
+                </div>
+            </div></div>
+            </div>
+
         @section Scripts {
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
@@ -335,7 +385,7 @@
                     if (!confirm("Are you sure you want to delete this contact?")) {
                         return;
                     }
-                    var $row = $('tr[data-index="' + editingContactIndex + '"]');
+                    var $row = $('tr.contact-summary[data-index="' + editingContactIndex + '"]');
                     var contactId = $row.find('input[name="Contacts[' + editingContactIndex + '].ID"]').val();
                     if (contactId === "00000000-0000-0000-0000-000000000000") {
                         // New unsaved contact: simply remove the row.
@@ -369,6 +419,90 @@
                 $('#modalCancel').click(function () {
                     editingContactIndex = -1;
                     $('#contactModal').modal('hide');
+                });
+
+
+                var payerCount = @((Model.Payers != null) ? Model.Payers.Count() : 0);
+                var editingPayerIndex = -1;
+
+                // show Add‐Payer modal
+                $('#addPayerBtn').click(function() {
+                    editingPayerIndex = -1;
+                    $('#modalPayerName').val('');
+                    $('#payerModalLabel').text('Add Payer');
+                    $('#payerModal').modal('show');
+                });
+
+                // click a row to edit
+                $(document).on('click', '.payer-summary', function() {
+                    editingPayerIndex = $(this).data('index');
+                    $('#payerModalLabel').text('Edit Payer');
+                    var $row = $(this);
+                    $('#modalPayerName').val($row.find('input[name="Payers['+editingPayerIndex+'].Name"]').val());
+                    $('#payerModal').modal('show');
+                });
+
+                // save new or edited
+                $('#modalPayerSave').click(function() {
+                    var name = $('#modalPayerName').val().trim();
+                    if (!name) { $('#payerModal').modal('hide'); return; }
+
+                    if (editingPayerIndex === -1) {
+                    // add
+                    var idx = payerCount++;
+                    var newRow = '<tr class="payer-summary" data-index="'+idx+'">'
+                        + '<td><span class="payer-name">'+name+'</span>'
+                        + '<input type="hidden" name="Payers['+idx+'].Name" value="'+name+'"/>'
+                        + '</td>'
+                        + '<input type="hidden" name="Payers['+idx+'].Id" value="00000000-0000-0000-0000-000000000000"/>'
+                        + '<input type="hidden" name="Payers.Index" value="'+idx+'"/>'
+                        + '</tr>';
+                    $('#payersTable tbody').append(newRow);
+                    } else {
+                    // update
+                    var $row = $('tr[data-index="'+editingPayerIndex+'"]');
+                    $row.find('.payer-name').text(name);
+                    $row.find('input[name="Payers['+editingPayerIndex+'].Name"]').val(name);
+                    }
+
+                    $('#payerModal').modal('hide');
+                });
+
+                // delete
+                $('#modalPayerDelete').click(function() {
+                    if (editingPayerIndex === -1) {
+                    alert('This payer is not yet saved.'); return;
+                    }
+                    if (!confirm('Delete this payer?')) return;
+                    var $row = $('tr.payer-summary[data-index="'+editingPayerIndex+'"]');
+                    var payerId = $row.find('input[name="Payers['+editingPayerIndex+'].Id"]').val();
+                    if (payerId === '00000000-0000-0000-0000-000000000000') {
+                    $row.remove();
+                    editingPayerIndex = -1;
+                    } else {
+                    $.post('@Url.Action("DeletePayer","StudentManagement")', { payerId: payerId })
+                        .done(function(res) {
+                        if (res.success) $row.remove();
+                        else alert('Failed to delete payer: ' + res.message);
+                        editingPayerIndex = -1;
+                        })
+                        .fail(function() { alert('Error deleting payer.'); });
+                    }
+                    $('#payerModal').modal('hide');
+                });
+
+                // cancel
+                $('#modalPayerCancel').click(function() {
+                    editingPayerIndex = -1;
+                    $('#payerModal').modal('hide');
+                });
+
+                $('form').submit(function(e) {
+                    $("input[name='Payers.Index']").remove();
+                    $('#payersTable tbody tr.payer-summary').each(function() {
+                    var idx = $(this).data('index');
+                    $('<input>').attr({type:'hidden', name:'Payers.Index', value:idx}).appendTo('form');
+                    });
                 });
 
                 // Before form submission, ensure each row's index is included.

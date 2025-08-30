@@ -68,6 +68,38 @@
             <p>No contact information available.</p>
         }
 
+        <h4>Payer Information</h4>
+        @if(Model.Payers != null && Model.Payers.Any())
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach(var payer in Model.Payers)
+                    {
+                        <tr>
+                            <td>@Html.DisplayFor(m => payer.Name)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No Payers</p>
+        }
+
+        <h4><a asp-controller="StudentBalance"
+            asp-action="UpdateBalance"
+            asp-route-id="@Model.ID"
+            class="btn btn-dark">
+                Go To Balance Info
+            </a>
+        </h4>
+
         <div class="details-buttons">
             <a  
                 href='@Url.Action("Edit", new { id = Model.ID })'

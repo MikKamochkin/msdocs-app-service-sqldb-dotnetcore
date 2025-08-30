@@ -4,6 +4,7 @@ using DotNetCoreSqlDb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DotNetCoreSqlDb.Migrations
 {
     [DbContext(typeof(MyDatabaseContext))]
-    partial class MyDatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20250703233250_CreatedZoomMeetingLog")]
+    partial class CreatedZoomMeetingLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -101,9 +104,6 @@ namespace DotNetCoreSqlDb.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsManualGroup")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -432,12 +432,6 @@ namespace DotNetCoreSqlDb.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<byte[]>("ImpersonationPasswordHash")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("ImpersonationPasswordSalt")
-                        .HasColumnType("varbinary(max)");
-
                     b.Property<int>("IncorrectAttempts")
                         .HasColumnType("int");
 
@@ -530,25 +524,7 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Property<DateTime?>("DateTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("Duration")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("JoinUrl")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<Guid?>("ScheduleId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("StartTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ZoomId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("ZoomMeetingId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -556,8 +532,6 @@ namespace DotNetCoreSqlDb.Migrations
                     b.HasIndex("AssignmentId");
 
                     b.HasIndex("ScheduleId");
-
-                    b.HasIndex("ZoomMeetingId");
 
                     b.ToTable("ZoomMeetingLog");
                 });
@@ -649,7 +623,7 @@ namespace DotNetCoreSqlDb.Migrations
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Payer", b =>
                 {
                     b.HasOne("DotNetCoreSqlDb.Models.Student", "Student")
-                        .WithMany("Payers")
+                        .WithMany()
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -733,15 +707,9 @@ namespace DotNetCoreSqlDb.Migrations
                         .WithMany()
                         .HasForeignKey("ScheduleId");
 
-                    b.HasOne("DotNetCoreSqlDb.Models.ZoomMeetings", "ZoomMeeting")
-                        .WithMany()
-                        .HasForeignKey("ZoomMeetingId");
-
                     b.Navigation("Assignment");
 
                     b.Navigation("Schedule");
-
-                    b.Navigation("ZoomMeeting");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.ZoomMeetings", b =>
@@ -770,8 +738,6 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Navigation("Contacts");
 
                     b.Navigation("Notes");
-
-                    b.Navigation("Payers");
 
                     b.Navigation("StudentGroupCompositions");
                 });

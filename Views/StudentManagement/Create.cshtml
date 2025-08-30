@@ -12,7 +12,7 @@
     }
 
     @* ——————— Main Content Column ——————— *@
-    <div class="@(User.IsInRole("admin") || User.IsInRole("support") ? "col-md-9" : "col-12")">
+    <div class="col-md-9">
         <h2>Create Student</h2>
 
         @Html.ValidationSummary(true, "", new { @class = "text-danger" })
@@ -85,6 +85,11 @@
                 <button type="button" id="addContact" class="btn btn-secondary">Add Contact Information</button>
                 <br /><br />
 
+                <h4>Payers</h4>
+                <div id="payers"></div>
+                <button type="button" id="addPayer" class="btn btn-secondary">Add Payer</button>
+                <br /><br />
+
                 <div class="form-group">
                     <div class="col-md-offset-2 col-md-10">
                         <input id="submitButton" type="submit" value="Create" class="btn btn-primary" />
@@ -96,8 +101,6 @@
                     <br>
                     <div class="alert alert-danger">@ViewBag.Error</div>
                 }
-
-                
             </div>
         }
 
@@ -143,6 +146,26 @@
             </div>
           </div>
         </div>
+
+        <div id="payerModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Payer</h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="control-label">Name</label>
+                            @Html.TextBox("modalPayerName", null, new { @class = "form-control", id="modalPayerName" })
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                    <button type="button" id="payerModalCancel" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="payerModalSave" class="btn btn-primary">Save</button>
+                </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -155,6 +178,8 @@
         // Global counters/variables:
         var contactCount = 0;
         var editingContactIndex = null;
+        var payerCount = 0;
+        var editingPayerIndex = null;
 
         function addContactSummary(index, contactType, typeText, value, invitationBool, emergencyBool, moneyBool) {
             if ($("#contactsSummary").length === 0) {
@@ -191,8 +216,37 @@
             $("#contactsSummary tbody").append(summaryRow);
         }
 
+        function addPayerSummary(index, payerName) {
+            // 1) If the payer table doesn’t exist yet, inject it just after "#payers"
+            if ($("#payersSummary").length === 0) {
+                var tableHtml =
+                    '<table id="payersSummary" class="table table-bordered" style="margin-top:20px;">' +
+                        '<thead><tr>' +
+                            '<th>Payer Name</th>' +
+                        '</tr></thead>' +
+                        '<tbody></tbody>' +
+                    '</table>';
+                $("#payers").after(tableHtml);
+            }
+
+            // 2) Build the summary row exactly like contacts do it
+            var summaryRow =
+                '<tr class="payer-summary" data-index="' + index + '" data-payername="' + payerName + '">' +
+                    '<td>' + payerName + '</td>' +
+                    '<td style="display:none;">' +
+                        '<input type="hidden" name="Payers[' + index + '].Name" value="' + payerName + '"/>' +
+                    '</td>' +
+                '</tr>';
+
+            // 3) Append to the table body
+            $("#payersSummary tbody").append(summaryRow);
+        }
+
+
+
         $(document).ready(function() {
             $("#contactModal").modal({ backdrop: 'static', keyboard: false, show: false });
+            $("#payerModal").modal({ backdrop: 'static', keyboard: false, show: false });
 
             $("#addContact").click(function() {
                 editingContactIndex = null;
@@ -202,6 +256,12 @@
                 $("#modalContactEmergency").prop("checked", false);
                 $("#modalContactMoney").prop("checked", false);
                 $("#contactModal").modal('show');
+            });
+
+            $("#addPayer").click(function() {
+                editingPayerIndex = null;
+                $("#modalPayerName").val("");
+                $("#payerModal").modal('show');
             });
 
             $(document).on("click", "#contactsSummary tbody tr.contact-summary", function() {
@@ -214,6 +274,15 @@
                 $("#modalContactMoney").prop("checked", $row.data("money"));
                 $("#contactModal").modal("show");
             });
+
+            $(document).on("click", "#payerSummary tbody tr.payer-summary", function()
+            {
+                var $row = $(this);
+                editingPayerIndex = $row.data("index");
+                $("modalPayerName").val($row.data("payername"));
+                $("#payerModal").modal("show");
+            })
+
 
             $("#modalSave").click(function() {
                 var contactType     = $("#modalContactType").val();
@@ -262,6 +331,49 @@
                 editingContactIndex = null;
                 $("#contactModal").modal('hide');
             });
+
+            // ——— Payer‐modal Save ———
+            $("#payerModalSave").click(function() {
+                // grab the new name
+                var payerName = $("#modalPayerName").val().trim();
+
+                // if empty, just close
+                if (!payerName) {
+                    $("#payerModal").modal('hide');
+                    return;
+                }
+
+                // editing an existing row?
+                if (editingPayerIndex !== null) {
+                    var $row = $("#payerSummary tbody tr.payer-summary[data-index='" + editingPayerIndex + "']");
+
+                    // update visible cell
+                    $row.find("td:first").text(payerName);
+
+                    // update hidden input
+                    $row.find("input[type=hidden]").val(payerName);
+
+                    // update the stored data‑attribute
+                    $row.data("payername", payerName);
+
+                    // reset
+                    editingPayerIndex = null;
+                }
+                else {
+                    // new payer
+                    addPayerSummary(payerCount, payerName);
+                    payerCount++;
+                }
+
+                // hide modal
+                $("#payerModal").modal('hide');
+            });
+
+            $("#payerModalCancel").click(function() {
+                editingContactIndex = null;
+                $("#payerModal").modal('hide');
+            });
+
         });
 
         // Disable the submit button on a valid first click to prevent double-submits

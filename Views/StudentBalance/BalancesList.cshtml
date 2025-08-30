@@ -1,0 +1,112 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.Assignments>
+
+@{
+    ViewData["Title"] = "View Balances";
+    var assignments = ViewBag.Assignments;
+}
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
+    {
+        <partial name="_AdminSidebar" />
+    }
+    <div class="col-md-9">
+
+        <h2>View Balances</h2>
+
+        <table class="table table-striped table-sm">
+            <thead>
+                <tr>
+                    <th>Group Name</th>
+                    <th>Teacher</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in assignments)
+                {
+                    var slotId = $"balances-slot-{a.Id}";
+                    <tr>
+                        <td>@a.Group.Name</td>
+                        <td>@(a.Teacher?.Name ?? a.TeacherId.ToString())</td>
+                        <td>
+                            <button type="button" class="btn btn-primary btn-sm show-balances" data-assignment-id="@a.Id"
+                                data-slot-id="@slotId">
+                                Show balances
+                            </button>
+                        </td>
+                    </tr>
+                    <tr id="@slotId" style="display:none;">
+                        <td colspan="3">
+                            <div class="p-2 border rounded">
+                                <div class="balances-loading" style="display:none;">Loading…</div>
+                                <div class="balances-content"></div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            function toggle(el, show) { el.style.display = show ? '' : 'none'; }
+
+            async function loadBalances(assignmentId, slotRow) {
+                const loading = slotRow.querySelector('.balances-loading');
+                const content = slotRow.querySelector('.balances-content');
+                content.innerHTML = '';
+                toggle(loading, true);
+
+                try {
+                    const url = '@Url.Action("BalancesForAssignment", "StudentBalance")'
+                        + '?assignmentId=' + encodeURIComponent(assignmentId);
+                    const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+                    const data = await resp.json(); // [{ studentId, studentName, assignmentId, balance }, ...]
+
+                    if (!Array.isArray(data) || data.length === 0) {
+                        content.innerHTML = '<div class="text-muted">No balances for this assignment.</div>';
+                        return;
+                    }
+
+                    // Build a small table
+                    let html = '<table class="table table-bordered table-sm mb-2">'
+                        + '<thead><tr>'
+                        + '<th style="width:40%">Student</th>'
+                        + '<th class="text-end" style="width:30%">Balance</th>'
+                        + '</tr></thead><tbody>';
+
+                    for (const r of data) {
+                        const name = (r.studentName && r.studentName.trim()) ? r.studentName : '[unknown]';
+                        html += '<tr>'
+                            + '<td>' + name + '</td>'
+                            + '<td class="text-end">' + r.balance + '</td>'
+                            + '</tr>';
+                    }
+                    html += '</tbody></table>';
+
+                    content.innerHTML = html;
+                } catch (e) {
+                    content.innerHTML = '<div class="text-danger">Could not load balances. ' + (e?.message || '') + '</div>';
+                } finally {
+                    toggle(loading, false);
+                }
+            }
+
+            document.addEventListener('click', function (e) {
+                const btn = e.target.closest('.show-balances');
+                if (!btn) return;
+
+                const slotRow = document.getElementById(btn.dataset.slotId);
+                const opening = slotRow.style.display === 'none';
+                toggle(slotRow, opening);
+                btn.textContent = opening ? 'Hide balances' : 'Show balances';
+                if (opening) loadBalances(btn.dataset.assignmentId, slotRow);
+            });
+        })();
+    </script>
+}

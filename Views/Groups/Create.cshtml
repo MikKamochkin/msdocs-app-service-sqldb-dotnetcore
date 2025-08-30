@@ -70,7 +70,7 @@
                         </div>
                         <div class="form-group mt-3">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="useMyBalance">
+                                <input class="form-check-input" type="checkbox" id="useMyBalance" checked>
                                 <label class="form-check-label" for="useMyBalance">
                                     Use My Balance
                                 </label>
@@ -134,6 +134,7 @@
             // and before showing the modal
             $('#addStudentBtn').click(function () {
                 updateStudentSelect();
+                $('#useMyBalance').prop('checked', true);
                 $('#addStudentModal').modal('show');
             });
 
@@ -222,7 +223,7 @@
             });
 
             // Before form submission, ensure at least one student is added
-            $('form').submit(function(e) {
+            /*$('form').submit(function(e) {
                 if (students.length === 0) {
                     alert("Please add at least one student to the group.");
                     e.preventDefault();
@@ -231,7 +232,7 @@
                 
                 // Make sure hidden fields are updated
                 updateHiddenFields();
-            });
+            });*/
         });
     </script>
 }

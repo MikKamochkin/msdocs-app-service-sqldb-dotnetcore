@@ -87,7 +87,6 @@ namespace DotNetCoreSqlDb.Helpers
             await _context.SaveChangesAsync();
         }
 
-        //Depositing
         public async Task LogStudentBalanceAsync(
             Guid studentId,
             Guid assignmentId,
@@ -117,7 +116,6 @@ namespace DotNetCoreSqlDb.Helpers
             await _context.SaveChangesAsync();
         }
 
-        //Used on lesson
         public async Task LogStudentBalanceAsync(
             Guid studentId,
             Guid assignmentId,
@@ -136,6 +134,43 @@ namespace DotNetCoreSqlDb.Helpers
             };
             _context.StudentBalanceTransactionLog.Add(log);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task LogZoomMeetingAsync(
+            Guid assignmentId,
+            Guid scheduleId,
+            Guid zoomMeetingId)
+        {
+            var zoomMeeting = await _context.ZoomMeetings.FindAsync(zoomMeetingId);
+            if (zoomMeeting != null)
+            {
+                var log = new ZoomMeetingLog
+                {
+                    AssignmentId = assignmentId,
+                    DateTime = DateTime.Now,
+                    ScheduleId = scheduleId,
+                    ZoomMeetingId = zoomMeetingId,
+                    ZoomId = zoomMeeting.ZoomId,
+                    Email = zoomMeeting.Email,
+                    JoinUrl = zoomMeeting.JoinUrl,
+                    StartTime = zoomMeeting.StartTime,
+                    Duration = zoomMeeting.Duration
+                };
+                _context.ZoomMeetingLog.Add(log);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                var log = new ZoomMeetingLog
+                {
+                    AssignmentId = assignmentId,
+                    DateTime = DateTime.Now,
+                    ScheduleId = scheduleId
+                };
+                _context.ZoomMeetingLog.Add(log);
+                await _context.SaveChangesAsync();
+            }
+            
         }
     }
 }
