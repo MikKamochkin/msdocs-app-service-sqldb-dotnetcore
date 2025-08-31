@@ -91,7 +91,7 @@ namespace DotNetCoreSqlDb.Controllers
                 return View("Index", payerName); // Return to view with error indication if needed
 
             var payers = await _context.Payer
-                .Where(p => p.Name == payerName.Trim())
+                .Where(p => EF.Functions.Collate(p.Name, "Latin1_General_CS_AS") == payerName.Trim())
                 .ToListAsync();
 
             var payerStudentIds = payers.Select(p => p.StudentId).Distinct();
