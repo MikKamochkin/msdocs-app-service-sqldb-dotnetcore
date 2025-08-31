@@ -63,6 +63,10 @@ namespace DotNetCoreSqlDb.Data
                 .HasIndex(u => u.Username)
                 .IsUnique();
 
+            modelBuilder.Entity<StudentBalance>()
+            .HasIndex(sb => new { sb.StudentId, sb.AssignmentId })
+            .IsUnique();
+
         }
         
 

@@ -56,17 +56,14 @@
                             }
                         </td>
                         <td>
-                            <!-- Deactivate -->
-                            @using (Html.BeginForm("Deactivate", "Groups", FormMethod.Post, new { @class="d-inline" }))
-                            {
-                                @Html.AntiForgeryToken()
-                                @Html.Hidden("id", group.Id)
-                                <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
-                            }
 
                             <!-- Deactivate & Copy -->
                                 <a href="@Url.Action("DeactivateAndCopy", "Groups", new { id = group.Id })" 
-                                class="btn btn-sm btn-info ml-1">Edit</a>
+                                class="btn btn-sm btn-success ml-1">Edit</a>
+
+                            <!-- View Balances -->
+                                <a href="@Url.Action("BalancesList", "StudentBalance", new { id = group.Id })" 
+                                class="btn btn-sm btn-primary ml-1">View Balances</a>
 
                             <!-- Copy Emails -->
                             @{
@@ -86,9 +83,20 @@
                                 Copy Emails
                             </button>
 
-                            <!-- View Balances -->
-                                <a href="@Url.Action("BalancesList", "StudentBalance", new { id = group.Id })" 
-                                class="btn btn-sm btn-primary ml-1">View Balances</a>
+
+                            <!-- Deactivate -->
+                            @using (Html.BeginForm("Deactivate", "Groups", FormMethod.Post, new { @class="d-inline" }))
+                            {
+                                @Html.AntiForgeryToken()
+                                @Html.Hidden("id", group.Id)
+                                <button type="submit" class="btn btn-sm btn-danger">Deactivate</button>
+                            }
+
+
+
+                            
+
+                            
                         </td>
 
                     </tr>
