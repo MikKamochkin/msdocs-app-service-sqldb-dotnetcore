@@ -108,7 +108,7 @@ namespace DotNetCoreSqlDb.Controllers
             if (teacherId.HasValue)
             {
                 var assignments = await _context.Assignments
-                    .Where(a => a.TeacherId == teacherId)
+                    .Where(a => a.TeacherId == teacherId && a.Group!.IsActive)
                     .Select(a => new
                     {
                         a.Id,
@@ -121,6 +121,7 @@ namespace DotNetCoreSqlDb.Controllers
                 groupItems = assignments
                     .GroupBy(x => x.GroupId)
                     .Select(g => g.First())
+                    //.Where(a => a.IsActive)
                     .Select(a => new SelectListItem
                     {
                         Value = a.Id.ToString(),
