@@ -473,13 +473,13 @@
 				}
 
 				//Uncomment this to use actual static link
-				return `
+				/*return `
 						  <a href="${deepLink}" class="${cls}" data-id="${id}" ${extra}>
 							<strong>Join Static Link</strong>
 						  </a>
-						  `;
+						  `;*/
 				//Dynamic link:
-				/*return `
+				return `
 					<a
 						href="${tempTestLink}" class="${cls}" data-id="${id}" ${extra}>
 						<strong>Join Static Link</strong>
@@ -502,7 +502,7 @@
 						class="btn btn-info btn-md ml-3"
 						title="Lesson details">
 						<i class="fa-solid fa-circle-info text-light"></i>
-					</a>`;*/
+					</a>`;
 			}
 
 			/* open Zoom + browser fallback */
