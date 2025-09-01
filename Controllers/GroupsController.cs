@@ -521,6 +521,8 @@ namespace DotNetCoreSqlDb.Controllers
                         });
                     }
 
+                    await _context.SaveChangesAsync();
+
                     // --- (E) Add StudentGroupComposition rows for ALL posted students ---
                     var useMyBalanceValues = Request.Form["UseMyBalanceValues"].ToString()
                         .Split(',', StringSplitOptions.RemoveEmptyEntries)
