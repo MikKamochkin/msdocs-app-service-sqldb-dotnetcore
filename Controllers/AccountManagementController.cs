@@ -129,7 +129,7 @@ namespace DotNetCoreSqlDb.Controllers
         // GET: /AccountManagement/PasswordReset?userId=…
         [HttpGet]
         public async Task<IActionResult> ChangeUsername(Guid userId)
-        {
+        {/*
             ViewBag.UserId = userId;
             var user = await _context.User.FindAsync(userId);
 
@@ -155,7 +155,8 @@ namespace DotNetCoreSqlDb.Controllers
             //return RedirectToAction("Index", returnController);
             ViewBag.ReturnController = returnController;
 
-            return View();
+            return View();*/
+            return NotFound();
         }
 
         // POST: /AccountManagement/PasswordReset

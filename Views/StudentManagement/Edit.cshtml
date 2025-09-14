@@ -14,7 +14,7 @@
 
         @Html.ValidationSummary(true, "", new { @class = "text-danger" })
 
-        @using (Html.BeginForm("Edit", "StudentManagement", FormMethod.Post))
+        @using (Html.BeginForm("Edit", "StudentManagement", FormMethod.Post, new {id = "editForm"}))
         {
             @Html.AntiForgeryToken()
             @Html.HiddenFor(m => m.ID)
@@ -124,8 +124,8 @@
                     </tbody>
 
                 </table>
-                <button type="button" id="addContactBtn" class="btn btn-success">Add Contact</button>
-                <br /><br />
+                <button type="button" id="addContactBtn" class="btn btn-info">Add Contact</button>
+                <br />
 
                 <h4>Payers</h4>
                 <table class="table table-bordered" id="payersTable">
@@ -154,9 +154,9 @@
                         }
                     </tbody>
                 </table>
-                <button type="button" id="addPayerBtn" class="btn btn-success">Add Payer</button>
-
-
+                <button type="button" id="addPayerBtn" class="btn btn-info">Add Payer</button>
+                <br>
+                <br>
                 <div class="form-group">
                     <div class="col-md-offset-2 col-md-10">
                         <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-danger">Cancel</a>
@@ -164,6 +164,13 @@
                     </div>
                 </div>
             </div>
+        }
+        @using (Html.BeginForm("ResetPassword", "StudentManagement", FormMethod.Post, new { @class = "d-inline" }))
+        {
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="studentId" value="@Model.ID" />
+            <br />
+            <button type="submit" class="btn btn-dark">Reset Password</button>
         }
 
         <!-- Modal for Adding/Editing a Contact -->
@@ -497,7 +504,7 @@
                     $('#payerModal').modal('hide');
                 });
 
-                $('form').submit(function(e) {
+                $('#editForm').submit(function (e) {
                     $("input[name='Payers.Index']").remove();
                     $('#payersTable tbody tr.payer-summary').each(function() {
                     var idx = $(this).data('index');
@@ -506,7 +513,7 @@
                 });
 
                 // Before form submission, ensure each row's index is included.
-                $('form').submit(function (e) {
+                $('#editForm').submit(function (e) {
                     $("input[name='Contacts.Index']").remove();
                     $('#contactsTable tbody tr.contact-summary').each(function () {
                         var idx = $(this).data('index');

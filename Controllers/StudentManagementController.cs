@@ -83,6 +83,12 @@ namespace DotNetCoreSqlDb.Controllers
             if (student == null)
                 return NotFound();
 
+            var user = await _context.User
+                .Where(u => u.ID == id)
+                .FirstOrDefaultAsync();
+
+            ViewBag.StudentNumber = user.Username;
+
             bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
             if (!isPrivileged && student.AccountingGroup != "S")
                 return Forbid();
@@ -297,9 +303,10 @@ namespace DotNetCoreSqlDb.Controllers
 
                 //_logger.LogInformation("Would have sent welcome email with the name of {n} to email: {e}", existingStudent.Name, primaryEmail);
 
-                if (string.IsNullOrWhiteSpace(primaryEmail))
+                //TODO: Add Password reset button that will send cred email to primary email and add tempdata to copy for admin 
+                /*if (string.IsNullOrWhiteSpace(primaryEmail))
                 {
-                    try
+                    /*try
                     {
                         var html = $"""
                             <h2>Bienvenue!</h2>
@@ -322,7 +329,7 @@ namespace DotNetCoreSqlDb.Controllers
                             subject: subject,
                             htmlBody: html);
 
-                        await _logHelper.LogMailAsync(to, subject, html);
+                        //await _logHelper.LogMailAsync(to, subject, html);
                     }
                     catch (Exception ex)
                     {
@@ -353,13 +360,13 @@ namespace DotNetCoreSqlDb.Controllers
                             subject: subject,
                             htmlBody: html);
 
-                        await _logHelper.LogMailAsync(to, subject, html);
+                        //await _logHelper.LogMailAsync(to, subject, html);
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Failed to send welcome e-mail to student {StudentId}", existingStudent.ID);
                     }
-                }
+                }*/
 
 
             }
@@ -503,7 +510,7 @@ namespace DotNetCoreSqlDb.Controllers
 
                 // 1) Seed Random once
 
-                string candidate;
+                /*string candidate;
                 bool exists = true;
                 int tries = 0;
                 const int maxTries = 5000; // Reasonable cap
@@ -529,6 +536,39 @@ namespace DotNetCoreSqlDb.Controllers
                         break;
                     }
 
+                } while (exists);*/
+
+                string candidate;
+                bool exists = true;
+                int tries = 0;
+                const int maxTries = 5000;
+                HashSet<string> attempted = new HashSet<string>();
+
+                do
+                {
+                    // Generate 6-digit body
+                    int body = rnd.Next(100000, 1000000); // 100000..999999
+                    string bodyStr = body.ToString();
+
+                    // Add 1-digit Luhn check
+                    int checkDigit = LuhnHelper.ComputeLuhnCheckDigit(bodyStr);
+                    candidate = bodyStr + checkDigit; // total length = 7
+
+                    if (!attempted.Add(candidate))
+                        continue;
+
+                    // Sanity check
+                    if (!LuhnHelper.IsLuhnValid(candidate))
+                        continue;
+
+                    exists = await _context.User.AnyAsync(u => u.Username == candidate);
+
+                    if (++tries >= maxTries)
+                    {
+                        ViewBag.Error = "Could not generate a unique username for this user.";
+                        break;
+                    }
+
                 } while (exists);
 
                 if (!exists)
@@ -538,7 +578,7 @@ namespace DotNetCoreSqlDb.Controllers
                         ID = student.ID,
                         Username = candidate,
                         Role = "student",
-                        MustChangePassword = true,
+                        MustChangePassword = false,
                         PasswordHash = passwordHash,
                         PasswordSalt = passwordSalt,
                         IncorrectAttempts = 0
@@ -559,33 +599,28 @@ namespace DotNetCoreSqlDb.Controllers
                     try
                     {
                         var html = $"""
-                             <h2>Bienvenue!</h2>
-                             <p>Your temporary credentials at <strong>TorontoFrench.com</strong></p>
+                             <h3>Welcome to TorontoFrench.com!</h3>
+                             <p>Your credentials:</p>
                              <p>
-                                 <strong>Username :</strong> {candidate}<br/>
-                                 <strong>Temporary Password :</strong> {defaultPassword}
+                                 <strong>Student Number :</strong> {candidate}<br/><br/>
+                                 <strong>Password :</strong> {defaultPassword}
                              </p>
-                             <p>You will have to change your password (and optionally username) upon your first login.</p>
                              <p>
-                                 Click here to log in: 
-                                 <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
+                                 <a href="https://torontofrench.ca/" target="_blank" style="color: #1a73e8;">Click here to log in</a>
                              </p>
                              """;
 
-                        /*await _mailer.SendAsync(
-                         to:       primaryEmail,
-                         //from: "Toronto French",
-                         subject:  "Your credentials at Toronto French",
-                         htmlBody: html);*/
-                        string to = "michael.kamochkin@gmail.com";
-                        string subject = "Your credentials at Toronto French";
-                        await _mailer.SendAsync(
-                        to: to,
-                        //from: "Toronto French",
-                        subject: subject,
-                        htmlBody: html);
 
-                        await _logHelper.LogMailAsync(to, subject, html);
+
+                        string to = primaryEmail;
+                        string subject = "TorontoFrench.com credentials";
+                        await _mailer.SendAsync(
+                         to: to,
+                         //from: "Toronto French",
+                         subject: subject,
+                         htmlBody: html);
+
+                        //await _logHelper.LogMailAsync(to, subject, html);
 
                     }
                     catch (Exception ex)
@@ -595,6 +630,7 @@ namespace DotNetCoreSqlDb.Controllers
                         // swallow → the user is created even if mail fails
                     }
                 }
+                /*
                 else
                 {
                     try
@@ -613,11 +649,11 @@ namespace DotNetCoreSqlDb.Controllers
                              </p>
                              """;
 
-                        /*await _mailer.SendAsync(
+                        await _mailer.SendAsync(
                          to:       primaryEmail,
                          //from: "Toronto French",
                          subject:  "Your credentials at Toronto French",
-                         htmlBody: html);*/
+                         htmlBody: html);
                         string to = "michael.kamochkin@gmail.com";
                         string subject = "Your credentials at Toronto French";
                         await _mailer.SendAsync(
@@ -636,7 +672,7 @@ namespace DotNetCoreSqlDb.Controllers
                         // swallow → the user is created even if mail fails
                     }
 
-                }
+                }*/
 
 
                 // 4) Create a blank Assignments entry for the new group
@@ -656,8 +692,16 @@ namespace DotNetCoreSqlDb.Controllers
                 _context.Assignments.Add(assignment);
                 */
                 // 5) Persist composition + assignment
+
+                // Save ephemeral credentials (one-time) for UI display after redirect
+
                 try
                 {
+                    // put creds into TempData just before saving
+                    TempData["JustCreatedOrChangedStudentName"] = student.Name;
+                    TempData["JustCreatedOrChangedStudentUsername"] = candidate;
+                    TempData["JustCreatedOrChangedStudentPassword"] = defaultPassword;
+
                     await _context.SaveChangesAsync();
                     return RedirectToAction(nameof(Index));
                 }
@@ -865,5 +909,52 @@ namespace DotNetCoreSqlDb.Controllers
                 closeMatches = matches
             });
         }
+
+        [Authorize(Roles = "admin, support, assistant")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(Guid studentId)
+        {
+            // 1) Load student & enforce same access rules you use elsewhere
+            var student = await _context.Student
+                .Include(s => s.Contacts)
+                .FirstOrDefaultAsync(s => s.ID == studentId);
+
+            if (student == null)
+                return NotFound();
+
+            // 2) Load the linked User row
+            var user = await _context.User.FirstOrDefaultAsync(u => u.ID == studentId);
+            if (user == null)
+                return NotFound(); // or create one if you prefer
+
+            Random rnd = new Random();
+            string newPassword = rnd.Next(100000, 1000000) + "";
+
+            PasswordHelper.CreatePasswordHash(
+                newPassword,
+                out byte[] passwordHash,
+                out byte[] passwordSalt
+            );
+
+
+            user.PasswordHash = passwordHash;
+            user.PasswordSalt = passwordSalt;
+            user.MustChangePassword = false;
+            user.IncorrectAttempts = 0;
+
+            await _context.SaveChangesAsync();
+
+            // 5) Put plaintext creds into TempData for one-time display
+            TempData["JustCreatedOrChangedStudentName"] = student.Name;
+            TempData["JustCreatedOrChangedStudentUsername"] = user.Username;
+            TempData["JustCreatedOrChangedStudentPassword"] = newPassword;
+
+            //_logger.LogInformation("changed password: " + newPassword);
+
+            // 6) Redirect back to Edit (or wherever you prefer to show the TempData)
+            return RedirectToAction(nameof(Index));
+        }
+
     }
 }

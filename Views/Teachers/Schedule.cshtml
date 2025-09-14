@@ -271,12 +271,12 @@
 		<!-- TABLE -->
 		<table id="entriesTable">
 			<colgroup>
+				<col style="width:11%" />
 				<col style="width:10%" />
-				<col style="width:10%" />
-				<col style="width:14%" />
-				<col style="width:12%" />
-				<col style="width:12%" />
-				<col style="width:18%" />
+				<col style="width:15%" />
+				<col style="width:8%" />
+				<col style="width:6%" />
+				<col style="width:32%" />
 			</colgroup>
 			<thead>
 				<tr>
@@ -481,15 +481,17 @@
 				//Dynamic link:
 				return `
 					<a
-						href="${tempTestLink}" class="${cls}" data-id="${id}" ${extra}>
-						<strong>Join Static Link</strong>
-					</a>
-					<a
 						href="${startLessonBase}?id=${id}"
 						class="btn btn-primary btn-md ml-2 start-lesson-btn"
 						target="_blank"
 						rel="noopener noreferrer">
 						<strong>${startOrJoin} Lesson</strong>
+					</a>
+					<a
+						href="${detailsBase}?scheduleId=${id}"
+						class="btn btn-info btn-md ml-3"
+						title="Lesson details">
+						<i class="fa-solid fa-circle-info text-light"></i>
 					</a>
 					<button
 						class="btn btn-danger btn-md ml-2 end-lesson-btn ${endBtnStatus}"
@@ -497,12 +499,7 @@
 						onclick="pingEndLesson('${id}'), refreshRows();"
 						<strong>End Lesson</strong>
 					</button>	
-					<a
-						href="${detailsBase}?scheduleId=${id}"
-						class="btn btn-info btn-md ml-3"
-						title="Lesson details">
-						<i class="fa-solid fa-circle-info text-light"></i>
-					</a>`;
+					`;
 			}
 
 			/* open Zoom + browser fallback */

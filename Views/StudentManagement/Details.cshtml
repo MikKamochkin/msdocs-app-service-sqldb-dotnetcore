@@ -2,6 +2,8 @@
 
 @{
     ViewData["Title"] = "Student Details";
+    
+    string studentNumber = ViewBag.StudentNumber; 
 }
 
 <div class="row no-gutters">
@@ -18,6 +20,8 @@
             <dl class="dl-horizontal">
                 <dt>Name</dt>
                 <dd>@Html.DisplayFor(model => model.Name)</dd>
+                <dt>Student Number</dt>
+                <dd>@studentNumber</dd>
                 <dt>Parent/Employer</dt>
                 <dd>@Html.DisplayFor(model => model.ParentOrEmployer)</dd>
                 <dt>Main Notes</dt>

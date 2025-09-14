@@ -2,12 +2,19 @@
 
 @{
     ViewData["Title"] = "Students List";
-    
+
     // Retrieve the current sort order from ViewBag (set by the controller)
     string currentSort = ViewBag.CurrentSort as string ?? "createdDate_desc";
     // Toggle sorting: if current sort is ascending for Name, then next is descending, and vice versa.
     string nameSortParam = currentSort == "Name" ? "name_desc" : "Name";
     string dateSortParam = currentSort == "CreatedDate" ? "createdDate_desc" : "CreatedDate";
+
+    // One-time creds (from TempData set in Create/Edit POST)
+    var newName = TempData["JustCreatedOrChangedStudentName"] as string;
+    var newUser = TempData["JustCreatedOrChangedStudentUsername"] as string;
+    var newPass = TempData["JustCreatedOrChangedStudentPassword"] as string;
+
+    bool hasNewCreds = !string.IsNullOrWhiteSpace(newUser) && !string.IsNullOrWhiteSpace(newPass);
 }
 
 <div class="row no-gutters">
@@ -16,6 +23,63 @@
         <partial name="_AdminSidebar" />
         <div class="col-md-10">
             <h2>Students List</h2>
+
+            @* One-time credentials banner *@
+            @*@if (!string.IsNullOrWhiteSpace(newUser) && !string.IsNullOrWhiteSpace(newPass))
+            {
+                <div class="alert alert-success alert-dismissible" role="alert" style="white-space:nowrap; overflow:auto;">
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+
+                    <strong>Student created.</strong>
+                    @if (!string.IsNullOrWhiteSpace(newName))
+                    {
+                        <span> (@newName)</span>
+                    }
+                    <br />
+                    <span><strong>Student Number:</strong> <code id="newUserVal">@newUser</code></span>
+                    &nbsp;&nbsp;
+                    <span><strong>Password:</strong> <code id="newPassVal">@newPass</code></span>
+                    &nbsp;&nbsp;
+                    <button type="button" class="btn btn-xs btn-default" onclick="copyCreds()">Copy</button>
+                </div>
+            }*@
+            @if (hasNewCreds)
+            {
+                <div id="credsModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
+                    aria-labelledby="credsModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 id="credsModalLabel" class="modal-title">Student Created</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close" id="modalXClose">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body" style="white-space:nowrap; overflow:auto;">
+                                @if (!string.IsNullOrWhiteSpace(newName))
+                                {
+                                    <p><strong>Name:</strong> @newName</p>
+                                }
+                                <p>
+                                    <strong>Student Number:</strong>
+                                    <code id="newUserVal">@newUser</code>
+                                </p>
+                                <p>
+                                    <strong>Password:</strong>
+                                    <code id="newPassVal">@newPass</code>
+                                </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" id="copyBtn" class="btn btn-primary" onclick="copyCreds()">Copy</button>
+                                @*<button type="button" id="modalClose" class="btn btn-secondary"
+                                    data-dismiss="modal">Close</button>*@
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
 
             <p>
                 <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
@@ -61,13 +125,13 @@
                     {
                         // Retrieve the first contact with type "phone" (case-insensitive) for the Phone Number column
                         var phoneContact = item.Contacts?.FirstOrDefault(c =>
-                            !string.IsNullOrEmpty(c.Type) &&
-                            c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
+                        !string.IsNullOrEmpty(c.Type) &&
+                        c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
 
                         // Retrieve the first contact with type "email" (case-insensitive) for the Email column
-                        var emailContact = item.Contacts?.FirstOrDefault(c => 
-                            !string.IsNullOrEmpty(c.Type) && 
-                            c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
+                        var emailContact = item.Contacts?.FirstOrDefault(c =>
+                        !string.IsNullOrEmpty(c.Type) &&
+                        c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
 
                         <tr>
                             <td>@Html.DisplayFor(modelItem => item.Name)</td>
@@ -78,10 +142,12 @@
                                 @(emailContact != null ? emailContact.Value : "")</td>
                             <td>
                                 <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
-                                <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
+                                <span class="localDate"
+                                    data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
                             </td>
                             <td>
-                                <a href="@Url.Action("Details", new { id = item.ID })"><i class="fa-solid fa-circle-info btn-lg text-dark"></i></a>
+                                <a href="@Url.Action("Details", new { id = item.ID })"><i
+                                        class="fa-solid fa-circle-info btn-lg text-dark"></i></a>
                             </td>
                         </tr>
                     }
@@ -138,13 +204,13 @@
                     {
                         // Retrieve the first contact with type "phone" (case-insensitive) for the Phone Number column
                         var phoneContact = item.Contacts?.FirstOrDefault(c =>
-                            !string.IsNullOrEmpty(c.Type) &&
-                            c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
+                        !string.IsNullOrEmpty(c.Type) &&
+                        c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
 
                         // Retrieve the first contact with type "email" (case-insensitive) for the Email column
-                        var emailContact = item.Contacts?.FirstOrDefault(c => 
-                            !string.IsNullOrEmpty(c.Type) && 
-                            c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
+                        var emailContact = item.Contacts?.FirstOrDefault(c =>
+                        !string.IsNullOrEmpty(c.Type) &&
+                        c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
 
                         <tr>
                             <td>@Html.DisplayFor(modelItem => item.Name)</td>
@@ -155,7 +221,8 @@
                                 @(emailContact != null ? emailContact.Value : "")</td>
                             <td>
                                 <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
-                                <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
+                                <span class="localDate"
+                                    data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
                             </td>
                             <td>
                                 <a href="@Url.Action("Details", new { id = item.ID })">🛈</a>
@@ -181,6 +248,33 @@
                     $(this).text(dateObj.toLocaleString());
                 }
             });
+
+            // If the modal is on the page, show it now
+            var $credsModal = $('#credsModal');
+            if ($credsModal.length) {
+                $credsModal.modal('show');
+
+                // Also support closing via the "X" button if data-dismiss isn't wired for some reason
+                $('#modalXClose').on('click', function () { $credsModal.modal('hide'); });
+            }
         });
+
+        // Copy creds helper
+        function copyCreds() {
+            var u = document.getElementById('newUserVal') ? document.getElementById('newUserVal').innerText : '';
+            var p = document.getElementById('newPassVal') ? document.getElementById('newPassVal').innerText : '';
+            var t = 'Student Number: ' + u + '\nPassword: ' + p + '\nhttps://torontofrench.ca';
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(t);
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = t;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (e) { }
+                document.body.removeChild(ta);
+            }
+        }
     </script>
 }

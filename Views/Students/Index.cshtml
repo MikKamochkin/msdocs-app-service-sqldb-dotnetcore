@@ -347,9 +347,9 @@
 
                 <!-- SETTINGS BUTTONS -->
                 <div class="settings-actions">
-                    <a asp-controller="AccountManagement" asp-action="ChangeUsername" asp-route-userId="@Model.ID">
+                    @*<a asp-controller="AccountManagement" asp-action="ChangeUsername" asp-route-userId="@Model.ID">
                         Change Username
-                    </a>
+                    </a>*@
                     <a asp-controller="AccountManagement" asp-action="ChangePassword" asp-route-userId="@Model.ID">
                         Change Password
                     </a>
@@ -357,15 +357,15 @@
             </div>
             <hr />
             <dl class="dl-horizontal">
-                <dt>Name</dt>
-                <dd>@Html.DisplayFor(m => m.Name)</dd>
-                <dt>Username</dt>
+                @*<dt>Name</dt>
+                <dd>@Html.DisplayFor(m => m.Name)</dd>*@
+                <dt>Student&nbsp;Number</dt>
                 <dd>@ViewBag.Username</dd>
 
                 <form id="timezoneForm">
                     @Html.AntiForgeryToken()
                     <div class="time-zone">
-                        <dt class="label">Default time</dt>
+                        <dt class="label">Default&nbsp;time</dt>
                         <dd>
                             <select id="timeZoneSelect" name="timeZoneId" class="selector col-md-3.5">
                                 @foreach (var tz in timeZones)

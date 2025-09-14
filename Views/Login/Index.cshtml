@@ -13,9 +13,9 @@
     @Html.AntiForgeryToken()
 
     <div class="form-group">
-      <label for="username">Username:</label>
+      <label for="username">Student&nbsp;Number:</label>
       <input type="text" class="form-control" name="username" id="username"
-             placeholder="Enter your username" />
+             placeholder="Enter your student number" />
     </div>
     <div class="form-group">
       <label for="password">Password:</label>
@@ -34,6 +34,13 @@
         Forgot your password?
       </a>
     </div>
+    @*<div class="form-group">
+      <a asp-controller="Registration"
+         asp-action="Index"
+         class="btn btn-link">
+        Don't have an account? Register
+      </a>
+    </div>*@
 
     @if (ViewBag.Error != null)
     {

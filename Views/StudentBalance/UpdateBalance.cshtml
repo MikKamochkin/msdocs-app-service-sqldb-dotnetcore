@@ -202,7 +202,7 @@
 
                     </div>
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-success">Apply</button>
+                        <button id="submitBalanceModal" type="submit" class="btn btn-success">Apply</button>
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                     </div>
                 </div>
@@ -231,9 +231,16 @@
                 modal.find('#paymentReference').val('');
                 modal.find('#paymentType').val('@ViewBag.DefaultPaymentType');
 
+                modal.find('#submitBalanceModal').prop('disabled', false);
+
+                // Ensure we only have one submit handler per open
+                var $form = modal.find('form');
+                $form.off('submit.disableOnce').on('submit.disableOnce', function () {
+                    // Disable on first submit to prevent double submissions
+                    modal.find('#submitBalanceModal').prop('disabled', true);
+                });
+
             });
-        </script>
-        <script>
             $(function () {
                 $('.student-balance-transactions-table tbody').on('click', 'tr[data-id]', function () {
                     var $row = $(this);
