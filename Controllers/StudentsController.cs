@@ -7,14 +7,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
-using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using TimeZoneConverter;
 using DotNetCoreSqlDb.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Build.Execution;
+using NuGet.Common;
+using DotNetCoreSqlDb.ViewModels;
+
 
 
 namespace DotNetCoreSqlDb.Controllers
@@ -92,10 +93,15 @@ namespace DotNetCoreSqlDb.Controllers
                 .Distinct()
                 .ToListAsync();
 
-            foreach (var a in assignments)
-            {
-                //_logger.LogInformation("AssignmentId: {1} ||| StudentName: {2} ||| TeacherName: {3} Balance: {4}", a.Id, a.Group?.Name, a.Teacher?.Name, a.StudentUnitBalance);
-            }
+            var balances = await _context.StudentBalance
+                .Where(b => b.StudentId == student.ID)
+                .Include(a => a.Assignment)
+                    .ThenInclude(t => t.Teacher)
+                .Include(b => b.Assignment)
+                    .ThenInclude(a => a.Group)
+                .ToListAsync();
+
+            ViewBag.Balances = balances;
 
             ViewBag.Assignments = assignments;
 
@@ -119,12 +125,15 @@ namespace DotNetCoreSqlDb.Controllers
                 .Distinct()
                 .ToListAsync();
 
+            var sixHoursAgo = DateTime.UtcNow.AddHours(-6);
+
             // 3) Pull every schedule entry for those groups
             var scheduleEntries = await _context.Schedule
                 .Include(s => s.Assignment)
                     .ThenInclude(a => a.Teacher)
                 .Where(s => groupIds.Contains(s.Assignment!.GroupId))
-                .OrderByDescending(s => s.DateTime)
+                .Where(s => s.DateTime > sixHoursAgo)
+                .OrderBy(s => s.DateTime)
                 .Take(15)
                 .ToListAsync();
 
@@ -221,6 +230,153 @@ namespace DotNetCoreSqlDb.Controllers
             }
         }
 
+        public async Task<IActionResult> LessonAndTransactionHistory()
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var studentId))
+                return NotFound();
+
+            // Student TZ (fallback to America/Toronto if missing)
+            var studentTzId = await _context.Student
+                .Where(s => s.ID == studentId)
+                .Select(s => s.TimeZoneId)
+                .FirstOrDefaultAsync();
+
+            var tzInfo = TZConvert.GetTimeZoneInfo(
+                string.IsNullOrWhiteSpace(studentTzId) ? "America/Toronto" : studentTzId
+            );
+
+            var now = DateTime.UtcNow;
+            var sixMonthsAgo = now.AddMonths(-6);
+
+            // 1) Groups for this student
+            var groupIds = await _context.StudentGroupComposition
+                .Where(gc => gc.StudentId == studentId)
+                .Select(gc => gc.GroupId)
+                .Distinct()
+                .ToListAsync();
+
+            // 2) Assignments in those groups
+            var assignmentIds = await _context.Assignments
+                .Where(a => groupIds.Contains(a.GroupId))
+                .Select(a => a.Id)
+                .ToListAsync();
+
+            // 3) Lessons in the last 6 months (past only)
+            var lessons = await _context.Schedule
+                .AsNoTracking()
+                .Where(s => assignmentIds.Contains(s.AssignmentId)
+                         && s.DateTime >= sixMonthsAgo
+                         && s.DateTime < now)
+                .Select(s => new
+                {
+                    s.Id,
+                    s.AssignmentId,
+                    s.DateTime,
+                    s.Status,
+                    s.Duration,
+                    TeacherName = s.Assignment.Teacher != null ? s.Assignment.Teacher.Name : null
+                })
+                .ToListAsync();
+
+            // 4) Transactions attached to lessons (automatic charges)
+            var txAttached = await _context.StudentBalanceTransactionLog
+                .AsNoTracking()
+                .Where(t => t.StudentId == studentId
+                         && t.DateTime >= sixMonthsAgo
+                         && t.ScheduleId != null)
+                .Select(t => new
+                {
+                    t.Id,
+                    t.ScheduleId,
+                    t.DateTime,
+                    t.TransactionAmount,
+                    t.Currency,
+                    t.PaymentType,
+                    TeacherName = t.Assignment != null && t.Assignment.Teacher != null
+                        ? t.Assignment.Teacher.Name
+                        : null
+                })
+                .ToListAsync();
+
+            // If (for any reason) multiple tx rows point at the same schedule, take the most recent
+            var txBySchedule = txAttached
+                .GroupBy(t => t.ScheduleId!.Value)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.DateTime ?? DateTime.MinValue).First()
+                );
+
+            // 5) Manual / standalone payments (no ScheduleId)
+            var txManual = await _context.StudentBalanceTransactionLog
+                .AsNoTracking()
+                .Where(t => t.StudentId == studentId
+                         && t.DateTime >= sixMonthsAgo
+                         && t.ScheduleId == null)
+                .Select(t => new
+                {
+                    t.Id,
+                    t.DateTime,
+                    t.TransactionAmount,
+                    t.Currency,
+                    t.PaymentType,
+                    TeacherName = t.Assignment != null && t.Assignment.Teacher != null
+                        ? t.Assignment.Teacher.Name
+                        : null
+                })
+                .ToListAsync();
+
+            // 6) Build merged lesson rows (lesson + its auto charge, if present)
+            var mergedLessonRows = lessons.Select(l =>
+            {
+                txBySchedule.TryGetValue(l.Id, out var tx);
+
+                return new TimelineItem
+                {
+                    DateTime = TimeZoneInfo.ConvertTimeFromUtc(l.DateTime, tzInfo),
+                    Kind = "Lesson",                       // merged row
+                    ScheduleId = l.Id,
+                    TransactionId = tx?.Id,                // filled if auto-charged
+                    AssignmentId = l.AssignmentId,
+                    Status = l.Status,
+                    DurationMinutes = l.Duration,
+                    Amount = tx?.TransactionAmount,
+                    Currency = tx?.Currency,
+                    PaymentType = tx?.PaymentType,
+                    TeacherName = l.TeacherName ?? tx?.TeacherName
+                };
+            });
+
+            // 7) Build manual payment rows (standalone)
+            var manualPaymentRows = txManual.Select(t => new TimelineItem
+            {
+                DateTime = t.DateTime.HasValue
+                    ? TimeZoneInfo.ConvertTimeFromUtc(t.DateTime.Value, tzInfo)
+                    : (DateTime?)null,
+                Kind = "Payment",                  // distinguish if you like; or "Transaction"
+                ScheduleId = null,                 // standalone
+                TransactionId = t.Id,
+                AssignmentId = null,
+                Status = null,
+                DurationMinutes = null,
+                Amount = t.TransactionAmount,
+                Currency = t.Currency,
+                PaymentType = t.PaymentType,
+                TeacherName = t.TeacherName
+            });
+
+            // 8) Final unified timeline: merged lessons + manual payments
+            var timeline = mergedLessonRows
+                .Concat(manualPaymentRows)
+                .OrderByDescending(i => i.DateTime)
+                .ToList();
+
+            return View(timeline);
+        }
+
+
+
+
         // GET: /Students/ScheduleJson
         [HttpGet]
         public async Task<IActionResult> ScheduleJson()
@@ -236,18 +392,22 @@ namespace DotNetCoreSqlDb.Controllers
                             .Distinct()
                             .ToListAsync();
 
+            var sixHoursAgo = DateTime.UtcNow.AddHours(-6);
+
             var results = await _context.Schedule
                 .Include(s => s.Assignment).ThenInclude(a => a.Teacher)
                 .Where(s => groupIds.Contains(s.Assignment!.GroupId))
-                .OrderByDescending(s => s.DateTime)
+                .OrderBy(s => s.DateTime)
+                .Where(s => s.DateTime > sixHoursAgo)
                 .Take(15)
-                .Select(s => new {
+                .Select(s => new
+                {
                     s.Id,
                     DateTime = s.DateTime.ToString("o"),
                     s.Status,
                     s.Duration,
                     TeacherName = s.Assignment!.Teacher!.Name,
-                    TeacherId   = s.Assignment!.Teacher!.Id
+                    TeacherId = s.Assignment!.Teacher!.Id
                 })
                 .ToListAsync();
 

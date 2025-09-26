@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using TimeZoneConverter;
 using DotNetCoreSqlDb.Services;
 using DotNetCoreSqlDb.Helpers;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -138,7 +139,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             // 6) Pass the raw schedule entries into the Razor view
-                return View(scheduleEntries);
+            return View(scheduleEntries);
         }
 
         // GET: /Teachers/Zoom
@@ -280,7 +281,7 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, id);
             }
-                
+
             var lesson = await _context.ZoomMeetings
                 .FirstOrDefaultAsync(z => z.ScheduleId == id);
             if (lesson == null)
@@ -328,7 +329,7 @@ namespace DotNetCoreSqlDb.Controllers
                 })
                 .ToListAsync();
 
-            
+
             /*
             var userId = User.FindFirst("UserID")?.Value;
             if (!Guid.TryParse(userId, out var studentId))
@@ -357,6 +358,175 @@ namespace DotNetCoreSqlDb.Controllers
                 .ToListAsync();
             */
             return Ok(scheduleEntries);      // HTTP 200 with JSON*/
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditSchedule(DateTime? date)
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var teacherId))
+                return NotFound();
+
+            // Selected date (defaults to today, local)
+            var selectedDate = (date ?? DateTime.Today).Date;
+            ViewBag.SelectedDate = selectedDate.ToString("yyyy-MM-dd");
+
+            // Time dropdown (5-minute increments to match your Manage page)
+            ViewBag.Times = Enumerable.Range(0, 24 * 12)
+                .Select(i => TimeSpan.FromMinutes(i * 5))
+                .Select(ts => new SelectListItem
+                {
+                    Value = ts.ToString(@"hh\:mm"),
+                    Text = ts.ToString(@"hh\:mm"),
+                    Selected = ts == TimeSpan.FromHours(9)
+                })
+                .ToList();
+
+            // Status dropdown (teachers can set status for new entries; existing remain read-only)
+            /*ViewBag.Statuses = DropdownOptions.ScheduleStatusTypes
+                .Select(item => new SelectListItem
+                {
+                    Text = item.Text,
+                    Value = item.Value,
+                    Selected = item.Value == "Scheduled"
+                });*/
+
+            // Duration dropdown (fixed list as in Manage)
+            ViewBag.LessonDurationTypes = DropdownOptions.LessonDurationTypes
+                .Select(item => new SelectListItem { Text = item.Text, Value = item.Value })
+                .ToList();
+
+            // Accounting type dropdown (use your default S100T100)
+            /*ViewBag.LessonAccountingType = DropdownOptions.LessonAccountingType
+                .Select(item => new SelectListItem
+                {
+                    Text = item.Text,
+                    Value = item.Value,
+                    Selected = item.Value == "S100T100"
+                });*/
+
+            // Time zones
+            var timeZones = TimeZoneMapping.GetTimeZones();
+            var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
+            foreach (var tz in timeZones) tz.Selected = tz.Value == defaultZoneIana;
+            ViewBag.TimeZones = timeZones;
+
+            // Groups visible to this teacher only (value = AssignmentId, text = Group.Name)
+            var assignments = await _context.Assignments
+                .Where(a => a.TeacherId == teacherId && a.Group!.IsActive)
+                .Select(a => new { a.Id, a.GroupId, GroupName = a.Group!.Name })
+                .OrderBy(x => x.GroupName)
+                .ToListAsync();
+
+            var groupItems = assignments
+                .GroupBy(x => x.GroupId)
+                .Select(g => g.First())
+                .Select(a => new SelectListItem { Value = a.Id.ToString(), Text = a.GroupName })
+                .OrderBy(x => x.Text)
+                .ToList();
+
+            ViewBag.Groups = groupItems;
+
+            // AssignmentId -> default StudentUnitDuration map
+            var durationMap = await _context.Assignments
+                .Where(a => a.TeacherId == teacherId)
+                .ToDictionaryAsync(a => a.Id.ToString(), a => a.StudentUnitDuration);
+            ViewBag.DurationMapJson = JsonSerializer.Serialize(durationMap);
+
+            // Load existing entries for *that date* (read-only in the view)
+            // Convert selected local day → UTC window
+            var windowsZoneId   = TZConvert.IanaToWindows(defaultZoneIana);
+            var tzInfo          = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
+
+            // IMPORTANT: make the local date "Unspecified" so ConvertTimeToUtc(sourceTz) accepts it
+            var selectedDateLocal = DateTime.SpecifyKind(selectedDate.Date, DateTimeKind.Unspecified);
+
+            var localStart = selectedDateLocal;              // 00:00 local (Unspecified)
+            var localEnd   = selectedDateLocal.AddDays(1);   // next midnight (Unspecified)
+
+            var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, tzInfo);
+            var endUtc   = TimeZoneInfo.ConvertTimeToUtc(localEnd,   tzInfo);
+
+            var existing = await _context.Schedule
+                .Include(s => s.Assignment!).ThenInclude(a => a.Group!)
+                .Where(s => s.Assignment!.TeacherId == teacherId &&
+                            s.DateTime >= startUtc && s.DateTime < endUtc)
+                .OrderBy(s => s.DateTime)
+                .ToListAsync();
+
+            var flat = existing.Select(r => new
+            {
+                r.Id,
+                r.AssignmentId,
+                DateTime = r.DateTime.ToUniversalTime().ToString("o"),     
+                r.Duration,
+                GroupName = r.Assignment!.Group!.Name,
+                IsExisting = true  // important: disables edit/delete in the view
+            }).ToList();
+
+            ViewBag.ExistingJson = JsonSerializer.Serialize(flat, new JsonSerializerOptions
+            {
+                ReferenceHandler = ReferenceHandler.IgnoreCycles
+            });
+
+            return View("EditSchedule", existing);
+        }
+
+        // keep this DTO local to TeachersController so you don't depend on ScheduleController
+        public class ScheduleDto
+        {
+            public Guid Id { get; set; }
+            public Guid AssignmentId { get; set; }
+            public DateTime DateTime { get; set; }
+            public int Duration { get; set; }
+        }
+
+        // Teachers can only create new rows; if Id is present, we reject it
+        [HttpPost]
+        public async Task<IActionResult> SaveEntry([FromBody] ScheduleDto dto)
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var teacherId))
+                return Unauthorized();
+
+            if (dto == null)
+                return BadRequest("Invalid payload");
+
+            if (dto.Id != Guid.Empty)
+                return BadRequest("Editing existing entries is not allowed.");
+
+            // Ensure the assignment belongs to this teacher
+            var assignment = await _context.Assignments
+                .Include(a => a.Group)
+                .FirstOrDefaultAsync(a => a.Id == dto.AssignmentId && a.TeacherId == teacherId);
+
+            if (assignment == null)
+                return BadRequest("Invalid assignment for this teacher.");
+
+            var entity = new Schedule
+            {
+                Id = Guid.NewGuid(),
+                AssignmentId = dto.AssignmentId,
+                DateTime = dto.DateTime.Kind == DateTimeKind.Local ? dto.DateTime.ToUniversalTime() : dto.DateTime,
+                Status = "Scheduled",
+                Duration = dto.Duration,
+                LessonAccountingType = "S100T100",
+                Accounted = false
+            };
+
+            _context.Schedule.Add(entity);
+            await _context.SaveChangesAsync();
+
+            // Return a row that will render as read-only (IsExisting = true)
+            return Json(new
+            {
+                id = entity.Id,
+                assignmentId = entity.AssignmentId,
+                dateTime = entity.DateTime.ToUniversalTime().ToString("o"),
+                duration = entity.Duration,
+                groupName = assignment.Group?.Name ?? "(unknown)",
+                isExisting = true
+            });
         }
     }
 }

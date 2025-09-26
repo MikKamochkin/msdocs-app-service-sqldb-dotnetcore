@@ -4,6 +4,7 @@
     ViewData["Title"] = "My Information";
     var timeZones = ViewBag.TimeZones as List<SelectListItem>;
     var assignments = ViewBag.Assignments as List<DotNetCoreSqlDb.Models.Assignments>;
+    var balances = ViewBag.Balances as List<DotNetCoreSqlDb.Models.StudentBalance>;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -328,6 +329,12 @@
                             <i class="fas fa-user-graduate"></i>
                         </a>
                     </li>
+                    <li>
+                        <a asp-controller="Students" asp-action="LessonAndTransactionHistory" title="History">
+                            <i class="fa-solid fa-dollar-sign"></i>
+                        </a>
+                    </li>
+
                 </ul>
 
                 <div class="burger">
@@ -383,6 +390,8 @@
         <!-- CONTACT INFO -->
         <div class="profile-section">
             <h4><b>Contact Information</b></h4>
+            <div>Please verify that this contact information is correct.
+            If you see any discrepancies, please reach out to us.</div>
             @if (Model.Contacts != null && Model.Contacts.Any())
             {
                 <div style="overflow-x:auto;">
@@ -409,7 +418,7 @@
                 <p>No contact information available.</p>
             }
         </div>
-        @*
+        
         <div class="profile-section">
         <h4><b>Balance</b></h4>
         @if (assignments != null)
@@ -424,14 +433,15 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var a in assignments)
+                        @foreach (var b in balances) 
                         {
                             <tr>
-                                <td data-label="Teacher">@Html.DisplayFor(m => a.Teacher.Name)</td>
-                                <td data-label="Lesson Duration">@Html.DisplayFor(m => a.StudentUnitDuration)</td>
-                                <td data-label="Balance">@Html.DisplayFor(m => a.StudentUnitBalance)</td>
+                                <td data-label="Teacher">@Html.DisplayFor(t => b.Assignment.Teacher.Name)</td>
+                                <td data-label="Teacher">@Html.DisplayFor(t => b.Assignment.StudentUnitDuration) mins</td>
+                                <td data-label="Teacher">@Html.DisplayFor(t => b.Balance)</td>
                             </tr>
                         }
+                            
                     </tbody>
                 </table>
             </div>
@@ -440,7 +450,16 @@
         {
             <p>No balance information available.</p>
         }
-        </div>*@
+        </div>
+
+        <div class="profile-section">
+            <h4><b>Zoom Test</b></h4>
+            <div class="settings-actions">
+                    <a href="https://zoom.us/test">
+						<strong>Click Here To Test Your Zoom</strong>
+					</a>
+                </div>
+        </div>
     </div>
 
     <!-- ---------- SCRIPTS ---------- -->

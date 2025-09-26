@@ -126,7 +126,7 @@ namespace DotNetCoreSqlDb.Services
                             if (sb != null)
                             {
                                 sb.Balance -= spent;
-                                await _logHelper.LogStudentBalanceAsync(studentId, a.Id, scheduleId, spent, sb.Balance);
+                                await _logHelper.LogStudentBalanceAsync(studentId, a.Id, scheduleId, -spent, sb.Balance);
                             }
                             
                         }

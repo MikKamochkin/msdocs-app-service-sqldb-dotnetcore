@@ -1,0 +1,709 @@
+@model List<DotNetCoreSqlDb.Models.Schedule>
+@using Microsoft.AspNetCore.Mvc.Rendering
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery AntiForgery
+
+@{
+    ViewData["Title"] = "Edit My Schedule";
+    var existingJson = ViewBag.ExistingJson as string ?? "[]";
+    var timeZones = ViewBag.TimeZones as List<SelectListItem>;
+    var tokens = AntiForgery.GetAndStoreTokens(ViewContext.HttpContext);
+}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* ---------- RESET ---------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* ---------- PAGE BACKGROUND ---------- */
+        body {
+            font-family: Helvetica, sans-serif;
+            background: #e8ecfc;
+            min-height: 100vh;
+        }
+
+        /* ---------- HEADER / NAV ---------- */
+        /* ---------- HEADER / NAV ---------- */
+        header {
+            background-color: #6981ec;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            z-index: 1000;
+        }
+
+        .header-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            height: 100%;
+            position: relative;
+            /* Needed for absolute positioning of children */
+        }
+
+        #logo {
+            position: absolute;
+            left: 12%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            /*font-weight: 700;*/
+            color: #fff;
+            /* Changed to white to match your original */
+        }
+
+        nav {
+            position: absolute;
+            left: 20%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .nav-links {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-links li {
+            display: inline-block;
+            margin-left: 20px;
+        }
+
+        .nav-links li a {
+            color: #000;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: inline-block;
+            transition: background-color .3s;
+        }
+
+        .nav-links li a:hover {
+            background-color: #ced6ff;
+            scale: 110%;
+            border-radius: 10%;
+        }
+
+        .nav-links li a.active-page,
+        .nav-links li a.inactive-page {
+            background-color: #fff;
+            border-radius: 10%;
+        }
+
+        /* burger (desktop hidden) */
+        .burger {
+            display: none;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+
+        .burger div {
+            width: 25px;
+            height: 3px;
+            background: #fff;
+            margin: 5px;
+            transition: .3s;
+        }
+
+        /* ---------- MOBILE NAV OVERRIDES ---------- */
+        @@media(max-width:768px) {
+            nav {
+                position: relative;
+                left: 0;
+                top: 0;
+                transform: none;
+                margin-top: 10px;
+            }
+
+            .nav-links {
+                display: none;
+                width: 100%;
+                text-align: center;
+                position: absolute;
+                background: #333;
+                top: 60px;
+                left: 0;
+                z-index: 1;
+            }
+
+            .nav-links.active {
+                display: block;
+            }
+
+            .nav-links li {
+                display: block;
+                margin: 10px 0;
+            }
+
+            .burger {
+                display: block;
+                float: right;
+                margin-top: 15px;
+            }
+
+            .burger.active .line1 {
+                transform: rotate(45deg) translate(-5px, 6px);
+            }
+
+            .burger.active .line2 {
+                opacity: 0;
+            }
+
+            .burger.active .line3 {
+                transform: rotate(-45deg) translate(-5px, -6px);
+            }
+        }
+
+        /* ---------- MAIN LAYOUT ---------- */
+        .content-wrapper {
+            max-width: 1100px;
+            margin: 80px auto 40px;
+            padding: 0 20px;
+        }
+
+        /* ---------- PROFILE CARD ---------- */
+        .profile-section {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: .5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-header h2 {
+            color: #333;
+            margin-bottom: .25rem;
+            font-size: 1.8rem;
+        }
+
+        /* settings action buttons */
+        .settings-actions {
+            display: flex;
+            gap: .75rem;
+            flex-wrap: wrap;
+        }
+
+        .settings-actions a {
+            padding: .5rem 1rem;
+            border: 1px solid #6981ec;
+            border-radius: 6px;
+            background: #fff;
+            color: #6981ec;
+            font-size: .9rem;
+            text-decoration: none;
+            transition: all .25s;
+        }
+
+        .settings-actions a:hover {
+            background: #6981ec;
+            color: #fff;
+        }
+
+        /* table styling */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            font-size: .95rem;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .table thead th {
+            background: #e9efff;
+            color: #333;
+            font-weight: 600;
+            padding: .85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #d4d9ff;
+        }
+
+        .table tbody td {
+            padding: .75rem 1rem;
+            border-bottom: 1px solid #f0f0f0;
+            color: #444;
+        }
+
+        .table tbody tr:nth-child(even) {
+            background: #fafbff;
+        }
+
+        .table tbody tr:hover {
+            background: #f0f4ff;
+        }
+
+        /* time zone */
+        .time-zone {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .time-zone .selector {
+            vertical-align: middle;
+            padding: .5rem .75rem;
+            border: 1px solid #6981ec;
+            border-radius: 6px;
+            background: #fff;
+            color: #000;
+            font-size: 1rem;
+            transition: all .25s;
+            width: auto;
+            min-width: 250px;
+        }
+
+        .time-zone .label {
+            vertical-align: middle;
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* Form controls */
+        .form-row {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-control {
+            border: 1px solid #c2c9f0;
+            border-radius: 6px;
+            padding: .5rem .75rem;
+            font-size: .95rem;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .form-control:focus {
+            border-color: #6981ec;
+            box-shadow: 0 0 0 2px rgba(105, 129, 236, 0.2);
+            outline: none;
+        }
+
+        /* Date navigation */
+        .date-navigation {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: .5rem 1rem;
+            border: 1px solid #6981ec;
+            border-radius: 6px;
+            background: #fff;
+            color: #6981ec;
+            font-size: .9rem;
+            cursor: pointer;
+            transition: all .25s;
+        }
+
+        .btn:hover {
+            background: #6981ec;
+            color: #fff;
+        }
+
+        .btn-outline-secondary {
+            border-color: #6c757d;
+            color: #6c757d;
+        }
+
+        .btn-outline-secondary:hover {
+            background: #6c757d;
+            color: #fff;
+        }
+
+        .btn-primary {
+            background: #6981ec;
+            color: #fff;
+            border-color: #6981ec;
+        }
+
+        .btn-primary:hover {
+            background: #5a70d6;
+            border-color: #5a70d6;
+        }
+
+        /* New entry form */
+        .new-entry-form {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: end;
+            margin-bottom: 1.5rem;
+            padding: 1.25rem;
+            background: #f8faff;
+            border-radius: 8px;
+            border: 1px solid #e0e6ff;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: .5rem;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: #444;
+            font-size: .9rem;
+        }
+
+        /* Day of week styling */
+        .day-of-week {
+            font-weight: bold;
+            color: #333;
+            margin-left: .5rem;
+        }
+
+        /* ---------- RESPONSIVE PROFILE ---------- */
+        @@media(max-width:768px) {
+            .profile-section {
+                padding: 1.5rem;
+            }
+
+            .profile-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: .5rem;
+            }
+
+            .settings-actions {
+                margin-top: .5rem;
+            }
+
+            .new-entry-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .form-group {
+                width: 100%;
+            }
+
+            .time-zone {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .time-zone .selector {
+                min-width: 100%;
+            }
+
+            .date-navigation {
+                justify-content: center;
+            }
+
+            .table thead {
+                display: none;
+            }
+
+            .table tbody td {
+                display: block;
+                width: 100%;
+                text-align: right;
+                padding-left: 50%;
+                position: relative;
+            }
+
+            .table tbody td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 1rem;
+                width: calc(50% - 1rem);
+                text-align: left;
+                font-weight: 600;
+                color: #666;
+            }
+        }
+
+        @@media(max-width:480px) {
+            .profile-section {
+                padding: 1rem;
+            }
+
+            .date-navigation {
+                flex-direction: column;
+            }
+
+            .date-navigation .btn {
+                width: 100%;
+            }
+        }
+
+        #timeSelect {
+            min-width: 100px; /* or whatever feels right */
+            /*text-align: center;*/
+        }
+
+        #groupSelect {
+            min-width: 200px;
+            /*text-align: center;*/
+        }
+    </style>
+</head>
+
+<body>
+    <!-- NAV -->
+    <header>
+        <div class="header-container">
+            <div id="logo">@ViewData["Title"]</div>
+
+            <nav>
+                <ul class="nav-links">
+                    <li>
+                        <a asp-controller="Teachers" asp-action="Schedule" title="Schedule">
+                            <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Teachers" asp-action="Index" title="Account">
+                            <i class="fas fa-user-graduate"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Teachers" asp-action="EditSchedule" title="Edit Schedule" class="active-page">
+                            <i class="fa-regular fa-calendar-plus"></i>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="burger" id="burger">
+                    <div class="line1"></div>
+                    <div class="line2"></div> <!-- added middle line -->
+                    <div class="line3"></div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content-wrapper">
+        <section class="profile-section">
+            <div class="profile-header">
+                <h2><b>Edit My Schedule</b></h2>
+            </div>
+
+            <!-- Date picker / nav -->
+            <form asp-action="EditSchedule" method="get" class="form-row">
+                <div class="date-navigation">
+                    <button type="button" class="btn btn-outline-secondary" onclick="shiftDay(-1)">← Prev</button>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        @*<label for="selectedDate">Selected Date</label>*@
+                        <input type="date" id="selectedDate" name="date" value="@ViewBag.SelectedDate"
+                            class="form-control" onchange="this.form.submit()" />
+                    </div>
+
+                    <span id="dayOfWeek" class="day-of-week">
+                        @if (ViewBag.SelectedDate != null)
+                        {
+                            var date = DateTime.Parse(ViewBag.SelectedDate.ToString());
+                            <span>@date.ToString("dddd")</span>
+                        }
+                    </span>
+
+                    <button type="button" class="btn btn-outline-secondary" onclick="shiftDay(1)">Next →</button>
+                </div>
+            </form>
+
+            <!-- Time Zone (client-only) -->
+            <div class="form-row">
+                <div class="time-zone">
+                    <label for="timeZoneSelect" class="label"><b>Time Zone:</b></label>
+                    <select id="timeZoneSelect" class="form-control selector" onchange="renderTable()">
+                        @foreach (var tz in timeZones)
+                        {
+                            if (tz.Selected)
+                            {
+                                <option value="@tz.Value" selected>@tz.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@tz.Value">@tz.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <!-- AJAX anti-forgery token -->
+            <input type="hidden" id="__RequestVerificationToken" value="@tokens.RequestToken" />
+
+            <hr />
+
+            <!-- NEW ENTRY form (add-only) -->
+            <div class="new-entry-form">
+                <div class="form-group">
+                    <label for="timeSelect">Time</label>
+                    <select id="timeSelect" class="form-control"
+                        asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
+                </div>
+
+                <div class="form-group">
+                    <label for="groupSelect">Student</label>
+                    <select id="groupSelect" class="form-control"
+                        asp-items="(IEnumerable<SelectListItem>)ViewBag.Groups">
+                        <option value="" selected>— select student —</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="durationSelect">Duration</label>
+                    <select id="durationSelect" class="form-control"
+                        asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonDurationTypes">
+                        <option value="" selected>— select duration —</option>
+                    </select>
+                </div>
+
+                <button type="button" class="btn btn-primary" onclick="saveEntryAjax()">Add Lesson</button>
+            </div>
+
+            <table class="table table-bordered" id="entriesTable" aria-describedby="dayOfWeek">
+                <thead>
+                    <tr>
+                        <th scope="col">Time</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Duration</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+    </main>
+
+    @section Scripts {
+        <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            // mobile burger toggle
+            $('#burger').on('click', function () {
+                $(this).toggleClass('active');
+                $('.nav-links').toggleClass('active');
+            });
+
+            const DateTime = luxon.DateTime;
+            const durationMap = @Html.Raw(ViewBag.DurationMapJson);
+            const existing = @Html.Raw(existingJson);
+            let rows = existing.slice();
+
+            // Ensure day of week is bold immediately
+            $(function () {
+                $('#dayOfWeek').css('font-weight', 'bold');
+                renderTable();
+                const sel = $('#groupSelect').val();
+                if (sel) $('#durationSelect').val(durationMap[sel]);
+            });
+
+            $('#groupSelect').on('change', () => {
+                const aid = $('#groupSelect').val();
+                $('#durationSelect').val(aid ? durationMap[aid] : '');
+            });
+
+            function shiftDay(delta) {
+                const input = $('#selectedDate')[0];
+                const d = new Date(input.value);
+                d.setDate(d.getDate() + delta);
+                input.value = d.toISOString().slice(0, 10);
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                $('#dayOfWeek').html('<span>' + days[d.getDay()] + '</span>').css('font-weight', 'bold');
+                input.form.submit();
+            }
+
+            function renderTable() {
+                const zone = $('#timeZoneSelect').val();
+                rows.sort((a, b) =>
+                    DateTime.fromISO(a.DateTime).toMillis() - DateTime.fromISO(b.DateTime).toMillis()
+                );
+
+                const tbody = $('#entriesTable tbody').empty();
+                rows.forEach((r) => {
+                    const dt = DateTime.fromISO(r.DateTime).setZone(zone).toFormat('HH:mm');
+                    tbody.append(`
+              <tr>
+                <td data-label="Time">${dt}</td>
+                <td data-label="Student">${r.GroupName}</td>
+                <td data-label="Duration">${r.Duration} mins</td>
+              </tr>
+            `);
+                });
+            }
+
+            function saveEntryAjax() {
+                const t = $('#timeSelect').val();
+                const g = $('#groupSelect').val();
+                const d0 = $('#selectedDate').val();
+                const dur = +$('#durationSelect').val();
+                const zone = $('#timeZoneSelect').val();
+                const token = $('#__RequestVerificationToken').val();
+
+                // tiny validation cleanup
+                if (!t || !g || !dur || !zone || !d0) {
+                    return alert('All fields are required.');
+                }
+
+                const dto = {
+                    AssignmentId: g,
+                    DateTime: luxon.DateTime.fromISO(`${d0}T${t}`, { zone }).toUTC().toISO(),
+                    Duration: dur
+                };
+
+                $.ajax({
+                    url: '/Teachers/SaveEntry',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    headers: { 'RequestVerificationToken': token },
+                    data: JSON.stringify(dto),
+                    success(resp) {
+                        const added = {
+                            Id: resp.id,
+                            AssignmentId: resp.assignmentId,
+                            DateTime: resp.dateTime,
+                            Duration: resp.duration,
+                            GroupName: resp.groupName,
+                            IsExisting: true
+                        };
+                        rows.push(added);
+                        renderTable();
+
+                        // Reset form
+                        $('#timeSelect').val('');
+                        $('#groupSelect').val('');
+                        $('#durationSelect').val('');
+                    },
+                    error(err) {
+                        alert('Save failed: ' + (err.responseJSON?.error || err.responseText));
+                    }
+                });
+            }
+        </script>
+    }
+</body>
+
+</html>

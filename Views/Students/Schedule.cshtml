@@ -30,46 +30,75 @@
             min-height: 100vh;
         }
 
-        		header {
-			background-color: #6981ec;
-			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-			position: fixed;
-			top: 0;
-			left: 0;
-			right: 0;
-			height: 60px;
-			z-index: 1000;
-		}
+        header {
+            background-color: #6981ec;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            z-index: 1000;
+        }
 
-		.header-container {
-			width: 100%;
-			max-width: 1200px;
-			margin: 0 auto;
-			padding: 0 20px;
-			height: 100%;
-			position: relative; /* Needed for absolute positioning of children */
-		}
+        .header-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            height: 100%;
+            position: relative;
+            /* Needed for absolute positioning of children */
+        }
 
-		#logo {
-			position: absolute;
-			left: 12%;
-			top: 50%;
-			transform: translate(-50%, -50%);
-			font-size: 1.5rem;
-			/*font-weight: 700;*/
-			color: #fff; /* Changed to white to match your original */
-		}
+        #logo {
+            position: absolute;
+            left: 12%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            /*font-weight: 700;*/
+            color: #fff;
+            /* Changed to white to match your original */
+        }
 
-		nav { position: absolute; left: 20%; top: 50%; transform: translateY(-50%); }
-			.nav-links   { list-style: none; margin: 0; padding: 0; }
-			.nav-links li{ display: inline-block; margin-left: 20px; }
-			.nav-links li a{
-			color: #000; text-decoration: none; padding: 10px 15px; display: inline-block;
-			transition: background-color .3s;
-			}
-			.nav-links li a:hover        { background-color: #ced6ff; scale: 110%; border-radius: 10%; }
-			.nav-links li a.active-page,
-			.nav-links li a.inactive-page{ background-color: #fff; border-radius: 10%; }
+        nav {
+            position: absolute;
+            left: 20%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .nav-links {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-links li {
+            display: inline-block;
+            margin-left: 20px;
+        }
+
+        .nav-links li a {
+            color: #000;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: inline-block;
+            transition: background-color .3s;
+        }
+
+        .nav-links li a:hover {
+            background-color: #ced6ff;
+            scale: 110%;
+            border-radius: 10%;
+        }
+
+        .nav-links li a.active-page,
+        .nav-links li a.inactive-page {
+            background-color: #fff;
+            border-radius: 10%;
+        }
 
         .burger {
             display: none;
@@ -260,6 +289,11 @@
                         <i class="fas fa-user-graduate"></i>
                     </a>
                 </li>
+                <li>
+                    <a asp-controller="Students" asp-action="LessonAndTransactionHistory" title="History">
+                        <i class="fa-solid fa-dollar-sign"></i>
+                    </a>
+                </li>
             </ul>
 
             <div class="burger">
@@ -325,28 +359,28 @@
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
 
     <script>
-    (async () => {
+        (async () => {
 
-        /* studentId injected by Razor */
-        const studentId = '@ViewBag.StudentId';
+            /* studentId injected by Razor */
+            const studentId = '@ViewBag.StudentId';
 
-        /* build + start connection */
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/hubs/scheduleHub")
-            .withAutomaticReconnect()
-            //.configureLogging(signalR.LogLevel.Information)
-            .build();
+            /* build + start connection */
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/hubs/scheduleHub")
+                .withAutomaticReconnect()
+                //.configureLogging(signalR.LogLevel.Information)
+                .build();
 
-        await connection.start();
-        //console.log("SignalR connected. Joining group…");
-        await connection.invoke("JoinStudentGroup", studentId);
+            await connection.start();
+            //console.log("SignalR connected. Joining group…");
+            await connection.invoke("JoinStudentGroup", studentId);
 
-        connection.on("ScheduleChanged", () => {
-            //.log("Ping received – refresh!");
-            refreshRows();                 // your existing function
-        });
+            connection.on("ScheduleChanged", () => {
+                //.log("Ping received – refresh!");
+                refreshRows();                 // your existing function
+            });
 
-    })();
+        })();
     </script>
 
     <script>
@@ -366,20 +400,20 @@
             const deepLink = `https://us02web.zoom.us/j/7890699796?pwd=eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09`;
             const webLink = `https://us02web.zoom.us/j/${meetingId}?pwd=${pwd}`;
             const detailsBase = '@Url.Action("Zoom", "Students")';
-                        
+
             /* ───────── DATA ───────── */
             //console.log("Parsing raw JSON…");
             const raw = @Html.Raw(existingJson);
             const rows = raw
                 .map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
-                .sort((a, b) => DateTime.fromISO(b.DateTime) - DateTime.fromISO(a.DateTime)); // newest → oldest
+                .sort((a, b) => DateTime.fromISO(a.DateTime) - DateTime.fromISO(b.DateTime)); // newest → oldest
             //console.log("Initial rows:", rows);
 
 
             let nextTimerId = null;
 
 
-            /*const studentId = '@ViewBag.StudentId';
+                /*const studentId = '@ViewBag.StudentId';
 
             const connection = new signalR.HubConnectionBuilder()
                 .withUrl("/hubs/scheduleHub")
@@ -407,11 +441,11 @@
                 console.log("Ping received – pulling fresh schedule");
                 refreshRows();
             });
-            */
+                */
             window.refreshRows = async function refreshRows() {
                 try {
-                    const latest = await fetch('@Url.Action("ScheduleJson","Students")')
-                                        .then(r => r.json());
+                    const latest = await fetch('@Url.Action("ScheduleJson", "Students")')
+                        .then(r => r.json());
 
                     rows.length = 0;                             // clear array
 
@@ -421,13 +455,13 @@
                         if (!rawTime) return;                   // skip bad rows
 
                         rows.push({
-                            Id:          src.Id          ?? src.id,
-                            TeacherId:   src.TeacherId   ?? src.teacherId,
+                            Id: src.Id ?? src.id,
+                            TeacherId: src.TeacherId ?? src.teacherId,
                             TeacherName: src.TeacherName ?? src.teacherName,
-                            Status:      src.Status      ?? src.status,
+                            Status: src.Status ?? src.status,
                             // ensure we always have a *number*
-                            Duration:    Number(src.Duration ?? src.duration ?? 0),
-                            DateTime:    rawTime.endsWith('Z') ? rawTime : rawTime + 'Z'
+                            Duration: Number(src.Duration ?? src.duration ?? 0),
+                            DateTime: rawTime.endsWith('Z') ? rawTime : rawTime + 'Z'
                         });
                     });
 
@@ -532,8 +566,11 @@
                     const diffMin = startUtc.diff(nowUtc, 'minutes').minutes;   // +ve = future
                     const windowEnd = -(Number(r.Duration) + minsAfter);        // negative minutes after END
                     const isToday = startUtc.setZone(zone).hasSame(nowLocal, 'day');
+                    const soon = diffMin < 720;
+                    const status = r.Status;
+                    const activeLesson = (status == 'Ongoing') || (status == 'Scheduled')
 
-                    if (!highlightId && isToday && diffMin <= minsBefore && diffMin >= windowEnd)
+                    if (!highlightId && soon && diffMin <= minsBefore && diffMin >= windowEnd && activeLesson)
                         highlightId = r.Id;                                       // active/ongoing lesson
                 });
                 if (!highlightId) {
@@ -546,7 +583,7 @@
                     });
                     if (bestAhead) highlightId = bestAhead.id;
                 }
-                
+
                 //console.log("Highlighting Id:", highlightId);
                 /* ---------- render each <tr> ---------- */
                 let appendedCount = 0;
@@ -556,27 +593,36 @@
                     const windowEnd = -(Number(r.Duration) + minsAfter);
                     const startLocal = startUtc.setZone(zone);
                     const isToday = startLocal.hasSame(nowLocal, 'day');
+                    //const soon = diffmin < 1440;
+                    const status = r.Status;
 
                     let actionHtml = '';
-                    if (isToday) {
-                        if (diffMin > minsBefore)               // too early
-                            actionHtml = buildBtn('disabled', r.Id);
-                        else if (diffMin < windowEnd)           // too late (>15 min after end)
-                            actionHtml = '';
-                        else                                    // within join-window
-                            actionHtml = buildBtn('enabled', r.Id);
+                    //if (soon) {
+                    if (diffMin > minsBefore) {
+                        actionHtml = buildBtn('disabled', r.Id); // too early
                     }
 
+                    else if (diffMin < windowEnd) {
+                        actionHtml = ''; // too late (>15 min after end)
+                    }
+                    else if (status != 'Ongoing' && status != 'Scheduled') {
+                        actionHtml = buildBtn('disabled', r.Id); // lesson not ongoing or scheduled
+                    }
+                    else {
+                        actionHtml = buildBtn('enabled', r.Id); // within join-window
+                    }
+                    //}
+
                     tbody.append(`
-                        <tr class="${r.Id === highlightId ? 'next-row' : ''}">
-                        <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
-                        <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
-                        <td data-label="Teacher">${r.TeacherName}</td>
-                        <td data-label="Status">${r.Status}</td>
-                        <td data-label="Duration">${r.Duration}&nbsp;min</td>
-                        <td data-label="Actions">${actionHtml}</td>
-                        </tr>
-                    `);
+                            <tr class="${r.Id === highlightId ? 'next-row' : ''}">
+                            <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
+                            <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
+                            <td data-label="Teacher">${r.TeacherName}</td>
+                            <td data-label="Status">${r.Status}</td>
+                            <td data-label="Duration">${r.Duration}&nbsp;min</td>
+                            <td data-label="Actions">${actionHtml}</td>
+                            </tr>
+                        `);
                     appendedCount++;
                     //console.log("Appended row for:", r.Id, r.TeacherName);
                 });
@@ -585,8 +631,8 @@
                 let soonest = null;
                 rows.forEach(r => {
                     const startUtc = DateTime.fromISO(r.DateTime);
-                    const enableTime = startUtc.minus({minutes: minsBefore});
-                    const disableTime = startUtc.plus({minutes: Number(r.Duration) + minsAfter});
+                    const enableTime = startUtc.minus({ minutes: minsBefore });
+                    const disableTime = startUtc.plus({ minutes: Number(r.Duration) + minsAfter });
                     const now = DateTime.utc();
 
                     if (enableTime > now) {
@@ -596,9 +642,8 @@
                         if (!soonest || disableTime < soonest) soonest = disableTime;
                     }
                 });
-                
-                if (soonest)
-                {
+
+                if (soonest) {
                     const msUntilNext = soonest.toMillis() - DateTime.utc().toMillis();
                     //console.log("Scheduling next renderTable in", msUntilNext, "ms");
                     nextTimerId = setTimeout(renderTable, Math.max(msUntilNext, 0) + 50)
@@ -614,27 +659,27 @@
             function buildBtn(state, id) {
                 const disabled = state === 'disabled';
                 const zoomBtn = `<a href="${deepLink}"
-                                    class="btn btn-primary btn-md join-btn ml-2${disabled ? " disabled-btn" : ""}"
-                                    ${disabled ? `aria-disabled="true" tabindex="-1"` : ""}>
-                                        <strong>Join lesson</strong>
-                                    </a>`;
+                                        class="btn btn-primary btn-md join-btn ml-2${disabled ? " disabled-btn" : ""}"
+                                        ${disabled ? `aria-disabled="true" tabindex="-1"` : ""}>
+                                            <strong>Join lesson</strong>
+                                        </a>`;
 
                 const detailsBtn = `
-                        <a
-                            href="${detailsBase}?scheduleId=${id}"
-                            class="btn btn-info btn-md ml-3"
-                            title="Lesson details">
-                            <i class="fa-solid fa-circle-info text-light"></i>
-                            </a>`;
+                            <a
+                                href="${detailsBase}?scheduleId=${id}"
+                                class="btn btn-info btn-md ml-3"
+                                title="Lesson details">
+                                <i class="fa-solid fa-circle-info text-light"></i>
+                                </a>`;
 
                 const waitBtn = `
-                        <a href="${waitRoomBase}?scheduleId=${id}"
-                            class="btn btn-primary btn-md ml-2${disabled ? " disabled-btn" : ""}"
-                                    ${disabled ? `aria-disabled="true" tabindex="-1"` : ""}"
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            Join Lesson
-                        </a>`;
+                            <a href="${waitRoomBase}?scheduleId=${id}"
+                                class="btn btn-primary btn-md ml-2${disabled ? " disabled-btn" : ""}"
+                                        ${disabled ? `aria-disabled="true" tabindex="-1"` : ""}"
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                Join Lesson
+                            </a>`;
 
                 //Uncomment this to actiavate the dynamic buttons
                 return waitBtn + detailsBtn;

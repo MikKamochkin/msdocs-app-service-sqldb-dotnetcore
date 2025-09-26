@@ -46,7 +46,8 @@
 			margin: 0 auto;
 			padding: 0 20px;
 			height: 100%;
-			position: relative; /* Needed for absolute positioning of children */
+			position: relative;
+			/* Needed for absolute positioning of children */
 		}
 
 		#logo {
@@ -56,19 +57,47 @@
 			transform: translate(-50%, -50%);
 			font-size: 1.5rem;
 			/*font-weight: 700;*/
-			color: #fff; /* Changed to white to match your original */
+			color: #fff;
+			/* Changed to white to match your original */
 		}
 
-		nav { position: absolute; left: 20%; top: 50%; transform: translateY(-50%); }
-			.nav-links   { list-style: none; margin: 0; padding: 0; }
-			.nav-links li{ display: inline-block; margin-left: 20px; }
-			.nav-links li a{
-			color: #000; text-decoration: none; padding: 10px 15px; display: inline-block;
+		nav {
+			position: absolute;
+			left: 20%;
+			top: 50%;
+			transform: translateY(-50%);
+		}
+
+		.nav-links {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.nav-links li {
+			display: inline-block;
+			margin-left: 20px;
+		}
+
+		.nav-links li a {
+			color: #000;
+			text-decoration: none;
+			padding: 10px 15px;
+			display: inline-block;
 			transition: background-color .3s;
-			}
-			.nav-links li a:hover        { background-color: #ced6ff; scale: 110%; border-radius: 10%; }
-			.nav-links li a.active-page,
-			.nav-links li a.inactive-page{ background-color: #fff; border-radius: 10%; }
+		}
+
+		.nav-links li a:hover {
+			background-color: #ced6ff;
+			scale: 110%;
+			border-radius: 10%;
+		}
+
+		.nav-links li a.active-page,
+		.nav-links li a.inactive-page {
+			background-color: #fff;
+			border-radius: 10%;
+		}
 
 		.burger {
 			display: none;
@@ -82,21 +111,21 @@
 				transform: translateY(-50%);
 				position: static;
 			}
-			
+
 			nav {
 				left: 0;
 				right: 0;
 				padding-right: 20px;
 			}
-			
+
 			.nav-links {
 				display: none;
 			}
-			
+
 			.burger {
 				display: block;
 			}
-			
+
 			.burger div {
 				width: 25px;
 				height: 3px;
@@ -236,6 +265,11 @@
 						<i class="fas fa-user-graduate"></i>
 					</a>
 				</li>
+				<li>
+					<a asp-controller="Teachers" asp-action="EditSchedule" title="Edit Schedule">
+						<i class="fa-regular fa-calendar-plus"></i>
+					</a>
+				</li>
 			</ul>
 
 			<div class="burger">
@@ -293,7 +327,7 @@
 	</div>
 </div>
 
-@if(impersonating == true)
+@if (impersonating == true)
 {
 	<partial name="_ImpersonatingBanner" />
 }
@@ -307,30 +341,30 @@
 	<script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 	<script>
-    (async () => {
+		(async () => {
 
-        /* teacherId injected by Razor */
-        const teacherId = '@ViewBag.TeacherId';
+			/* teacherId injected by Razor */
+			const teacherId = '@ViewBag.TeacherId';
 
-        /* build + start connection */
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/hubs/scheduleHub")
-            .withAutomaticReconnect()
-            //.configureLogging(signalR.LogLevel.Information)
-            .build();
+			/* build + start connection */
+			const connection = new signalR.HubConnectionBuilder()
+				.withUrl("/hubs/scheduleHub")
+				.withAutomaticReconnect()
+				//.configureLogging(signalR.LogLevel.Information)
+				.build();
 
-        await connection.start();
-        //console.log("SignalR connected. Joining group…");
-        await connection.invoke("JoinTeacherGroup", teacherId);
+			await connection.start();
+			//console.log("SignalR connected. Joining group…");
+			await connection.invoke("JoinTeacherGroup", teacherId);
 
-        connection.on("ScheduleChanged", () => {
-            //.log("Ping received – refresh!");
-			//g("pinging schedule changed");
-            refreshRows();                 // your existing function
-        });
+			connection.on("ScheduleChanged", () => {
+				//.log("Ping received – refresh!");
+				//g("pinging schedule changed");
+				refreshRows();                 // your existing function
+			});
 
-    })();
-    </script>
+		})();
+	</script>
 	<script>
 		const startLessonBase = '@Url.Action("StartLesson", "Teachers")';
 		const endLessonBase = '@Url.Action("EndLesson", "Teachers")';
@@ -357,33 +391,33 @@
 
 			window.refreshRows = async function refreshRows() {
 				//console.log("in refresh rows");
-                try {
-                    const latest = await fetch('@Url.Action("ScheduleJson","Teachers")')
-                                        .then(r => r.json());
+				try {
+					const latest = await fetch('@Url.Action("ScheduleJson", "Teachers")')
+						.then(r => r.json());
 
-                    rows.length = 0;                             // clear array
+					rows.length = 0;                             // clear array
 
-                    latest.forEach(src => {
-                        // tolerate both PascalCase and camelCase coming from JSON
-                        const rawTime = src.DateTime ?? src.dateTime;
-                        if (!rawTime) return;                   // skip bad rows
+					latest.forEach(src => {
+						// tolerate both PascalCase and camelCase coming from JSON
+						const rawTime = src.DateTime ?? src.dateTime;
+						if (!rawTime) return;                   // skip bad rows
 
-                        rows.push({
-                            Id:          src.Id          ?? src.id,
-                            TeacherId:   src.TeacherId   ?? src.teacherId,
-                            StudentName: src.StudentName ?? src.studentName,
-                            Status:      src.Status      ?? src.status,
-                            // ensure we always have a *number*
-                            Duration:    Number(src.Duration ?? src.duration ?? 0),
-                            DateTime:    rawTime.endsWith('Z') ? rawTime : rawTime + 'Z'
-                        });
-                    });
+						rows.push({
+							Id: src.Id ?? src.id,
+							TeacherId: src.TeacherId ?? src.teacherId,
+							StudentName: src.StudentName ?? src.studentName,
+							Status: src.Status ?? src.status,
+							// ensure we always have a *number*
+							Duration: Number(src.Duration ?? src.duration ?? 0),
+							DateTime: rawTime.endsWith('Z') ? rawTime : rawTime + 'Z'
+						});
+					});
 
-                    renderTable();                              // redraw
-                } catch (e) {
-                    console.error("Refresh failed", e);
-                }
-            };
+					renderTable();                              // redraw
+				} catch (e) {
+					console.error("Refresh failed", e);
+				}
+			};
 
 			$(renderTable);
 			$('#timeZoneSelect').on('change', renderTable);
@@ -432,25 +466,24 @@
 						else if (diffMin < windowEnd)           // too late (>15 min after end)
 							actionHtml = '';
 						else {
-							if (row.Status == "Scheduled" || row.Status == "Ongoing")
-							{
+							if (row.Status == "Scheduled" || row.Status == "Ongoing") {
 								actionHtml = buildBtn('enabled', row.Id, row.Status);
 							}
 							else {
 								actionHtml = '';
 							}
-						}                                   
+						}
 					}
 
 					tbody.append(`
-				                <tr class="${row.Id === highlightId ? 'next-row' : ''}">
-				                  <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
-				                  <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
-				                  <td data-label="Student">${row.StudentName}</td>
-				                  <td data-label="Status">${row.Status}</td>
-				                  <td data-label="Duration">${row.Duration}&nbsp;min</td>
-				                  <td data-label="Actions">${actionHtml}</td>
-				                </tr>`);
+					                <tr class="${row.Id === highlightId ? 'next-row' : ''}">
+					                  <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
+					                  <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
+					                  <td data-label="Student">${row.StudentName}</td>
+					                  <td data-label="Status">${row.Status}</td>
+					                  <td data-label="Duration">${row.Duration}&nbsp;min</td>
+					                  <td data-label="Actions">${actionHtml}</td>
+					                </tr>`);
 				});
 			}
 
@@ -480,26 +513,26 @@
 						  `;*/
 				//Dynamic link:
 				return `
-					<a
-						href="${startLessonBase}?id=${id}"
-						class="btn btn-primary btn-md ml-2 start-lesson-btn"
-						target="_blank"
-						rel="noopener noreferrer">
-						<strong>${startOrJoin} Lesson</strong>
-					</a>
-					<a
-						href="${detailsBase}?scheduleId=${id}"
-						class="btn btn-info btn-md ml-3"
-						title="Lesson details">
-						<i class="fa-solid fa-circle-info text-light"></i>
-					</a>
-					<button
-						class="btn btn-danger btn-md ml-2 end-lesson-btn ${endBtnStatus}"
-						data-id="${id}"
-						onclick="pingEndLesson('${id}'), refreshRows();"
-						<strong>End Lesson</strong>
-					</button>	
-					`;
+						<a
+							href="${startLessonBase}?id=${id}"
+							class="btn btn-primary btn-md ml-2 start-lesson-btn"
+							target="_blank"
+							rel="noopener noreferrer">
+							<strong>${startOrJoin} Lesson</strong>
+						</a>
+						<a
+							href="${detailsBase}?scheduleId=${id}"
+							class="btn btn-info btn-md ml-3"
+							title="Lesson details">
+							<i class="fa-solid fa-circle-info text-light"></i>
+						</a>
+						<button
+							class="btn btn-danger btn-md ml-2 end-lesson-btn ${endBtnStatus}"
+							data-id="${id}"
+							onclick="pingEndLesson('${id}'), refreshRows();"
+							<strong>End Lesson</strong>
+						</button>	
+						`;
 			}
 
 			/* open Zoom + browser fallback */
@@ -560,27 +593,20 @@
 		});
 
 		// 1) Intercept the Start-Lesson link
+		// Intercept the Start-Lesson link
 		$(document).on('click', '.start-lesson-btn', function (e) {
-			e.preventDefault();                         // stop the default navigation
-			const $btn = $(this);
-			const url = $btn.attr('href');           // e.g. “/Teachers/StartLesson?id=…”
+			e.preventDefault();
+			const url = $(this).attr('href');
 
-			// 2) Open Zoom in a new tab (will follow the server’s redirect → joinUrl)
+			// Open Zoom in a new tab
 			window.open(url, '_blank');
 
-			setTimeout(refreshRows, 1000);
-
-			// 3) Swap this into a “Join Lesson” button
-			$btn
-				.removeClass('start-lesson-btn btn-primary')   // no longer a “start” button
-				.addClass('join-btn btn-secondary')            // give it your “join” styling
-				.find('strong')
-				.text('Join Lesson');                        // flip the text label
-
+			// Reload this page after a short delay
 			setTimeout(() => {
-				window.location.reload();
-			}, 500)
+				window.location.reload(true);   // full reload
+			}, 800);
 		});
+
 
 	</script>
 }
