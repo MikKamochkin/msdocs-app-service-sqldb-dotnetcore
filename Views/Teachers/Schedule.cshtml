@@ -485,6 +485,27 @@
 					                  <td data-label="Actions">${actionHtml}</td>
 					                </tr>`);
 				});
+
+				let soonest = null;
+                rows.forEach(r => {
+                    const startUtc = DateTime.fromISO(r.DateTime);
+                    const enableTime = startUtc.minus({ minutes: minsBefore });
+                    const disableTime = startUtc.plus({ minutes: Number(r.Duration) + minsAfter });
+                    const now = DateTime.utc();
+
+                    if (enableTime > now) {
+                        if (!soonest || enableTime < soonest) soonest = enableTime;
+                    }
+                    if (disableTime > now) {
+                        if (!soonest || disableTime < soonest) soonest = disableTime;
+                    }
+                });
+
+                if (soonest) {
+                    const msUntilNext = soonest.toMillis() - DateTime.utc().toMillis();
+                    //console.log("Scheduling next renderTable in", msUntilNext, "ms");
+                    nextTimerId = setTimeout(renderTable, Math.max(msUntilNext, 0) + 50)
+                }
 			}
 
 			/* ---------- helpers ---------- */

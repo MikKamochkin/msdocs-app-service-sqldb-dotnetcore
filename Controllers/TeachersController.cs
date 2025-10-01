@@ -315,10 +315,13 @@ namespace DotNetCoreSqlDb.Controllers
             if (!Guid.TryParse(userId, out var teacherId))
                 return NotFound();
 
+            var sixHoursAgo = DateTime.UtcNow.AddHours(-6);
+
             var scheduleEntries = await _context.Schedule
                 .Include(s => s.Assignment)          // load the Assignment nav
                     .ThenInclude(a => a.Group)      // then load its Group nav
                 .Where(s => s.Assignment!.TeacherId == teacherId)
+                .Where(s => s.DateTime > sixHoursAgo)
                 .OrderByDescending(s => s.DateTime)
                 .Take(15)
                 .Select(s => new

@@ -121,7 +121,7 @@ namespace DotNetCoreSqlDb.Services
                             // 1) fetch (or create) the StudentBalance row for this student & assignment
                             var sb = await _context.StudentBalance
                                 .SingleOrDefaultAsync(b => b.StudentId == studentId &&
-                                                        b.AssignmentId == a.Id);
+                                                         b.AssignmentId == a.Id);
                             // 2) decrease the balance
                             if (sb != null)
                             {
