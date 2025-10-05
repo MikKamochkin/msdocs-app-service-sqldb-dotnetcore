@@ -14,7 +14,8 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly IWhatsAppService _svc;
         public WhatsAppController(IWhatsAppService svc) => _svc = svc;
 
-        public async Task<IActionResult> Index() => View(await _svc.GetAllMessagesAsync());
+        public async Task<IActionResult> Index() { return NotFound(); }/*=> View(await _svc.GetAllMessagesAsync());*/
+
 
         [HttpGet]
         public async Task<IActionResult> ValidateContact(string phone)

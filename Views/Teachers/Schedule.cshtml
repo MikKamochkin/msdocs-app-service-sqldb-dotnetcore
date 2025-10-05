@@ -386,8 +386,12 @@
 			const raw = @Html.Raw(existingJson);
 			const rows = raw
 				.map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
-				.sort((a, b) => DateTime.fromISO(a.DateTime) - DateTime.fromISO(b.DateTime)); // newest → oldest
+				//.sort((a, b) => DateTime.fromISO(a.DateTime) - DateTime.fromISO(b.DateTime)); // newest → oldest
+			rows.sort(sortByDateAsc);
 
+			function sortByDateAsc(a, b) {
+				return DateTime.fromISO(a.DateTime).toMillis() - DateTime.fromISO(b.DateTime).toMillis();
+			}
 
 			window.refreshRows = async function refreshRows() {
 				//console.log("in refresh rows");
@@ -413,6 +417,7 @@
 						});
 					});
 
+					rows.sort(sortByDateAsc);
 					renderTable();                              // redraw
 				} catch (e) {
 					console.error("Refresh failed", e);
@@ -511,18 +516,22 @@
 			/* ---------- helpers ---------- */
 			function buildBtn(state, id, status) {
 				const cls = state === 'disabled'
-					? 'btn btn-primary btn-md join-btn ml-2 disabled-btn'
-					: 'btn btn-primary btn-md join-btn ml-2';
+					? 'btn btn-success btn-md join-btn ml-2 disabled-btn'
+					: 'btn btn-success btn-md join-btn ml-2';
 				const extra = state === 'disabled' ? 'aria-disabled="true" tabindex="-1"' : '';
+				
 				let startOrJoin = "";
 				let endBtnStatus = "";
+				let startOrJoinClass = "";
 
 				if (status == "Ongoing") {
-					startOrJoin = "Join";
+					startOrJoin = "Rejoin";
+					startOrJoinClass = "btn btn-warning";
 
 				}
 				else {
 					startOrJoin = "Start";
+					startOrJoinClass = "btn btn-success";
 					endBtnStatus = "disabled"
 				}
 
@@ -534,9 +543,10 @@
 						  `;*/
 				//Dynamic link:
 				return `
+						
 						<a
 							href="${startLessonBase}?id=${id}"
-							class="btn btn-primary btn-md ml-2 start-lesson-btn"
+							class="${startOrJoinClass} btn-md ml-2 start-lesson-btn"
 							target="_blank"
 							rel="noopener noreferrer">
 							<strong>${startOrJoin} Lesson</strong>
