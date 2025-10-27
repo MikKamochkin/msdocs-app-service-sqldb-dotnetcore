@@ -39,13 +39,16 @@ namespace DotNetCoreSqlDb.Controllers
                 .OrderByDescending(d => d.Time)
                 .ToListAsync();
 
-            return View(mails);
+            //return View(mails);
+            return NotFound();
         }
 
         public async Task<IActionResult> SignIn(string sortOrder)
         {
+            var dayAgo = DateTime.UtcNow.AddHours(-24);
             var signIns = await _context.SignInLog
                 .OrderByDescending(d => d.Time)
+                .Where(d => d.Time >= dayAgo)
                 .ToListAsync();
 
             return View(signIns);

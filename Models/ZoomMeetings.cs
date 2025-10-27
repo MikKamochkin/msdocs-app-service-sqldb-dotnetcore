@@ -39,6 +39,8 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("UUid")]
         public string? UUid { get; set; } = "";
 
+        [DisplayName("FirstMutualPresenceTime")]
+        public DateTime? FirstMutualPresenceTime { get; set; }
 
         public virtual Schedule? Schedule { get; set; }
     }

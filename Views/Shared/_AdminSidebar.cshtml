@@ -47,12 +47,12 @@
         }
 
         @* WhatsApp *@
-        @{
+        @*@{
             var cssWhatsApp = btnClass("Whatsapp", "Index");
         }
         <a href="@Url.Action("Index", "Whatsapp")" class="@cssWhatsApp" title="WhatsApp">
             <i class="hgi hgi-stroke hgi-message-01"></i>
-        </a>
+        </a>*@
 
         @* Assignments *@
         @if (User.IsInRole("admin") || User.IsInRole("support"))

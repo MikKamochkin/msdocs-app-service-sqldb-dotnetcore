@@ -149,16 +149,17 @@ namespace DotNetCoreSqlDb.Services
                 try
                 {
                     using var tx = await _context.Database
-                                                    .BeginTransactionAsync(IsolationLevel.Serializable);
+                        .BeginTransactionAsync(IsolationLevel.Serializable);
 
-                        zoomRow.IsBusy = false;
-                        zoomRow.ScheduleId = null;
-                        zoomRow.JoinUrl = null;
-                        zoomRow.MeetingId = null;
-                        zoomRow.MeetingPassword = null;
-                        zoomRow.StartTime = null;
-                        zoomRow.Duration = null;
-                        zoomRow.UUid = null;
+                    zoomRow.IsBusy = false;
+                    zoomRow.ScheduleId = null;
+                    zoomRow.JoinUrl = null;
+                    zoomRow.MeetingId = null;
+                    zoomRow.MeetingPassword = null;
+                    zoomRow.StartTime = null;
+                    zoomRow.Duration = null;
+                    zoomRow.UUid = null;
+                    zoomRow.FirstMutualPresenceTime = null;
 
                     var schedule = await _context.Schedule
                                         .FirstOrDefaultAsync(s => s.Id == scheduleId);
@@ -201,7 +202,7 @@ namespace DotNetCoreSqlDb.Services
                                               .AddMinutes(slot.Duration!.Value)
                                               .AddMinutes(bufferAfterMeetingEnd);
 
-                    _logger.LogInformation("endMoment is {End} for slot {SlotId}", endMoment, slot.Id);
+                _logger.LogInformation("endMoment is {End} for slot {SlotId}", endMoment, slot.Id);
 
                 if (nowUtc < endMoment) continue;
 
@@ -224,14 +225,14 @@ namespace DotNetCoreSqlDb.Services
                     using var tx = await _context.Database
                         .BeginTransactionAsync(IsolationLevel.Serializable);
 
-                        slot.IsBusy = false;
-                        slot.ScheduleId = null;
-                        slot.JoinUrl = null;
-                        slot.MeetingId = null;
-                        slot.MeetingPassword = null;
-                        slot.StartTime = null;
-                        slot.Duration = null;
-                        slot.UUid = null;
+                    slot.IsBusy = false;
+                    slot.ScheduleId = null;
+                    slot.JoinUrl = null;
+                    slot.MeetingId = null;
+                    slot.MeetingPassword = null;
+                    slot.StartTime = null;
+                    slot.Duration = null;
+                    slot.UUid = null;
 
                     await _context.SaveChangesAsync();
                     await tx.CommitAsync();
@@ -246,5 +247,73 @@ namespace DotNetCoreSqlDb.Services
             }
         }
 
+        public async Task MarkLessonAsSufficient()
+        {
+
+            const float sufficientPercentageOfLesson = 0.5f;
+            var activeLessons = await _context.ZoomMeetings
+                //.Include(z => z.Schedule)
+                .Where(z => z.IsBusy && z.UUid != null && z.UUid != "")
+                .ToListAsync();
+
+            var now = DateTime.UtcNow;
+
+            foreach (var lesson in activeLessons)
+            {
+                var count = await GetLiveParticipantCountAsync(lesson.UUid!);
+
+                if (count >= 2 && !lesson.FirstMutualPresenceTime.HasValue)
+                {
+                    lesson.FirstMutualPresenceTime = now;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            var lessonsWithFirstMutualPresenceTime = await _context.ZoomMeetings
+                .Include(z => z.Schedule)
+                .Where(z => z.FirstMutualPresenceTime != null)
+                .ToListAsync();
+
+
+            foreach (var lesson in lessonsWithFirstMutualPresenceTime)
+            {
+                var lessonDuration = lesson.Schedule!.Duration;
+                var timeSinceFirstMutualPresenceTime = now - lesson.FirstMutualPresenceTime;
+                var count = await GetLiveParticipantCountAsync(lesson.UUid!);
+                
+                bool lessonSufficient = timeSinceFirstMutualPresenceTime?.TotalMinutes >= lessonDuration * sufficientPercentageOfLesson && count >= 2;
+
+                if (lessonSufficient)
+                {
+                    lesson.Schedule.HasReachedMinimumDuration = true;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
+        
+        private async Task<int> GetLiveParticipantCountAsync(string uuid)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(uuid))
+                {
+                    var vm = await _zoomApiService.ListLiveMeetingParticipantsAsync(uuid);
+                    // If you want to store remaining rate-limit somewhere, you can expose it here as well.
+                    return vm?.Participants?.Count ?? 0;
+                }
+                else
+                {
+                    return 0;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error fetching live participants for meeting UUID {Uuid}", uuid);
+                return 0;
+            }
+        }
     }
 }

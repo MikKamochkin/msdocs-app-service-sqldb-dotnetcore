@@ -382,6 +382,26 @@
             margin-left: .5rem;
         }
 
+        .btn-danger {
+            background-color: #dc3545;   /* red when active */
+            color: #fff;
+            border: 1px solid #dc3545;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background-color: #b02a37;   /* darker red on hover */
+            border-color: #b02a37;
+            color: #fff;
+        }
+
+        .btn-danger:disabled {
+            background-color: #fff;      /* white when disabled */
+            color: #dc3545;
+            border: 1px solid #dc3545;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
         /* ---------- RESPONSIVE PROFILE ---------- */
         @@media(max-width:768px) {
             .profile-section {
@@ -458,7 +478,8 @@
         }
 
         #timeSelect {
-            min-width: 100px; /* or whatever feels right */
+            min-width: 100px;
+            /* or whatever feels right */
             /*text-align: center;*/
         }
 
@@ -488,7 +509,8 @@
                         </a>
                     </li>
                     <li>
-                        <a asp-controller="Teachers" asp-action="EditSchedule" title="Edit Schedule" class="active-page">
+                        <a asp-controller="Teachers" asp-action="EditSchedule" title="Edit Schedule"
+                            class="active-page">
                             <i class="fa-regular fa-calendar-plus"></i>
                         </a>
                     </li>
@@ -586,11 +608,18 @@
             </div>
 
             <table class="table table-bordered" id="entriesTable" aria-describedby="dayOfWeek">
+                <colgroup>
+                    <col style="width: 20%;">
+                    <col style="width: 40%;">
+                    <col style="width: 30%;">
+                    <col style="width: 10%;">
+                </colgroup>
                 <thead>
                     <tr>
                         <th scope="col">Time</th>
                         <th scope="col">Student</th>
                         <th scope="col">Duration</th>
+                        <th scope="col">Delete</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -638,22 +667,41 @@
 
             function renderTable() {
                 const zone = $('#timeZoneSelect').val();
+
                 rows.sort((a, b) =>
                     DateTime.fromISO(a.DateTime).toMillis() - DateTime.fromISO(b.DateTime).toMillis()
                 );
 
                 const tbody = $('#entriesTable tbody').empty();
-                rows.forEach((r) => {
-                    const dt = DateTime.fromISO(r.DateTime).setZone(zone).toFormat('HH:mm');
+
+                rows.forEach((r, i) => {
+                    const dtIso = r?.DateTime;
+                    const groupName = r?.GroupName ?? '(unknown)';
+                    const duration = (r?.Duration ?? '') + (r?.Duration ? ' mins' : '');
+
+                    const dt = dtIso
+                        ? DateTime.fromISO(dtIso).setZone(zone).toFormat('HH:mm')
+                        : '(invalid time)';
+
+                    const canDeleteLesson = (!r.HasReachedMinimumDuration);
+
+                    const delBtn = `
+                        <button class="btn btn-sm btn-danger"
+                            ${canDeleteLesson ? '' : 'disabled'}
+                            onclick="deleteRow(${i})">×</button>
+                    `;
+
                     tbody.append(`
-              <tr>
-                <td data-label="Time">${dt}</td>
-                <td data-label="Student">${r.GroupName}</td>
-                <td data-label="Duration">${r.Duration} mins</td>
-              </tr>
-            `);
+                    <tr>
+                        <td data-label="Time">${dt}</td>
+                        <td data-label="Student">${groupName}</td>
+                        <td data-label="Duration">${duration}</td>
+                        <td data-label="Delete">${delBtn}</td>
+                    </tr>
+                `);
                 });
             }
+
 
             function saveEntryAjax() {
                 const t = $('#timeSelect').val();
@@ -702,6 +750,33 @@
                     }
                 });
             }
+
+            function deleteRow(i) {
+                const entry = rows[i];
+                if (!entry || !entry.Id) return;
+
+                if (!confirm('Delete this lesson?')) return;
+
+                const token = $('#__RequestVerificationToken').val();
+
+                $.ajax({
+                    url: '/Teachers/DeleteEntry',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'RequestVerificationToken': token
+                    },
+                    data: JSON.stringify(entry.Id),
+                    success() {
+                        rows.splice(i, 1);
+                        renderTable();
+                    },
+                    error(err) {
+                        alert('Delete failed: ' + (err.responseJSON?.error || err.responseText));
+                    }
+                });
+            }
+
         </script>
     }
 </body>

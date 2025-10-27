@@ -9,5 +9,6 @@ namespace DotNetCoreSqlDb.Services
         Task AssignMeetingsAsync(Guid id);
         Task EndMeetingsAsync(Guid id);
         Task CleanupMeetingsAsync();
+        Task MarkLessonAsSufficient();
     }
 }

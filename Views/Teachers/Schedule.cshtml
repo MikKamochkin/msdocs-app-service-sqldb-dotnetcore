@@ -358,9 +358,11 @@
 			await connection.invoke("JoinTeacherGroup", teacherId);
 
 			connection.on("ScheduleChanged", () => {
-				//.log("Ping received – refresh!");
-				//g("pinging schedule changed");
-				refreshRows();                 // your existing function
+				refreshRows();
+			});
+
+			connection.on("LessonStarted", () => {
+				refreshRows();
 			});
 
 		})();
@@ -625,7 +627,7 @@
 
 		// 1) Intercept the Start-Lesson link
 		// Intercept the Start-Lesson link
-		$(document).on('click', '.start-lesson-btn', function (e) {
+		/*$(document).on('click', '.start-lesson-btn', function (e) {
 			e.preventDefault();
 			const url = $(this).attr('href');
 
@@ -636,7 +638,7 @@
 			setTimeout(() => {
 				window.location.reload(true);   // full reload
 			}, 800);
-		});
+		});*/
 
 
 	</script>

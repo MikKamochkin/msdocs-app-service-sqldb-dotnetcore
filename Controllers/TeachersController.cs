@@ -15,6 +15,8 @@ using TimeZoneConverter;
 using DotNetCoreSqlDb.Services;
 using DotNetCoreSqlDb.Helpers;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using DotNetCoreSqlDb.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -25,13 +27,15 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly ILogger<TeachersController> _logger;
         private readonly IZoomMeetingService _zoomSvc;
         private readonly IUpdateBalanceService _balanceSvc;
+        private readonly IHubContext<ScheduleHub> _hub;
 
-        public TeachersController(MyDatabaseContext context, ILogger<TeachersController> logger, IZoomMeetingService zoomSvc, IUpdateBalanceService balanceSvc)
+        public TeachersController(MyDatabaseContext context, ILogger<TeachersController> logger, IZoomMeetingService zoomSvc, IUpdateBalanceService balanceSvc, IHubContext<ScheduleHub> hub)
         {
             _context = context;
             _logger = logger;
             _zoomSvc = zoomSvc;
             _balanceSvc = balanceSvc;
+            _hub = hub;
         }
 
         // GET: Teacher/Index
@@ -125,14 +129,14 @@ namespace DotNetCoreSqlDb.Controllers
             // 5) Supply your time-zone list again
             var timeZones = TimeZoneMapping.GetTimeZones();
             var defaultZone = TZConvert.WindowsToIana("Eastern Standard Time");
-            var studentsTimezone = await _context.Teacher
+            var teachersTimezone = await _context.Teacher
                 .Where(s => s.Id == teacherId)
                 .Select(s => s.TimeZoneId)
                 .FirstOrDefaultAsync();
 
             foreach (var tz in timeZones)
             {
-                tz.Selected = tz.Value == studentsTimezone;
+                tz.Selected = tz.Value == teachersTimezone;
             }
             ViewBag.TimeZones = timeZones;
 
@@ -291,6 +295,10 @@ namespace DotNetCoreSqlDb.Controllers
                 //TODO: Add error handling here
                 return NotFound();
 
+            await _hub.Clients
+                .Group($"teacher_{teacherId}")
+                .SendAsync("LessonStarted");
+
             return Redirect(lesson.JoinUrl);
         }
 
@@ -414,7 +422,15 @@ namespace DotNetCoreSqlDb.Controllers
             // Time zones
             var timeZones = TimeZoneMapping.GetTimeZones();
             var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
-            foreach (var tz in timeZones) tz.Selected = tz.Value == defaultZoneIana;
+            var teachersTimezone = await _context.Teacher
+                .Where(s => s.Id == teacherId)
+                .Select(s => s.TimeZoneId)
+                .FirstOrDefaultAsync();
+
+            foreach (var tz in timeZones)
+            {
+                tz.Selected = tz.Value == teachersTimezone;
+            }
             ViewBag.TimeZones = timeZones;
 
             // Groups visible to this teacher only (value = AssignmentId, text = Group.Name)
@@ -441,17 +457,17 @@ namespace DotNetCoreSqlDb.Controllers
 
             // Load existing entries for *that date* (read-only in the view)
             // Convert selected local day → UTC window
-            var windowsZoneId   = TZConvert.IanaToWindows(defaultZoneIana);
-            var tzInfo          = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
+            var windowsZoneId = TZConvert.IanaToWindows(defaultZoneIana);
+            var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
 
             // IMPORTANT: make the local date "Unspecified" so ConvertTimeToUtc(sourceTz) accepts it
             var selectedDateLocal = DateTime.SpecifyKind(selectedDate.Date, DateTimeKind.Unspecified);
 
             var localStart = selectedDateLocal;              // 00:00 local (Unspecified)
-            var localEnd   = selectedDateLocal.AddDays(1);   // next midnight (Unspecified)
+            var localEnd = selectedDateLocal.AddDays(1);   // next midnight (Unspecified)
 
             var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, tzInfo);
-            var endUtc   = TimeZoneInfo.ConvertTimeToUtc(localEnd,   tzInfo);
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, tzInfo);
 
             var existing = await _context.Schedule
                 .Include(s => s.Assignment!).ThenInclude(a => a.Group!)
@@ -464,10 +480,13 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 r.Id,
                 r.AssignmentId,
-                DateTime = r.DateTime.ToUniversalTime().ToString("o"),     
+                DateTime = r.DateTime.ToUniversalTime().ToString("o"),
                 r.Duration,
                 GroupName = r.Assignment!.Group!.Name,
-                IsExisting = true  // important: disables edit/delete in the view
+                IsExisting = true,  // important: disables edit/delete in the view
+                r.HasReachedMinimumDuration,
+                r.Status
+
             }).ToList();
 
             ViewBag.ExistingJson = JsonSerializer.Serialize(flat, new JsonSerializerOptions
@@ -517,7 +536,8 @@ namespace DotNetCoreSqlDb.Controllers
                 Status = "Scheduled",
                 Duration = dto.Duration,
                 LessonAccountingType = "S100T100",
-                Accounted = false
+                Accounted = false,
+                HasReachedMinimumDuration = false      
             };
 
             _context.Schedule.Add(entity);
@@ -531,8 +551,82 @@ namespace DotNetCoreSqlDb.Controllers
                 dateTime = entity.DateTime.ToUniversalTime().ToString("o"),
                 duration = entity.Duration,
                 groupName = assignment.Group?.Name ?? "(unknown)",
-                isExisting = true
+                isExisting = true,
+                HasReachedMinimumDuration = false,
+                status = entity.Status
             });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteEntry([FromBody] Guid id)
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var teacherId))
+                return NotFound();
+
+            // Load + ensure ownership
+            var entity = await _context.Schedule
+                .Include(s => s.Assignment)
+                    .ThenInclude(a => a.Group)
+                        .ThenInclude(g => g.StudentGroupCompositions)
+                .Include(s => s.Assignment)
+                    .ThenInclude(a => a.Teacher)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (entity == null)
+                return NotFound();
+
+            if (entity.Assignment?.TeacherId != teacherId)
+                return NotFound();
+
+            
+            if (entity.HasReachedMinimumDuration == true)
+            {
+                return BadRequest("This lesson cannot be deleted");
+            }
+            
+
+            // Collect affected IDs before delete
+            var affectedStudentIds = entity.Assignment?.Group?.StudentGroupCompositions?
+                .Select(sgc => sgc.StudentId)
+                .Distinct()
+                .ToList() ?? new List<Guid>();
+
+            _context.Schedule.Remove(entity);
+            await _context.SaveChangesAsync();
+
+            // Notify students
+            foreach (var studentId in affectedStudentIds)
+            {
+                await _hub.Clients
+                    .Group($"student_{studentId}")
+                    .SendAsync("ScheduleChanged");
+            }
+
+            // Send refreshed list to teacher (latest 15)
+            var updatedSchedule = await _context.Schedule
+                .Include(s => s.Assignment!).ThenInclude(a => a.Teacher)
+                .Where(s => s.Assignment!.TeacherId == teacherId)
+                .OrderByDescending(s => s.DateTime)
+                .Take(15)
+                .Select(r => new
+                {
+                    r.Id,
+                    r.AssignmentId,
+                    DateTime = r.DateTime.ToUniversalTime().ToString("o"),
+                    r.Status,
+                    r.Duration,
+                    TeacherId = r.Assignment!.Teacher!.Id,
+                    TeacherName = r.Assignment!.Teacher!.Name
+                })
+                .ToListAsync();
+
+            await _hub.Clients
+                .Group($"teacher_{teacherId}")
+                .SendAsync("ScheduleChanged", updatedSchedule);
+
+            return Ok();
         }
     }
 }

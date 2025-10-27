@@ -76,6 +76,7 @@ public sealed class TimedHostedService : BackgroundService
             using var scope = _scopeFactory.CreateScope();
             var zoomSvc = scope.ServiceProvider.GetRequiredService<IZoomMeetingService>();
             await zoomSvc.CleanupMeetingsAsync();
+            await zoomSvc.MarkLessonAsSufficient();
             
         }
         catch (Exception ex)
