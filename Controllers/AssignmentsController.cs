@@ -181,7 +181,9 @@ namespace DotNetCoreSqlDb.Controllers
                                        "Id", "Name",
                                        model.GroupId);
             ViewBag.Teachers      = new SelectList(
-                                       await _context.Teacher.ToListAsync(),
+                                       await _context.Teacher
+                                       .OrderBy(t => t.Name)
+                                       .ToListAsync(),
                                        "Id", "Name",
                                        model.TeacherId);
 

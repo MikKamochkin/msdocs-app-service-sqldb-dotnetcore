@@ -187,7 +187,7 @@ namespace DotNetCoreSqlDb.Services
         //Automatic meating cleanup that runs from timer and ends all meetings that ended >= 15 mins ago
         public async Task CleanupMeetingsAsync()
         {
-            const int bufferAfterMeetingEnd = 15; // min
+            const int bufferAfterMeetingEnd = 70; // min
 
             var nowUtc = DateTime.UtcNow;
             var busySlots = await _context.ZoomMeetings
@@ -198,26 +198,53 @@ namespace DotNetCoreSqlDb.Services
 
             foreach (var slot in busySlots)
             {
-                var endMoment = slot.StartTime!.Value
+                var endMomentWithBuffer = slot.StartTime!.Value
                                               .AddMinutes(slot.Duration!.Value)
                                               .AddMinutes(bufferAfterMeetingEnd);
 
-                _logger.LogInformation("endMoment is {End} for slot {SlotId}", endMoment, slot.Id);
+                var endMoment = slot.StartTime!.Value
+                                .AddMinutes(slot.Duration!.Value);
+
+                //kill if:
+                // after end with buffer
+                // after end, before buffer, no one there
+
+                //live if:
+                //before end
+                //after end, before buffer, >= 1 participant
 
                 if (nowUtc < endMoment) continue;
 
+                var participantCount = await GetLiveParticipantCountAsync(slot.MeetingId!);
 
+                //_logger.LogInformation("Count: " + participantCount + " at: " + DateTime.UtcNow);
+
+                if (nowUtc > endMoment && nowUtc < endMomentWithBuffer && participantCount > 0) continue;
+     
                 try
                 {
                     /*await _zoomApiService.EndMeetingAsync(
                             slot.ZoomId);*/
                     await _zoomApiService.EndZoomMeetingAsync(slot.MeetingId);
+
+                    var schedId = slot.ScheduleId;
+                    if (schedId != null)
+                    {
+                        var schedule = await _context.Schedule
+                            .Where(s => s.Id == schedId)
+                            .FirstOrDefaultAsync();
+                        
+                        if (schedule != null)
+                        {
+                            schedule.Status = "Taken";
+                        }
+
+                        await _context.SaveChangesAsync();
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex,
-                        "Zoom end call failed for slot {SlotId}; proceeding with local cleanup",
-                        slot.Id);
+                
                 }
 
                 try
@@ -237,12 +264,12 @@ namespace DotNetCoreSqlDb.Services
                     await _context.SaveChangesAsync();
                     await tx.CommitAsync();
 
-                    _logger.LogInformation("Cleared Zoom slot record {SlotId}", slot.Id);
+                    //_logger.LogInformation("Cleared Zoom slot record {SlotId}", slot.Id);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex,
-                        "Database cleanup failed for Zoom slot {SlotId}", slot.Id);
+                    //_logger.LogError(ex,
+                        //"Database cleanup failed for Zoom slot {SlotId}", slot.Id);
                 }
             }
         }
@@ -253,14 +280,14 @@ namespace DotNetCoreSqlDb.Services
             const float sufficientPercentageOfLesson = 0.5f;
             var activeLessons = await _context.ZoomMeetings
                 //.Include(z => z.Schedule)
-                .Where(z => z.IsBusy && z.UUid != null && z.UUid != "")
+                .Where(z => z.IsBusy && !string.IsNullOrEmpty(z.MeetingId))
                 .ToListAsync();
 
             var now = DateTime.UtcNow;
 
             foreach (var lesson in activeLessons)
             {
-                var count = await GetLiveParticipantCountAsync(lesson.UUid!);
+                var count = await GetLiveParticipantCountAsync(lesson.MeetingId!);
 
                 if (count >= 2 && !lesson.FirstMutualPresenceTime.HasValue)
                 {
@@ -293,13 +320,13 @@ namespace DotNetCoreSqlDb.Services
             await _context.SaveChangesAsync();
         }
         
-        private async Task<int> GetLiveParticipantCountAsync(string uuid)
+        private async Task<int> GetLiveParticipantCountAsync(string meetingId)
         {
             try
             {
-                if (!string.IsNullOrEmpty(uuid))
+                if (!string.IsNullOrEmpty(meetingId))
                 {
-                    var vm = await _zoomApiService.ListLiveMeetingParticipantsAsync(uuid);
+                    var vm = await _zoomApiService.ListLiveMeetingParticipantsAsync(meetingId);
                     // If you want to store remaining rate-limit somewhere, you can expose it here as well.
                     return vm?.Participants?.Count ?? 0;
                 }
@@ -311,7 +338,7 @@ namespace DotNetCoreSqlDb.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error fetching live participants for meeting UUID {Uuid}", uuid);
+                //_logger.LogWarning(ex, "Error fetching live participants for meeting UUID {Uuid}", meetingId);
                 return 0;
             }
         }

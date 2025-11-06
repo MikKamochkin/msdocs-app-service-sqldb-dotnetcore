@@ -683,7 +683,7 @@
                         ? DateTime.fromISO(dtIso).setZone(zone).toFormat('HH:mm')
                         : '(invalid time)';
 
-                    const canDeleteLesson = (!r.HasReachedMinimumDuration);
+                    const canDeleteLesson = (!r.HasReachedMinimumDuration && r.Status != "Ongoing");
 
                     const delBtn = `
                         <button class="btn btn-sm btn-danger"

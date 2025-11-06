@@ -63,7 +63,7 @@ namespace DotNetCoreSqlDb.Services
 
                 if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
                     return new ZoomParticipantViewModel { RateLimitRemaining = remaining };
-
+                
                 resp.EnsureSuccessStatusCode();
 
                 var json = await resp.Content.ReadAsStringAsync();
@@ -74,6 +74,10 @@ namespace DotNetCoreSqlDb.Services
                 {
                     foreach (var p in arr.EnumerateArray())
                     {
+                        var ipAddress = p.GetProperty("ip_address").GetString() ?? string.Empty;
+
+                        _log.LogInformation("Ip address: " + ipAddress);
+                            
                         list.Add(new ZoomParticipant
                         {
                             UserName = p.GetProperty("user_name").GetString() ?? string.Empty,

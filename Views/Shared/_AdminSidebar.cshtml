@@ -38,7 +38,7 @@
         }
 
         @* Schedule *@
-        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
         {
             var cssSchedule = btnClass("Schedule", "Manage");
             <a href="@Url.Action("Manage", "Schedule")" class="@cssSchedule" title="Schedule">
@@ -89,7 +89,7 @@
             </a>
         }
 
-        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
         {
             var cssZoomMeetings = btnClass("ZoomMeetings", "Index");
             <a href="@Url.Action("Index", "ZoomMeetings")" class="@cssZoomMeetings" title="ZoomMeetings">

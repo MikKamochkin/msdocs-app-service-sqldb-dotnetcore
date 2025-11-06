@@ -18,7 +18,7 @@ using DotNetCoreSqlDb.Services;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "support, admin")]
+    [Authorize(Roles = "support, admin, assistant")]
     public class ScheduleController : Controller
     {
         private readonly MyDatabaseContext _context;
@@ -108,7 +108,7 @@ namespace DotNetCoreSqlDb.Controllers
             if (teacherId.HasValue)
             {
                 var assignments = await _context.Assignments
-                    .Where(a => a.TeacherId == teacherId && a.Group!.IsActive)
+                    .Where(a => a.TeacherId == teacherId && a.Group!.IsActive && a.IsActive == true)
                     .Select(a => new
                     {
                         a.Id,

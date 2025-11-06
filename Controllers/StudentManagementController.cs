@@ -43,11 +43,11 @@ namespace DotNetCoreSqlDb.Controllers
             // Include Contacts so that we can display email addresses.
             IQueryable<Student> query = _context.Student.Include(s => s.Contacts);
 
-            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
+            /*bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
             if (!isPrivileged)
             {
                 query = query.Where(s => s.AccountingGroup == "S");
-            }
+            }*/
 
             switch (sortOrder)
             {
@@ -90,8 +90,8 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.StudentNumber = user.Username;
 
             bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
-            if (!isPrivileged && student.AccountingGroup != "S")
-                return Forbid();
+            /*if (!isPrivileged && student.AccountingGroup != "S")
+                return Forbid();*/
 
             return View(student);
         }
@@ -110,8 +110,8 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
 
             bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
-            if (!isPrivileged && student.AccountingGroup != "S")
-                return Forbid();
+            /*if (!isPrivileged && student.AccountingGroup != "S")
+                return Forbid();*/
 
             ViewBag.ContactTypes = DropdownOptions.ContactTypes;
             ViewBag.SourceTypes = DropdownOptions.SourceTypes;
@@ -146,8 +146,8 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
 
             bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
-            if (!isPrivileged && existingStudent.AccountingGroup != "S")
-                return Forbid();
+            /*if (!isPrivileged && existingStudent.AccountingGroup != "S")
+                return Forbid();*/
 
             // --- scalar updates ---
             existingStudent.Name = updatedStudent.Name;
@@ -155,7 +155,14 @@ namespace DotNetCoreSqlDb.Controllers
             existingStudent.MainNotes = updatedStudent.MainNotes;
             existingStudent.Source = updatedStudent.Source;
             existingStudent.TimeZoneId = updatedStudent.TimeZoneId;
-            existingStudent.AccountingGroup = isPrivileged ? updatedStudent.AccountingGroup : "S";
+            //existingStudent.AccountingGroup = isPrivileged ? updatedStudent.AccountingGroup : "S";
+            if (isPrivileged)
+            {
+                // If the admin didn’t post a value for some reason, keep existing one.
+                if (!string.IsNullOrWhiteSpace(updatedStudent.AccountingGroup))
+                    existingStudent.AccountingGroup = updatedStudent.AccountingGroup;
+                // else keep existingStudent.AccountingGroup as-is
+            }
 
             // --- rename solo groups ---
             var suffix = string.IsNullOrWhiteSpace(existingStudent.ParentOrEmployer) ? "" : " – " + existingStudent.ParentOrEmployer;

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "support, admin")]
+    [Authorize(Roles = "support, admin, assistant")]
     public class ZoomMeetingsController : Controller
     {
         private readonly MyDatabaseContext _context;
