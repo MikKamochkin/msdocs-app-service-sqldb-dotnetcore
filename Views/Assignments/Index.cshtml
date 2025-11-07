@@ -6,11 +6,11 @@
 }
 <div class="row no-gutters">
     @* ——————— Sidebar Column ——————— *@
-    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
     {
         <partial name="_AdminSidebar" />
     }
-    <div class="@(User.IsInRole("admin") || User.IsInRole("support") ? "col-md-9" : "col-12")">
+    <div class="@(User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant")? "col-md-9" : "col-12")">
 <h1>Assignments</h1>
 <p>
     <a href="@Url.Action("Create")" class="btn btn-primary">Create New Assignment</a>

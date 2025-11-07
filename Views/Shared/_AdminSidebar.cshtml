@@ -55,7 +55,7 @@
         </a>*@
 
         @* Assignments *@
-        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
         {
             var cssAssignments = btnClass("Assignments", "Index");
             <a href="@Url.Action("Index", "Assignments")" class="@cssAssignments" title="Assignments">

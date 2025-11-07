@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "support")]
+    [Authorize(Roles = "support, admin, assistant") ]
     public class AssignmentsController : Controller
     {
         private readonly MyDatabaseContext _context;
