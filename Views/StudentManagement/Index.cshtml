@@ -8,6 +8,8 @@
     // Toggle sorting: if current sort is ascending for Name, then next is descending, and vice versa.
     string nameSortParam = currentSort == "Name" ? "name_desc" : "Name";
     string dateSortParam = currentSort == "CreatedDate" ? "createdDate_desc" : "CreatedDate";
+    var resetDates = ViewBag.ResetDates as IDictionary<Guid, DateTimeOffset?>;
+
 
     // One-time creds (from TempData set in Create/Edit POST)
     var newName = TempData["JustCreatedOrChangedStudentName"] as string;
@@ -104,6 +106,7 @@
                         <th class="fixedCol">Parent/Employer</th>
                         <th class="fixedCol">Phone Number</th>
                         <th>Email</th>
+                        <th>PasswordReset?</th>
                         <th>
                             <a href="@Url.Action("Index", new { sortOrder = dateSortParam })">
                                 Created Date
@@ -140,6 +143,26 @@
                                 @(phoneContact != null ? phoneContact.Value : "")</td>
                             <td class="fixedCol">
                                 @(emailContact != null ? emailContact.Value : "")</td>
+                            <td>
+                                @{
+                                    DateTimeOffset? rdt = null;
+                                    if (resetDates != null)
+                                    {
+                                        // Use the correct key type (Guid or string) based on your controller dictionary
+                                        resetDates.TryGetValue(item.ID, out rdt);
+                                        // or: resetDates.TryGetValue(item.ID.ToString(), out rdt);
+                                    }
+                                }
+
+                                @if (rdt.HasValue)
+                                {
+                                    <i class="fa-solid fa-check text-success"></i>
+                                }
+                                else
+                                {
+                                    @: <!-- leave blank (null) -->
+                                }
+                            </td>
                             <td>
                                 <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
                                 <span class="localDate"

@@ -67,6 +67,17 @@ namespace DotNetCoreSqlDb.Controllers
                     query = query.OrderBy(s => s.Name);
                     break;
             }
+
+            // Build: studentId(string) -> passwordResetDate (nullable)
+            var resetMap = await _context.User   // <-- usually "_context.Users"
+                .AsNoTracking()
+                .Select(u => new { u.ID, u.PaswordSetDate }) // <-- adjust property name
+                .ToDictionaryAsync(x => x.ID, x => (DateTimeOffset?)x.PaswordSetDate);
+
+            // Expose to the view
+            ViewBag.ResetDates = resetMap;
+
+            // Keep your existing sorted students query
             return View(await query.ToListAsync());
         }
 
@@ -88,6 +99,8 @@ namespace DotNetCoreSqlDb.Controllers
                 .FirstOrDefaultAsync();
 
             ViewBag.StudentNumber = user.Username;
+
+            ViewBag.PasswordSetDate = user.PaswordSetDate;
 
             bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
             /*if (!isPrivileged && student.AccountingGroup != "S")
@@ -589,6 +602,7 @@ namespace DotNetCoreSqlDb.Controllers
                         PasswordHash = passwordHash,
                         PasswordSalt = passwordSalt,
                         IncorrectAttempts = 0
+                        //PaswordSetDate = DateTime.UtcNow
                     };
 
                     _context.User.Add(user);
@@ -949,6 +963,7 @@ namespace DotNetCoreSqlDb.Controllers
             user.PasswordSalt = passwordSalt;
             user.MustChangePassword = false;
             user.IncorrectAttempts = 0;
+            user.PaswordSetDate = DateTime.Now;
 
             await _context.SaveChangesAsync();
 

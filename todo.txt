@@ -1,3 +1,8 @@
+get ip address of teachers when they join to see if they're in a meeting
+fix teacher editing
+trim whitespace on student create and edit
+
+
 to students/schedule:
 show only today's + future lessons (datetime.now - 6 hours + all future)
 don't limit to 15 lessons, do all of now + future

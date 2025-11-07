@@ -36,5 +36,8 @@ namespace DotNetCoreSqlDb.Models
 
         [Required]
         public required int IncorrectAttempts { get; set; } = 0;
+
+        [DisplayName("PaswordSetDate")]
+        public DateTime? PaswordSetDate { get; set; }
     }
 }

@@ -4,6 +4,7 @@
     ViewData["Title"] = "Student Details";
     
     string studentNumber = ViewBag.StudentNumber; 
+    var passwordSetDate = ViewBag.passwordSetDate;
 }
 
 <div class="row no-gutters">
@@ -37,6 +38,8 @@
                     <dt>Accounting Group</dt>
                     <dd>@Html.DisplayFor(model => model.AccountingGroup)</dd>
                 }
+                <dt>Password Set Date</dt>
+                <dd>@passwordSetDate</dd>
             </dl>
         </div>
 
