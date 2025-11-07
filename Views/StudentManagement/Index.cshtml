@@ -1,21 +1,25 @@
-@model IEnumerable<DotNetCoreSqlDb.Models.Student>
+@model DotNetCoreSqlDb.Controllers.StudentManagementController.PagedResult<DotNetCoreSqlDb.Controllers.StudentManagementController.StudentListItemVM>
+
 
 @{
     ViewData["Title"] = "Students List";
 
-    // Retrieve the current sort order from ViewBag (set by the controller)
+    // Sorting + search state
     string currentSort = ViewBag.CurrentSort as string ?? "createdDate_desc";
-    // Toggle sorting: if current sort is ascending for Name, then next is descending, and vice versa.
     string nameSortParam = currentSort == "Name" ? "name_desc" : "Name";
     string dateSortParam = currentSort == "CreatedDate" ? "createdDate_desc" : "CreatedDate";
-    var resetDates = ViewBag.ResetDates as IDictionary<Guid, DateTimeOffset?>;
+    string q = ViewBag.Query as string ?? "";
 
+    // Paging state (renamed to avoid '@page' Razor directive confusion)
+    int pageNumber = ViewBag.Page is int ? (int)ViewBag.Page : (Model?.Page ?? 1);
+    int pageSize = ViewBag.PageSize is int ? (int)ViewBag.PageSize : (Model?.PageSize ?? 50);
+    int total = ViewBag.Total is int ? (int)ViewBag.Total : (Model?.TotalCount ?? 0);
+    int totalPagesCount = Math.Max(1, (int)Math.Ceiling((double)total / Math.Max(1, pageSize)));
 
     // One-time creds (from TempData set in Create/Edit POST)
     var newName = TempData["JustCreatedOrChangedStudentName"] as string;
     var newUser = TempData["JustCreatedOrChangedStudentUsername"] as string;
     var newPass = TempData["JustCreatedOrChangedStudentPassword"] as string;
-
     bool hasNewCreds = !string.IsNullOrWhiteSpace(newUser) && !string.IsNullOrWhiteSpace(newPass);
 }
 
@@ -26,31 +30,11 @@
         <div class="col-md-10">
             <h2>Students List</h2>
 
-            @* One-time credentials banner *@
-            @*@if (!string.IsNullOrWhiteSpace(newUser) && !string.IsNullOrWhiteSpace(newPass))
-            {
-                <div class="alert alert-success alert-dismissible" role="alert" style="white-space:nowrap; overflow:auto;">
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-
-                    <strong>Student created.</strong>
-                    @if (!string.IsNullOrWhiteSpace(newName))
-                    {
-                        <span> (@newName)</span>
-                    }
-                    <br />
-                    <span><strong>Student Number:</strong> <code id="newUserVal">@newUser</code></span>
-                    &nbsp;&nbsp;
-                    <span><strong>Password:</strong> <code id="newPassVal">@newPass</code></span>
-                    &nbsp;&nbsp;
-                    <button type="button" class="btn btn-xs btn-default" onclick="copyCreds()">Copy</button>
-                </div>
-            }*@
+            @* One-time credentials modal *@
             @if (hasNewCreds)
             {
                 <div id="credsModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
-                    aria-labelledby="credsModalLabel" aria-hidden="true">
+                     aria-labelledby="credsModalLabel" aria-hidden="true">
                     <div class="modal-dialog">
                         <div class="modal-content">
                             <div class="modal-header">
@@ -64,19 +48,11 @@
                                 {
                                     <p><strong>Name:</strong> @newName</p>
                                 }
-                                <p>
-                                    <strong>Student Number:</strong>
-                                    <code id="newUserVal">@newUser</code>
-                                </p>
-                                <p>
-                                    <strong>Password:</strong>
-                                    <code id="newPassVal">@newPass</code>
-                                </p>
+                                <p><strong>Student Number:</strong> <code id="newUserVal">@newUser</code></p>
+                                <p><strong>Password:</strong> <code id="newPassVal">@newPass</code></p>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" id="copyBtn" class="btn btn-primary" onclick="copyCreds()">Copy</button>
-                                @*<button type="button" id="modalClose" class="btn btn-secondary"
-                                    data-dismiss="modal">Close</button>*@
                             </div>
                         </div>
                     </div>
@@ -87,19 +63,44 @@
                 <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
             </p>
 
+            @* Search + page size *@
+            <form method="get" class="form-inline mb-3">
+                <input type="text" name="q" value="@q" class="form-control mr-2" style="min-width:280px"
+                       placeholder="Search name, phone, email, employer..." />
+                <input type="hidden" name="sortOrder" value="@currentSort" />
+                <input type="hidden" name="page" value="1" />
+                <select name="pageSize" class="form-control mr-2" onchange="this.form.submit()">
+                    @{
+                        int[] sizes = new[] { 25, 50, 100, 200 };
+                        foreach (var s in sizes)
+                        {
+                            if (s == pageSize)
+                            {
+                                <option value="@s" selected>@s / page</option>
+                            }
+                            else
+                            {
+                                <option value="@s">@s / page</option>
+                            }
+                        }
+                    }
+                </select>
+                <button type="submit" class="btn btn-secondary">Search</button>
+            </form>
+
             <table class="table">
                 <thead>
                     <tr>
                         <th>
-                            <a href="@Url.Action("Index", new { sortOrder = nameSortParam })">
+                            <a href="@Url.Action("Index", new { sortOrder = nameSortParam, q = q, page = 1, pageSize = pageSize })">
                                 Name
                                 @if (currentSort == "Name")
                                 {
-                                    <span>&#9650;</span> @* up arrow for ascending *@
+                                    <span>&#9650;</span>
                                 }
                                 else if (currentSort == "name_desc")
                                 {
-                                    <span>&#9660;</span> @* down arrow for descending *@
+                                    <span>&#9660;</span>
                                 }
                             </a>
                         </th>
@@ -108,7 +109,7 @@
                         <th>Email</th>
                         <th>PasswordReset?</th>
                         <th>
-                            <a href="@Url.Action("Index", new { sortOrder = dateSortParam })">
+                            <a href="@Url.Action("Index", new { sortOrder = dateSortParam, q = q, page = 1, pageSize = pageSize })">
                                 Created Date
                                 @if (currentSort == "CreatedDate")
                                 {
@@ -124,58 +125,44 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in Model)
+                    @foreach (var item in Model.Items)
                     {
-                        // Retrieve the first contact with type "phone" (case-insensitive) for the Phone Number column
-                        var phoneContact = item.Contacts?.FirstOrDefault(c =>
-                        !string.IsNullOrEmpty(c.Type) &&
-                        c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
-
-                        // Retrieve the first contact with type "email" (case-insensitive) for the Email column
-                        var emailContact = item.Contacts?.FirstOrDefault(c =>
-                        !string.IsNullOrEmpty(c.Type) &&
-                        c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
-
                         <tr>
-                            <td>@Html.DisplayFor(modelItem => item.Name)</td>
-                            <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
-                            <td class="fixedCol">
-                                @(phoneContact != null ? phoneContact.Value : "")</td>
-                            <td class="fixedCol">
-                                @(emailContact != null ? emailContact.Value : "")</td>
+                            <td>@item.Name</td>
+                            <td>@item.ParentOrEmployer</td>
+                            <td class="fixedCol">@item.Phone</td>
+                            <td class="fixedCol">@item.Email</td>
                             <td>
-                                @{
-                                    DateTimeOffset? rdt = null;
-                                    if (resetDates != null)
-                                    {
-                                        // Use the correct key type (Guid or string) based on your controller dictionary
-                                        resetDates.TryGetValue(item.ID, out rdt);
-                                        // or: resetDates.TryGetValue(item.ID.ToString(), out rdt);
-                                    }
-                                }
-
-                                @if (rdt.HasValue)
+                                @if (item.HasPasswordReset)
                                 {
-                                    <i class="fa-solid fa-check text-success"></i>
-                                }
-                                else
-                                {
-                                    @: <!-- leave blank (null) -->
+                                    <i class="fa-solid fa-check text-success" title="Password was set/reset"></i>
                                 }
                             </td>
                             <td>
-                                <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
-                                <span class="localDate"
-                                    data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
+                                <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
                             </td>
                             <td>
-                                <a href="@Url.Action("Details", new { id = item.ID })"><i
-                                        class="fa-solid fa-circle-info btn-lg text-dark"></i></a>
+                                <a href="@Url.Action("Details", new { id = item.ID })"><i class="fa-solid fa-circle-info btn-lg text-dark"></i></a>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
+
+            @* Pager *@
+            <nav aria-label="Students pages">
+                <ul class="pagination">
+                    <li class="page-item @(pageNumber <= 1 ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber - 1, pageSize = pageSize })">Prev</a>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">@(pageNumber) / @(totalPagesCount) (@total total)</span>
+                    </li>
+                    <li class="page-item @(pageNumber >= totalPagesCount ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber + 1, pageSize = pageSize })">Next</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     }
     else
@@ -187,19 +174,44 @@
                 <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
             </p>
 
+            @* Search + page size (non-admin view) *@
+            <form method="get" class="form-inline mb-3">
+                <input type="text" name="q" value="@q" class="form-control mr-2" style="min-width:280px"
+                       placeholder="Search name, phone, email, employer..." />
+                <input type="hidden" name="sortOrder" value="@currentSort" />
+                <input type="hidden" name="page" value="1" />
+                <select name="pageSize" class="form-control mr-2" onchange="this.form.submit()">
+                    @{
+                        int[] sizes = new[] { 25, 50, 100, 200 };
+                        foreach (var s in sizes)
+                        {
+                            if (s == pageSize)
+                            {
+                                <option value="@s" selected>@s / page</option>
+                            }
+                            else
+                            {
+                                <option value="@s">@s / page</option>
+                            }
+                        }
+                    }
+                </select>
+                <button type="submit" class="btn btn-secondary">Search</button>
+            </form>
+
             <table class="table">
                 <thead>
                     <tr>
                         <th>
-                            <a href="@Url.Action("Index", new { sortOrder = nameSortParam })">
+                            <a href="@Url.Action("Index", new { sortOrder = nameSortParam, q = q, page = 1, pageSize = pageSize })">
                                 Name
                                 @if (currentSort == "Name")
                                 {
-                                    <span>&#9650;</span> @* up arrow for ascending *@
+                                    <span>&#9650;</span>
                                 }
                                 else if (currentSort == "name_desc")
                                 {
-                                    <span>&#9660;</span> @* down arrow for descending *@
+                                    <span>&#9660;</span>
                                 }
                             </a>
                         </th>
@@ -207,7 +219,7 @@
                         <th class="fixedCol">Phone Number</th>
                         <th>Email</th>
                         <th>
-                            <a href="@Url.Action("Index", new { sortOrder = dateSortParam })">
+                            <a href="@Url.Action("Index", new { sortOrder = dateSortParam, q = q, page = 1, pageSize = pageSize })">
                                 Created Date
                                 @if (currentSort == "CreatedDate")
                                 {
@@ -223,29 +235,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in Model)
+                    @foreach (var item in Model.Items)
                     {
-                        // Retrieve the first contact with type "phone" (case-insensitive) for the Phone Number column
-                        var phoneContact = item.Contacts?.FirstOrDefault(c =>
-                        !string.IsNullOrEmpty(c.Type) &&
-                        c.Type.Equals("phone", StringComparison.OrdinalIgnoreCase));
-
-                        // Retrieve the first contact with type "email" (case-insensitive) for the Email column
-                        var emailContact = item.Contacts?.FirstOrDefault(c =>
-                        !string.IsNullOrEmpty(c.Type) &&
-                        c.Type.Equals("email", StringComparison.OrdinalIgnoreCase));
-
                         <tr>
-                            <td>@Html.DisplayFor(modelItem => item.Name)</td>
-                            <td>@Html.DisplayFor(modelItem => item.ParentOrEmployer)</td>
-                            <td class="fixedCol">
-                                @(phoneContact != null ? phoneContact.Value : "")</td>
-                            <td class="fixedCol">
-                                @(emailContact != null ? emailContact.Value : "")</td>
+                            <td>@item.Name</td>
+                            <td>@item.ParentOrEmployer</td>
+                            <td class="fixedCol">@item.Phone</td>
+                            <td class="fixedCol">@item.Email</td>
                             <td>
-                                <!-- Render the UTC time in ISO 8601 format (with "Z") as a data attribute -->
-                                <span class="localDate"
-                                    data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
+                                <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
                             </td>
                             <td>
                                 <a href="@Url.Action("Details", new { id = item.ID })">🛈</a>
@@ -254,6 +252,21 @@
                     }
                 </tbody>
             </table>
+
+            @* Pager (non-admin) *@
+            <nav aria-label="Students pages">
+                <ul class="pagination">
+                    <li class="page-item @(pageNumber <= 1 ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber - 1, pageSize = pageSize })">Prev</a>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">@(pageNumber) / @(totalPagesCount) (@total total)</span>
+                    </li>
+                    <li class="page-item @(pageNumber >= totalPagesCount ? "disabled" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber + 1, pageSize = pageSize })">Next</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     }
 </div>

@@ -36,49 +36,102 @@ namespace DotNetCoreSqlDb.Controllers
 
 
         // GET: Students
-        public async Task<IActionResult> Index(string sortOrder)
+        public async Task<IActionResult> Index(
+            string? sortOrder,
+            string? q,                 // search across name/email/phone/employer
+            int page = 1,              // 1-based
+            int pageSize = 50,         // tune as needed (25/50/100)
+            CancellationToken ct = default)
         {
             sortOrder ??= "createdDate_desc";
-            ViewBag.CurrentSort = sortOrder;
-            // Include Contacts so that we can display email addresses.
-            IQueryable<Student> query = _context.Student.Include(s => s.Contacts);
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 10, 200);
 
-            /*bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
-            if (!isPrivileged)
-            {
-                query = query.Where(s => s.AccountingGroup == "S");
-            }*/
+            // Base query (NO Include) — we will project only what we need
+            var students = _context.Student.AsNoTracking();
 
-            switch (sortOrder)
+            // Server-side search (LIKE). For phone search to be great, consider storing a normalized digits-only phone column.
+            if (!string.IsNullOrWhiteSpace(q))
             {
-                case "Name":
-                    query = query.OrderBy(s => s.Name);
-                    break;
-                case "name_desc":
-                    query = query.OrderByDescending(s => s.Name);
-                    break;
-                case "CreatedDate":
-                    query = query.OrderBy(s => s.CreatedDate);
-                    break;
-                case "createdDate_desc":
-                    query = query.OrderByDescending(s => s.CreatedDate);
-                    break;
-                default:
-                    query = query.OrderBy(s => s.Name);
-                    break;
+                var pattern = $"%{q.Trim()}%";
+                students = students.Where(s =>
+                    EF.Functions.Like(s.Name, pattern) ||
+                    EF.Functions.Like(s.ParentOrEmployer, pattern) ||
+                    s.Contacts.Any(c => EF.Functions.Like(c.Value, pattern)));
             }
 
-            // Build: studentId(string) -> passwordResetDate (nullable)
-            var resetMap = await _context.User   // <-- usually "_context.Users"
-                .AsNoTracking()
-                .Select(u => new { u.ID, u.PaswordSetDate }) // <-- adjust property name
-                .ToDictionaryAsync(x => x.ID, x => (DateTimeOffset?)x.PaswordSetDate);
+            // Sorting
+            students = sortOrder switch
+            {
+                "Name" => students.OrderBy(s => s.Name),
+                "name_desc" => students.OrderByDescending(s => s.Name),
+                "CreatedDate" => students.OrderBy(s => s.CreatedDate).ThenBy(s => s.ID),
+                "createdDate_desc" => students.OrderByDescending(s => s.CreatedDate).ThenByDescending(s => s.ID),
+                _ => students.OrderBy(s => s.Name).ThenBy(s => s.ID)
+            };
 
-            // Expose to the view
-            ViewBag.ResetDates = resetMap;
+            // Total count for pagination UI
+            var total = await students.CountAsync(ct);
 
-            // Keep your existing sorted students query
-            return View(await query.ToListAsync());
+            // Project exactly the columns needed + first phone/email via correlated subqueries
+            var pageItems = await students
+                .Select(s => new StudentListItemVM
+                {
+                    ID = s.ID,
+                    Name = s.Name,
+                    ParentOrEmployer = s.ParentOrEmployer,
+                    Phone = s.Contacts
+                        .Where(c => c.Type != null && c.Type.ToLower() == "phone")
+                        .Select(c => c.Value)
+                        .FirstOrDefault(),
+                    Email = s.Contacts
+                        .Where(c => c.Type != null && c.Type.ToLower() == "email")
+                        .Select(c => c.Value)
+                        .FirstOrDefault(),
+                    CreatedDate = s.CreatedDate,
+                    // Avoid building a whole dictionary: compute the flag per row
+                    HasPasswordReset = _context.User
+                        .Where(u => u.ID == s.ID)
+                        .Select(u => u.PaswordSetDate != null)
+                        .FirstOrDefault()
+                })
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            // ViewBag for sort/search/paging; or return a PagedResult<StudentListItemVM>
+            ViewBag.CurrentSort = sortOrder;
+            ViewBag.Query = q;
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.Total = total;
+
+            return View(new PagedResult<StudentListItemVM>
+            {
+                Items = pageItems,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = total
+            });
+        }
+
+        public sealed class StudentListItemVM
+        {
+            public Guid ID { get; set; }
+            public string Name { get; set; } = "";
+            public string ParentOrEmployer { get; set; } = "";
+            public string? Phone { get; set; }
+            public string? Email { get; set; }
+            public DateTimeOffset CreatedDate { get; set; }
+            public bool HasPasswordReset { get; set; }
+        }
+
+        public sealed class PagedResult<T>
+        {
+            public IReadOnlyList<T> Items { get; set; } = Array.Empty<T>();
+            public int Page { get; set; }
+            public int PageSize { get; set; }
+            public int TotalCount { get; set; }
         }
 
         // GET: Students/Details/{id}
