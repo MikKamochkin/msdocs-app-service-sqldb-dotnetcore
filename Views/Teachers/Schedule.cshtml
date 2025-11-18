@@ -200,10 +200,11 @@
 		}
 
 		/* highlight next lesson */
-		.next-row td {
-			background: #fff3cd;
-			font-weight: bold;
-		}
+        .highlight-row td {
+            background: #fff3cd;
+            font-weight: bold;
+        }
+
 
 		/* disabled join button */
 		.disabled-btn,
@@ -343,28 +344,21 @@
 	<script>
 		(async () => {
 
-			/* teacherId injected by Razor */
 			const teacherId = '@ViewBag.TeacherId';
 
-			/* build + start connection */
 			const connection = new signalR.HubConnectionBuilder()
 				.withUrl("/hubs/scheduleHub")
 				.withAutomaticReconnect()
-				//.configureLogging(signalR.LogLevel.Information)
 				.build();
 
 			await connection.start();
-			//console.log("SignalR connected. Joining group…");
 			await connection.invoke("JoinTeacherGroup", teacherId);
-
 			connection.on("ScheduleChanged", () => {
 				refreshRows();
 			});
-
 			connection.on("LessonStarted", () => {
 				refreshRows();
 			});
-
 		})();
 	</script>
 	<script>
@@ -375,7 +369,7 @@
 
 			/* ───────── CONSTANTS (match Zoom page) ───────── */
 			const minsBefore = 5;           // allow join 5 min before start
-			const minsAfter = 70;           // …and 15 min after the lesson ENDS
+			const minsAfter = 90;           // …and 15 min after the lesson ENDS
 			const meetingId = "7890699796";
 			const pwd = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
 			const deepLink = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
@@ -395,13 +389,21 @@
 				return DateTime.fromISO(a.DateTime).toMillis() - DateTime.fromISO(b.DateTime).toMillis();
 			}
 
+			window.nextRefreshTimeout = null;
+
 			window.refreshRows = async function refreshRows() {
-				//console.log("in refresh rows");
 				try {
-					const latest = await fetch('@Url.Action("ScheduleJson", "Teachers")')
+					const response = await fetch('@Url.Action("ScheduleJson", "Teachers")')
 						.then(r => r.json());
 
+					if (window.nextRefreshTimeout) {
+                        clearTimeout(window.nextRefreshTimeout);
+                        window.nextRefreshTimeout = null;
+                    }
+
 					rows.length = 0;                             // clear array
+
+					const latest = response.rows || response;
 
 					latest.forEach(src => {
 						// tolerate both PascalCase and camelCase coming from JSON
@@ -415,18 +417,44 @@
 							Status: src.Status ?? src.status,
 							// ensure we always have a *number*
 							Duration: Number(src.Duration ?? src.duration ?? 0),
-							DateTime: rawTime.endsWith('Z') ? rawTime : rawTime + 'Z'
+							DateTime: rawTime.endsWith('Z') ? rawTime : rawTime + 'Z',
+							CanJoinNow: (src.canJoinNow ?? src.CanJoinNow) === true,
+                            EnableAtUtc: (src.enableAtUtc ?? src.EnableAtUtc) ?? null,
+                            DisableAtUtc: (src.disableAtUtc ?? src.DisableAtUtc) ?? null,
+                            HighlightRow: (src.highlightRow ?? src.HighlightRow) === true
 						});
 					});
 
 					rows.sort(sortByDateAsc);
-					renderTable();                              // redraw
+					renderTable();
+
+					const nextRefreshMs = response.nextRefreshMs;
+                    if (Number.isFinite(nextRefreshMs) && nextRefreshMs > 0) {
+                        console.log("Setting next refresh timeout in: " + nextRefreshMs + "ms");
+                        window.nextRefreshTimeout = setTimeout(() => {
+                            refreshRows();
+                        }, nextRefreshMs);
+                    }
+					/*rows.sort(sortByDateAsc);
+					renderTable();                              // redraw*/
 				} catch (e) {
 					console.error("Refresh failed", e);
 				}
 			};
 
-			$(renderTable);
+			// Initial setup
+            $(function () {
+                // Use refreshRows for initial load to handle timeout setup
+                refreshRows();
+            });
+
+			// Clean up timeout when leaving page
+            window.addEventListener('beforeunload', function () {
+                if (window.nextRefreshTimeout) {
+                    clearTimeout(window.nextRefreshTimeout);
+                }
+            });
+
 			$('#timeZoneSelect').on('change', renderTable);
 
 			function renderTable() {
@@ -435,27 +463,7 @@
 				const nowLocal = nowUtc.setZone(zone);
 				const tbody = $('#entriesTable tbody').empty();
 
-				/* ---------- choose row to highlight ---------- */
-				let highlightId = null;
-				rows.forEach(r => {
-					const startUtc = DateTime.fromISO(r.DateTime);
-					const diffMin = startUtc.diff(nowUtc, 'minutes').minutes;   // +ve = future
-					const windowEnd = -(Number(r.Duration) + minsAfter);        // negative minutes after END
-					const isToday = startUtc.setZone(zone).hasSame(nowLocal, 'day');
-
-					if (!highlightId && isToday && diffMin <= minsBefore && diffMin >= windowEnd)
-						highlightId = r.Id;                                       // active/ongoing lesson
-				});
-				if (!highlightId) {
-					/* otherwise highlight nearest future lesson */
-					let bestAhead = null;
-					rows.forEach(r => {
-						const diffMin = DateTime.fromISO(r.DateTime).diff(nowUtc, 'minutes').minutes;
-						if (diffMin > 0 && (!bestAhead || diffMin < bestAhead.diff))
-							bestAhead = { id: r.Id, diff: diffMin };
-					});
-					if (bestAhead) highlightId = bestAhead.id;
-				}
+				let appendedCount = 0;
 
 				/* ---------- render each <tr> ---------- */
 				rows.forEach(row => {
@@ -464,55 +472,28 @@
 					const windowEnd = -(Number(row.Duration) + minsAfter);
 					const startLocal = startUtc.setZone(zone);
 					const isToday = startLocal.hasSame(nowLocal, 'day');
+					const status = row.Status;
 
 					let actionHtml = '';
-					//TODO: Fix this logic (or not, it sorta works, just very ugly)
-					if (isToday) {
-						if (diffMin > minsBefore)               // too early
-							actionHtml = '';
-						else if (diffMin < windowEnd)           // too late (>15 min after end)
-							actionHtml = '';
-						else {
-							if (row.Status == "Scheduled" || row.Status == "Ongoing") {
-								actionHtml = buildBtn('enabled', row.Id, row.Status);
-							}
-							else {
-								actionHtml = '';
-							}
-						}
-					}
 
+					
+                    if (row.CanJoinNow) {
+                        actionHtml = buildBtn('enabled', row.Id, row.Status)
+                    }
+		
 					tbody.append(`
-					                <tr class="${row.Id === highlightId ? 'next-row' : ''}">
-					                  <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
-					                  <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
-					                  <td data-label="Student">${row.StudentName}</td>
-					                  <td data-label="Status">${row.Status}</td>
-					                  <td data-label="Duration">${row.Duration}&nbsp;min</td>
-					                  <td data-label="Actions">${actionHtml}</td>
-					                </tr>`);
+							<tr class="${row.HighlightRow ? 'highlight-row' : ''}">
+								<td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
+								<td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
+								<td data-label="Student">${row.StudentName}</td>
+								<td data-label="Status">${row.Status}</td>
+								<td data-label="Duration">${row.Duration}&nbsp;min</td>
+								<td data-label="Actions">${actionHtml}</td>
+							</tr>`);
+						appendedCount++;
 				});
 
-				let soonest = null;
-                rows.forEach(r => {
-                    const startUtc = DateTime.fromISO(r.DateTime);
-                    const enableTime = startUtc.minus({ minutes: minsBefore });
-                    const disableTime = startUtc.plus({ minutes: Number(r.Duration) + minsAfter });
-                    const now = DateTime.utc();
-
-                    if (enableTime > now) {
-                        if (!soonest || enableTime < soonest) soonest = enableTime;
-                    }
-                    if (disableTime > now) {
-                        if (!soonest || disableTime < soonest) soonest = disableTime;
-                    }
-                });
-
-                if (soonest) {
-                    const msUntilNext = soonest.toMillis() - DateTime.utc().toMillis();
-                    //console.log("Scheduling next renderTable in", msUntilNext, "ms");
-                    nextTimerId = setTimeout(renderTable, Math.max(msUntilNext, 0) + 50)
-                }
+				const domRowCount = $('#entriesTable tbody tr').length;
 			}
 
 			/* ---------- helpers ---------- */
@@ -537,12 +518,6 @@
 					endBtnStatus = "disabled"
 				}
 
-				//Uncomment this to use actual static link
-				/*return `
-						  <a href="${deepLink}" class="${cls}" data-id="${id}" ${extra}>
-							<strong>Join Static Link</strong>
-						  </a>
-						  `;*/
 				//Dynamic link:
 				return `
 						
@@ -569,24 +544,16 @@
 			}
 
 			/* open Zoom + browser fallback */
-			//Uncomment this to route to actual static link; for now just testing
 
 			$(document).on('click', '.join-btn', function (e) {
 				if ($(this).hasClass('disabled-btn')) return;
 				e.preventDefault();
 				const $btn = $(this);
 				const url = $btn.attr('href');
-				//window.location.href = deepLink;
 				window.open(url, '_blank');
 
 				setTimeout(() => window.open(weblink, '_blank'), 500);
 			});
-			/*$(document).on('click', '.join-btn', function (e) {
-				if ($(this).hasClass('disabled-btn')) return;
-				e.preventDefault();
-				window.location.href = tempTestLink;
-				setTimeout(() => window.location.href = tempTestLink, 500);
-			});*/
 		})();
 
 		async function pingEndLesson(id) {

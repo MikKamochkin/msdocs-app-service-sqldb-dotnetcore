@@ -28,6 +28,8 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly IZoomMeetingService _zoomSvc;
         private readonly IUpdateBalanceService _balanceSvc;
         private readonly IHubContext<ScheduleHub> _hub;
+        private const int JoinEarlyMinutes = 5;
+        private const int GraceAfterMinutes = 90;
 
         public TeachersController(MyDatabaseContext context, ILogger<TeachersController> logger, IZoomMeetingService zoomSvc, IUpdateBalanceService balanceSvc, IHubContext<ScheduleHub> hub)
         {
@@ -94,23 +96,40 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
 
             var sixHoursAgo = DateTime.UtcNow.AddHours(-6);
+            var utcNow = DateTime.UtcNow;
 
             var scheduleEntries = await _context.Schedule
                 .Include(s => s.Assignment)          // load the Assignment nav
                     .ThenInclude(a => a.Group)      // then load its Group nav
                 .Where(s => s.Assignment!.TeacherId == teacherId)
                 .Where(s => s.DateTime > sixHoursAgo)
-                .OrderByDescending(s => s.DateTime)
+                .OrderBy(s => s.DateTime)
                 .Take(15)
                 .ToListAsync();
 
-            /*var zoomLinks = await _context.ZoomMeetings
-                .Where(z => scheduleEntries.Select(s => s.Id).Contains(z.ScheduleId))
-                .ToDictionaryAsync(z => z.ScheduleId, z => z.JoinUrl);*/
+            var soonestLessonTime = DateTime.MaxValue;
+            var upcomingLessonEndTime = DateTime.MaxValue;
 
+            foreach (var lesson in scheduleEntries)
+            {
+                var startTime = lesson.DateTime.AddMinutes(-JoinEarlyMinutes);
+                var endTime = lesson.DateTime.AddMinutes(lesson.Duration + GraceAfterMinutes);
+
+                if (startTime < soonestLessonTime && startTime > utcNow)
+                {
+                    soonestLessonTime = startTime;
+                }
+                if(endTime < upcomingLessonEndTime && endTime > utcNow)
+                {
+                    upcomingLessonEndTime = endTime;
+                }
+            }
+            var timeUntilSoonest = Math.Min((soonestLessonTime - DateTime.UtcNow).TotalMilliseconds, (upcomingLessonEndTime - DateTime.UtcNow).TotalMilliseconds) ;
+
+            var flatDtos = scheduleEntries.Select(s => ToDto(s, utcNow)).ToList();
 
             // 4) Serialize for the view’s JS (ISO timestamps + teacher names)
-            var flat = scheduleEntries.Select(s => new
+            /*var flat = scheduleEntries.Select(s => new
             {
                 s.Id,
                 s.AssignmentId,
@@ -119,10 +138,10 @@ namespace DotNetCoreSqlDb.Controllers
                 s.Duration,
                 StudentName = s.Assignment?.Group?.Name
                 //JoinUrl = zoomLinks.TryGetValue(s.Id, out var url) ? url : null
-            });
+            });*/
 
             ViewBag.ExistingJson = JsonSerializer.Serialize(
-                flat,
+                flatDtos,
                 new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles }
             );
 
@@ -302,14 +321,28 @@ namespace DotNetCoreSqlDb.Controllers
             return Redirect(lesson.JoinUrl);
         }
 
-
-
         [HttpGet]
         public async Task<IActionResult> EndLesson(Guid id)
         {
-            _logger.LogInformation("Called end lesson with id: {id}", id);
-
             await _zoomSvc.EndMeetingsAsync(id);
+
+            var schedule = await _context.Schedule
+                .Include(s => s.Assignment)
+                    .ThenInclude(a => a.Group)
+                        .ThenInclude(g => g.StudentGroupCompositions)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            var affectedStudentIds = schedule.Assignment?.Group?.StudentGroupCompositions?
+                .Select(sgc => sgc.StudentId)
+                .Distinct()
+                .ToList() ?? new List<Guid>();
+
+            foreach (var studentId in affectedStudentIds)
+            {
+                await _hub.Clients
+                    .Group($"student_{studentId}")
+                    .SendAsync("ScheduleChanged");
+            }
 
             return Ok(new { message = "EndLesson triggered" }); // returns HTTP 200
         }
@@ -324,25 +357,43 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
 
             var sixHoursAgo = DateTime.UtcNow.AddHours(-6);
+            var utcNow = DateTime.UtcNow;
 
             var scheduleEntries = await _context.Schedule
                 .Include(s => s.Assignment)          // load the Assignment nav
                     .ThenInclude(a => a.Group)      // then load its Group nav
                 .Where(s => s.Assignment!.TeacherId == teacherId)
                 .Where(s => s.DateTime > sixHoursAgo)
-                .OrderByDescending(s => s.DateTime)
+                .OrderBy(s => s.DateTime)
                 .Take(15)
-                .Select(s => new
-                {
-                    s.Id,
-                    s.AssignmentId,
-                    DateTime = s.DateTime.ToString("o"),
-                    s.Status,
-                    s.Duration,
-                    StudentName = s.Assignment.Group.Name
-                })
                 .ToListAsync();
 
+            var soonestLessonTime = DateTime.MaxValue;
+            var upcomingLessonEndTime = DateTime.MaxValue;
+
+            foreach (var lesson in scheduleEntries)
+            {
+                var startTime = lesson.DateTime.AddMinutes(-JoinEarlyMinutes);
+                var endTime = lesson.DateTime.AddMinutes(lesson.Duration + GraceAfterMinutes);
+
+                if (startTime < soonestLessonTime && startTime > utcNow)
+                {
+                    soonestLessonTime = startTime;
+                }
+                if(endTime < upcomingLessonEndTime && endTime > utcNow)
+                {
+                    upcomingLessonEndTime = endTime;
+                }
+            }
+            var timeUntilSoonest = Math.Min((soonestLessonTime - DateTime.UtcNow).TotalMilliseconds, (upcomingLessonEndTime - DateTime.UtcNow).TotalMilliseconds) ;
+
+            var flatDtos = scheduleEntries.Select(s => ToDto(s, utcNow)).ToList();
+
+            return Ok(new ScheduleJsonResponse
+            {
+                Rows = flatDtos,
+                NextRefreshMs = timeUntilSoonest > 0 ? (long)timeUntilSoonest : null
+            });
 
             /*
             var userId = User.FindFirst("UserID")?.Value;
@@ -371,7 +422,7 @@ namespace DotNetCoreSqlDb.Controllers
                 })
                 .ToListAsync();
             */
-            return Ok(scheduleEntries);      // HTTP 200 with JSON*/
+            //return Ok(scheduleEntries);      // HTTP 200 with JSON*/
         }
 
         [HttpGet]
@@ -523,6 +574,7 @@ namespace DotNetCoreSqlDb.Controllers
             // Ensure the assignment belongs to this teacher
             var assignment = await _context.Assignments
                 .Include(a => a.Group)
+                    .ThenInclude(a => a.StudentGroupCompositions)
                 .FirstOrDefaultAsync(a => a.Id == dto.AssignmentId && a.TeacherId == teacherId);
 
             if (assignment == null)
@@ -537,11 +589,27 @@ namespace DotNetCoreSqlDb.Controllers
                 Duration = dto.Duration,
                 LessonAccountingType = "S100T100",
                 Accounted = false,
-                HasReachedMinimumDuration = false      
+                HasReachedMinimumDuration = false
             };
 
             _context.Schedule.Add(entity);
+
+            var affectedStudentIds = entity.Assignment?.Group?.StudentGroupCompositions?
+                .Select(sgc => sgc.StudentId)
+                .Distinct()
+                .ToList() ?? new List<Guid>();
+
+
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("studentid affected: " + affectedStudentIds.Count);
+            foreach (var studentId in affectedStudentIds)
+            {
+                _logger.LogInformation("studentid affected: " + studentId);
+                await _hub.Clients
+                    .Group($"student_{studentId}")
+                    .SendAsync("ScheduleChanged");
+            }
 
             // Return a row that will render as read-only (IsExisting = true)
             return Json(new
@@ -552,7 +620,7 @@ namespace DotNetCoreSqlDb.Controllers
                 duration = entity.Duration,
                 groupName = assignment.Group?.Name ?? "(unknown)",
                 isExisting = true,
-                HasReachedMinimumDuration = false,
+                hasReachedMinimumDuration = false,
                 status = entity.Status
             });
         }
@@ -580,12 +648,12 @@ namespace DotNetCoreSqlDb.Controllers
             if (entity.Assignment?.TeacherId != teacherId)
                 return NotFound();
 
-            
+
             if (entity.HasReachedMinimumDuration == true)
             {
                 return BadRequest("This lesson cannot be deleted");
             }
-            
+
 
             // Collect affected IDs before delete
             var affectedStudentIds = entity.Assignment?.Group?.StudentGroupCompositions?
@@ -627,6 +695,52 @@ namespace DotNetCoreSqlDb.Controllers
                 .SendAsync("ScheduleChanged", updatedSchedule);
 
             return Ok();
+        }
+
+        private ScheduleRowDto ToDto(Schedule s, DateTime utcNow)
+        {
+            // All times in UTC on the server
+            var startUtc = DateTime.SpecifyKind(s.DateTime, DateTimeKind.Utc);
+            var enableAtUtc = startUtc.AddMinutes(-JoinEarlyMinutes);
+            var disableAtUtc = startUtc.AddMinutes(s.Duration + GraceAfterMinutes);
+            var soon = (enableAtUtc - utcNow).TotalHours < 12;
+            bool isActiveStatus = string.Equals(s.Status, "Scheduled", StringComparison.OrdinalIgnoreCase)
+                               || string.Equals(s.Status, "Ongoing", StringComparison.OrdinalIgnoreCase);
+
+            var canJoinNow = isActiveStatus && utcNow >= enableAtUtc && utcNow <= disableAtUtc;
+            var highlightRow = isActiveStatus && soon;
+
+            return new ScheduleRowDto
+            {
+                Id = s.Id,
+                AssignmentId = s.AssignmentId,
+                DateTime = startUtc,
+                Status = s.Status ?? "",
+                Duration = s.Duration,
+                StudentName = s.Assignment?.Group?.Name,
+                EnableAtUtc = enableAtUtc,
+                DisableAtUtc = disableAtUtc,
+                CanJoinNow = canJoinNow,
+                HighlightRow = highlightRow
+            };
+        }
+        public sealed class ScheduleRowDto
+        {
+            public Guid Id { get; set; }
+            public Guid AssignmentId { get; set; }
+            public DateTime DateTime { get; set; }       
+            public string Status { get; set; } = "";
+            public int Duration { get; set; }
+            public string StudentName { get; set; } = "";
+            public DateTime EnableAtUtc { get; set; }
+            public DateTime DisableAtUtc { get; set; }
+            public bool CanJoinNow { get; set; }
+            public bool HighlightRow { get; set; }
+        }
+        public sealed class ScheduleJsonResponse
+        {
+            public List<ScheduleRowDto> Rows { get; set; } = new();
+            public long? NextRefreshMs { get; set; }
         }
     }
 }

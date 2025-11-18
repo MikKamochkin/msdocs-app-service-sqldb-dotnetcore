@@ -216,7 +216,7 @@ namespace DotNetCoreSqlDb.Controllers
                 return Forbid();*/
 
             // --- scalar updates ---
-            existingStudent.Name = updatedStudent.Name;
+            existingStudent.Name = updatedStudent.Name.Trim();
             existingStudent.ParentOrEmployer = updatedStudent.ParentOrEmployer;
             existingStudent.MainNotes = updatedStudent.MainNotes;
             existingStudent.Source = updatedStudent.Source;
@@ -374,77 +374,8 @@ namespace DotNetCoreSqlDb.Controllers
                         c.Invitation == true)
                     ?.Value;
 
-                //_logger.LogInformation("Would have sent welcome email with the name of {n} to email: {e}", existingStudent.Name, primaryEmail);
-
-                //TODO: Add Password reset button that will send cred email to primary email and add tempdata to copy for admin 
-                /*if (string.IsNullOrWhiteSpace(primaryEmail))
-                {
-                    /*try
-                    {
-                        var html = $"""
-                            <h2>Bienvenue!</h2>
-                            <p>Your temporary credentials at <strong>torontofrench.com</strong></p>
-                            <p>
-                                <strong>Username :</strong> {candidate}<br/>
-                                <strong>Temporary Password :</strong> {tempPass}
-                            </p>
-                            <p>You will need to change your password upon your first login.</p>
-                            <p>
-                                Click here to log in: 
-                                <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
-                            </p>
-                            """;
-
-                        string to = "michael.kamochkin@gmail.com";
-                        string subject = "Your credentials at torontofrench.com";
-                        await _mailer.SendAsync(
-                            to: to,
-                            subject: subject,
-                            htmlBody: html);
-
-                        //await _logHelper.LogMailAsync(to, subject, html);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to send welcome e-mail to student {StudentId}", existingStudent.ID);
-                    }
-                }
-                else
-                {
-                    try
-                    {
-                        var html = $"""
-                            <h2>Bienvenue!</h2>
-                            <p>Your temporary credentials at <strong>torontofrench.com</strong></p>
-                            <p>
-                                <strong>Username :</strong> {candidate}<br/>
-                                <strong>Temporary Password :</strong> {tempPass}
-                            </p>
-                            <p>You will need to change your password upon your first login.</p>
-                            <p>
-                                Click here to log in: 
-                                <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
-                            </p>
-                            """;
-                        string to = primaryEmail;
-                        string subject = "Your credentials at torontofrench.com";
-                        await _mailer.SendAsync(
-                            to: to,
-                            subject: subject,
-                            htmlBody: html);
-
-                        //await _logHelper.LogMailAsync(to, subject, html);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to send welcome e-mail to student {StudentId}", existingStudent.ID);
-                    }
-                }*/
-
-
             }
 
-            // --- persist ---
             try
             {
                 await _context.SaveChangesAsync();
@@ -499,19 +430,7 @@ namespace DotNetCoreSqlDb.Controllers
             // consume it so it can’t be used again
             HttpContext.Session.Remove("CreateStudentToken");
 
-            /*var allNames = await _context.Student.Select(s => s.Name).ToListAsync();
-
-            bool needsWarning = allNames.Contains(student.Name);
-
-            if (needsWarning)
-            {
-                // carry warning to TempData
-                TempData["WarningMessage"] =
-                    "A student with a very similar name already exists. Are you sure?";
-                //return View(student);
-            }*/
-
-            // set created date
+            student.Name = student.Name.Trim();
 
             student.TimeZoneId = "America/New_York";
 
@@ -579,38 +498,7 @@ namespace DotNetCoreSqlDb.Controllers
                     out byte[] passwordSalt
                 );
 
-                //bool exists = await _context.User.AnyAsync(u => u.Username == student.Name + rndAppend);
-
-                // 1) Seed Random once
-
-                /*string candidate;
-                bool exists = true;
-                int tries = 0;
-                const int maxTries = 5000; // Reasonable cap
-                HashSet<string> attempted = new HashSet<string>();
-
-                do
-                {
-                    int usernameSuffix = rnd.Next(1000000, 10000000); // 7-digit number
-                    candidate = $"{usernameSuffix}";
-
-                    if (attempted.Contains(candidate))
-                    {
-                        continue; // skip DB check if already tried this one
-                    }
-
-                    attempted.Add(candidate);
-
-                    exists = await _context.User.AnyAsync(u => u.Username == candidate);
-
-                    if (++tries >= maxTries)
-                    {
-                        ViewBag.Error = "Could not generate a unique username for this user.";
-                        break;
-                    }
-
-                } while (exists);*/
-
+                
                 string candidate;
                 bool exists = true;
                 int tries = 0;
@@ -704,71 +592,7 @@ namespace DotNetCoreSqlDb.Controllers
                         // swallow → the user is created even if mail fails
                     }
                 }
-                /*
-                else
-                {
-                    try
-                    {
-                        var html = $"""
-                             <h2>Bienvenue!</h2>
-                             <p>Your temporary credentials at <strong>TorontoFrench.com</strong></p>
-                             <p>
-                                 <strong>Username :</strong> {candidate}<br/>
-                                 <strong>Temporary Password :</strong> {defaultPassword}
-                             </p>
-                             <p>You will have to change your password (and optionally username) upon your first login.</p>
-                             <p>
-                                 Click here to log in: 
-                                 <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
-                             </p>
-                             """;
-
-                        await _mailer.SendAsync(
-                         to:       primaryEmail,
-                         //from: "Toronto French",
-                         subject:  "Your credentials at Toronto French",
-                         htmlBody: html);
-                        string to = "michael.kamochkin@gmail.com";
-                        string subject = "Your credentials at Toronto French";
-                        await _mailer.SendAsync(
-                        to: to,
-                        //from: "Toronto French",
-                        subject: subject,
-                        htmlBody: html);
-
-                        await _logHelper.LogMailAsync(to, subject, html);
-
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex,
-                            "Failed to send welcome e-mail to student {StudentId}", student.ID);
-                        // swallow → the user is created even if mail fails
-                    }
-
-                }*/
-
-
-                // 4) Create a blank Assignments entry for the new group
-                /*var assignment = new Assignments
-                {
-                    Id                  = Guid.NewGuid(),
-                    GroupId             = group.Id,
-                    TeacherId           = null,            // now allowed as nullable
-                    StudentUnitCost     = 0f,
-                    StudentUnitType     = string.Empty,
-                    StudentUnitBalance  = 0f,
-                    StudentUnitDuration = 0f,
-                    TeacherPayForUnit   = 0f,
-                    TeacherPayUnitType  = string.Empty,
-                    IsActive            = false
-                };
-                _context.Assignments.Add(assignment);
-                */
-                // 5) Persist composition + assignment
-
-                // Save ephemeral credentials (one-time) for UI display after redirect
-
+                
                 try
                 {
                     // put creds into TempData just before saving
@@ -868,40 +692,6 @@ namespace DotNetCoreSqlDb.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
-
-
-        /*[Authorize(Roles = "admin, support, assistant")]
-        [HttpGet]
-        public async Task<JsonResult> CheckDuplicateName(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return Json(new { duplicate = false, closeMatches = new string[0] });
-
-            // Pull all names into memory (can optimize later with indexed subset if needed)
-            var allNames = await _context.Student
-                                .Select(s => s.Name)
-                                .ToListAsync();
-
-            // Do fuzzy comparison in C#
-            var threshold = 75;  // adjust as needed
-            var matches = allNames
-                .Select(existing => new
-                {
-                    Name = existing,
-                    Score = Fuzz.TokenSetRatio(existing, name)
-                })
-                .Where(x => x.Score >= threshold)
-                .OrderByDescending(x => x.Score)
-                .Take(5)
-                .Select(x => x.Name)
-                .ToList();
-
-            return Json(new
-            {
-                duplicate = matches.Any(),
-                closeMatches = matches
-            });
-        }*/
 
         [Authorize(Roles = "admin, support, assistant")]
         [HttpGet]

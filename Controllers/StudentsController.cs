@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Build.Execution;
 using NuGet.Common;
 using DotNetCoreSqlDb.ViewModels;
+using Twilio.TwiML.Voice;
 
 
 
@@ -26,6 +27,9 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly MyDatabaseContext _context;
         private readonly IHubContext<ZoomMeetingHub> _hub;
         private readonly ILogger<TeachersController> _logger;
+
+        private const int JoinEarlyMinutes = 5;    // allow join this many minutes before start
+        private const int GraceAfterMinutes = 90;
 
         public StudentsController(MyDatabaseContext context, IHubContext<ZoomMeetingHub> hub, ILogger<TeachersController> logger)
         {
@@ -126,6 +130,7 @@ namespace DotNetCoreSqlDb.Controllers
                 .ToListAsync();
 
             var sixHoursAgo = DateTime.UtcNow.AddHours(-6);
+            var utcNow = DateTime.UtcNow;
 
             // 3) Pull every schedule entry for those groups
             var scheduleEntries = await _context.Schedule
@@ -137,23 +142,31 @@ namespace DotNetCoreSqlDb.Controllers
                 .Take(15)
                 .ToListAsync();
 
-            // 4) Serialize for the view’s JS (ISO timestamps + teacher names)
-            var flat = scheduleEntries.Select(s => new
-            {
-                s.Id,
-                s.AssignmentId,
-                DateTime = s.DateTime.ToString("o"),
-                s.Status,
-                s.Duration,
-                TeacherName = s.Assignment!.Teacher!.Name,
-                TeacherId = s.Assignment!.Teacher!.Id,
+            var soonestLessonTime = DateTime.MaxValue;
+            var upcomingLessonEndTime = DateTime.MaxValue;
 
-            });
+            foreach (var lesson in scheduleEntries)
+            {
+                var startTime = lesson.DateTime.AddMinutes(-JoinEarlyMinutes);
+                var endTime = lesson.DateTime.AddMinutes(lesson.Duration + GraceAfterMinutes);
+
+                if (startTime < soonestLessonTime && startTime > utcNow)
+                {
+                    soonestLessonTime = startTime;
+                }
+                if(endTime < upcomingLessonEndTime && endTime > utcNow)
+                {
+                    upcomingLessonEndTime = endTime;
+                }
+            }
+            var timeUntilSoonest = Math.Min((soonestLessonTime - DateTime.UtcNow).TotalMilliseconds, (upcomingLessonEndTime - DateTime.UtcNow).TotalMilliseconds) ;
+
+
+            var flatDtos = scheduleEntries.Select(s => ToDto(s, utcNow)).ToList();
 
             ViewBag.ExistingJson = JsonSerializer.Serialize(
-                flat,
-                new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles }
-            );
+                flatDtos,
+                new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles });
 
             // 5) Supply your time-zone list again
             var timeZones = TimeZoneMapping.GetTimeZones();
@@ -393,28 +406,45 @@ namespace DotNetCoreSqlDb.Controllers
                             .ToListAsync();
 
             var sixHoursAgo = DateTime.UtcNow.AddHours(-6);
+            var utcNow = DateTime.UtcNow;
 
-            var results = await _context.Schedule
-                .Include(s => s.Assignment).ThenInclude(a => a.Teacher)
+            var entries = await _context.Schedule
+                .Include(s => s.Assignment)!
+                    .ThenInclude(a => a.Teacher)
                 .Where(s => groupIds.Contains(s.Assignment!.GroupId))
-                .OrderBy(s => s.DateTime)
                 .Where(s => s.DateTime > sixHoursAgo)
+                .OrderBy(s => s.DateTime)
                 .Take(15)
-                .Select(s => new
-                {
-                    s.Id,
-                    DateTime = s.DateTime.ToString("o"),
-                    s.Status,
-                    s.Duration,
-                    TeacherName = s.Assignment!.Teacher!.Name,
-                    TeacherId = s.Assignment!.Teacher!.Id
-                })
                 .ToListAsync();
 
-            return Ok(results);      // HTTP 200 with JSON
+            var soonestLessonTime = DateTime.MaxValue;
+            var upcomingLessonEndTime = DateTime.MaxValue;
+
+            foreach (var lesson in entries)
+            {
+                //if (lesson.Status != "Ongoing" || lesson.Status != "Scheduled") continue;
+                var startTime = lesson.DateTime.AddMinutes(-JoinEarlyMinutes);
+                var endTime = lesson.DateTime.AddMinutes(lesson.Duration + GraceAfterMinutes);
+
+                if (startTime < soonestLessonTime && startTime > utcNow)
+                {
+                    soonestLessonTime = startTime;
+                }
+                if(endTime < upcomingLessonEndTime && endTime > utcNow)
+                {
+                    upcomingLessonEndTime = endTime;
+                }
+            }
+            var timeUntilSoonest = Math.Min((soonestLessonTime - DateTime.UtcNow).TotalMilliseconds, (upcomingLessonEndTime - DateTime.UtcNow).TotalMilliseconds) ;
+
+            var dtos = entries.Select(s => ToDto(s, utcNow)).ToList();
+
+            return Ok(new ScheduleJsonResponse
+            {
+                Rows = dtos,
+                NextRefreshMs = timeUntilSoonest > 0 ? (long)timeUntilSoonest : null
+            });
         }
-
-
         // 1) Render the “waiting room” page
         [HttpGet]
         public IActionResult Wait(Guid scheduleId)
@@ -456,6 +486,63 @@ namespace DotNetCoreSqlDb.Controllers
         {
             public string TimeZoneId { get; set; }
         }
+
+        private ScheduleRowDto ToDto(Schedule s, DateTime utcNow)
+        {
+            // All times in UTC on the server
+            var startUtc = DateTime.SpecifyKind(s.DateTime, DateTimeKind.Utc);
+            var enableAtUtc = startUtc.AddMinutes(-JoinEarlyMinutes);
+            var disableAtUtc = startUtc.AddMinutes(s.Duration + GraceAfterMinutes);
+            var soon = (enableAtUtc - utcNow).TotalHours < 12;
+            bool isActiveStatus = string.Equals(s.Status, "Scheduled", StringComparison.OrdinalIgnoreCase)
+                               || string.Equals(s.Status, "Ongoing", StringComparison.OrdinalIgnoreCase);
+
+            var canJoinNow = isActiveStatus && utcNow >= enableAtUtc && utcNow <= disableAtUtc;
+            var highlightRow = isActiveStatus && soon;
+
+            return new ScheduleRowDto
+            {
+                Id = s.Id,
+                AssignmentId = s.AssignmentId,
+                // Preserve original field your JS expects:
+                DateTime = startUtc, // serialized as ISO string
+                Status = s.Status ?? "",
+                Duration = s.Duration,
+                TeacherName = s.Assignment?.Teacher?.Name ?? "",
+                TeacherId = s.Assignment?.Teacher?.Id ?? Guid.Empty,
+
+                // New server-side fields:
+                EnableAtUtc = enableAtUtc,
+                DisableAtUtc = disableAtUtc,
+                CanJoinNow = canJoinNow,
+                HighlightRow = highlightRow
+            };
+        }
+
+        // DTO sent to the view/JS
+        public sealed class ScheduleRowDto
+        {
+            public Guid Id { get; set; }
+            public Guid AssignmentId { get; set; }
+            public DateTime DateTime { get; set; }       // UTC start time (kept for backward compatibility)
+            public string Status { get; set; } = "";
+            public int Duration { get; set; }
+            public string TeacherName { get; set; } = "";
+            public Guid TeacherId { get; set; }
+
+            // Server-side timing decisions
+            public DateTime EnableAtUtc { get; set; }
+            public DateTime DisableAtUtc { get; set; }
+            public bool CanJoinNow { get; set; }
+            public bool HighlightRow { get; set; }
+        }
+
+        public sealed class ScheduleJsonResponse
+        {
+            public List<ScheduleRowDto> Rows { get; set; } = new();
+            public long? NextRefreshMs { get; set; }   // null when nothing upcoming
+        }
+
 
 
 

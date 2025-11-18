@@ -72,167 +72,33 @@ namespace DotNetCoreSqlDb.Controllers
         }
 
         // POST: Teacher/Edit/{id}
-        /*[HttpPost]
+        [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id)
+        public async Task<IActionResult> Edit(Guid id, Teacher updatedTeacher)
         {
+            var existingTeacher = await _context.Teacher
+                .FirstOrDefaultAsync(s => s.Id == id);
 
-            var existingStudent = await _context.Student
-                .Include(s => s.Contacts)
-                .FirstOrDefaultAsync(s => s.ID == id);
-
-            if (existingStudent == null)
+            if (existingTeacher == null)
                 return NotFound();
 
-            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("support");
-            if (!isPrivileged && existingStudent.AccountingGroup != "S")
-                return Forbid();
+            existingTeacher.Name = updatedTeacher.Name;
+            existingTeacher.Email = updatedTeacher.Email;
 
-            // --- scalar updates ---
-            existingStudent.Name            = updatedStudent.Name;
-            existingStudent.ParentOrEmployer= updatedStudent.ParentOrEmployer;
-            existingStudent.MainNotes       = updatedStudent.MainNotes;
-            existingStudent.Source          = updatedStudent.Source;
-            existingStudent.TimeZoneId      = updatedStudent.TimeZoneId;
-            existingStudent.AccountingGroup = isPrivileged ? updatedStudent.AccountingGroup : "S";
-
-            // --- rename solo groups ---
-            var suffix = string.IsNullOrWhiteSpace(existingStudent.ParentOrEmployer) ? "" : " – " + existingStudent.ParentOrEmployer;
-            var studentNamePlusParent = existingStudent.Name + suffix;
-
-            var soloGroups = await _context.Group
-                .Where(g => g.StudentGroupCompositions.Count() == 1 &&
-                            g.StudentGroupCompositions.Any(c => c.StudentId == id))
-                .ToListAsync();
-
-            foreach (var g in soloGroups)
-                g.Name = studentNamePlusParent;
-
-            // --- sync contacts ---
-            if (updatedStudent.Contacts != null && updatedStudent.Contacts.Any())
-            {
-                foreach (var contact in updatedStudent.Contacts)
-                {
-                    if (contact.ID == Guid.Empty || contact.ID.ToString() == "00000000-0000-0000-0000-000000000000")
-                    {
-                        contact.ID        = Guid.NewGuid();
-                        contact.StudentID = existingStudent.ID;
-                        _context.Entry(contact).State = EntityState.Added;
-                        existingStudent.Contacts.Add(contact);
-                    }
-                    else
-                    {
-                        var existingContact = existingStudent.Contacts.FirstOrDefault(c => c.ID == contact.ID);
-                        if (existingContact != null)
-                        {
-                            existingContact.Type       = contact.Type;
-                            existingContact.Value      = contact.Value;
-                            existingContact.Invitation = contact.Invitation;
-                            existingContact.Emergency  = contact.Emergency;
-                            existingContact.Money      = contact.Money;
-                        }
-                    }
-                }
-
-                var postedIds = updatedStudent.Contacts
-                    .Where(c => c.ID != Guid.Empty && c.ID.ToString() != "00000000-0000-0000-0000-000000000000")
-                    .Select(c => c.ID)
-                    .ToList();
-
-                var toRemove = existingStudent.Contacts
-                    .Where(c => c.ID != Guid.Empty && !postedIds.Contains(c.ID))
-                    .ToList();
-
-                foreach (var c in toRemove)
-                    _context.Entry(c).State = EntityState.Deleted;
-            }
-
-            // --- NEW: create user if missing ---
-            bool userExists = await _context.User.AnyAsync(u => u.ID == existingStudent.ID);
-            if (!userExists)
-            {
-                var rnd       = new Random();
-                var tempPass  = rnd.Next(100000, 1000000).ToString();
-
-                PasswordHelper.CreatePasswordHash(tempPass, out byte[] hash, out byte[] salt);
-
-                const int maxTries = 899;
-                int tries = 0;
-                string clean = new string(existingStudent.Name.Where(c => !char.IsWhiteSpace(c)).ToArray());
-                string candidate;
-                bool candidateExists;
-                do
-                {
-                    int suffixNum = rnd.Next(100, 1000);
-                    candidate = $"{clean}{suffixNum}";
-                    candidateExists = await _context.User.AnyAsync(u => u.Username == candidate);
-                }
-                while (candidateExists && ++tries < maxTries);
-
-                if (tries >= maxTries)
-                {
-                    ViewBag.Error = "Could not generate a unique username for this user.";
-                    ViewBag.ContactTypes         = DropdownOptions.ContactTypes;
-                    ViewBag.SourceTypes          = DropdownOptions.SourceTypes;
-                    ViewBag.AccountingGroupTypes = DropdownOptions.AccountingGroupTypes;
-                    ViewBag.Timezones            = TimeZoneMapping.GetTimeZones();
-                    return View(updatedStudent);
-                }
-
-                var newUser = new User
-                {
-                    ID                = existingStudent.ID,
-                    Username          = candidate,
-                    Role              = "student",
-                    MustChangePassword= true,
-                    PasswordHash      = hash,
-                    PasswordSalt      = salt,
-                    IncorrectAttempts = 0
-                };
-                _context.User.Add(newUser);
-
-                try
-                {
-                    var html = $"""
-                        <h2>Bienvenue {existingStudent.Name} !</h2>
-                        <p>Your temporary credentials at <strong>TorontoFrench.com</strong>.</p>
-                        <p>
-                            <strong>Username :</strong> {candidate}<br/>
-                            <strong>Temporary Password :</strong> {tempPass}
-                        </p>
-                        <p>You will have to change your password (and optionally username) upon your first login.</p>
-                        <p>
-                            Click here to log in: 
-                            <a href="https://msdocs-core-sql-tsl.azurewebsites.net/" target="_blank" style="color: #1a73e8;">Log in to your account</a>
-                        </p>
-                        """;
-
-                    await _mailer.SendAsync(
-                        to:      "michael.kamochkin@gmail.com",
-                        subject: "Your credentials at Toronto French",
-                        htmlBody: html);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to send welcome e-mail to student {StudentId}", existingStudent.ID);
-                }
-            }
-
-            // --- persist ---
             try
             {
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.Student.Any(e => e.ID == updatedStudent.ID))
+                if (!_context.Teacher.Any(e => e.Id == updatedTeacher.Id))
                     return NotFound();
                 else
                     throw;
             }
 
             return RedirectToAction(nameof(Index));
-        }*/
+        }
 
 
         // GET: Teacher/Create

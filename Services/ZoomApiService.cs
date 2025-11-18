@@ -45,9 +45,9 @@ namespace DotNetCoreSqlDb.Services
 
         public Task<string> GetAccessTokenAsync() => GetAccessTokenInternalAsync();
 
-        //Not currently used, can be used for a view file to show all active meetings
         public async Task<ZoomParticipantViewModel> ListLiveMeetingParticipantsAsync(string meetingId)
         {
+            //_log.LogInformation("Remaining: ");
             await _throttle.WaitAsync();
             try
             {
@@ -69,14 +69,19 @@ namespace DotNetCoreSqlDb.Services
                 var json = await resp.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(json);
 
+                //_log.LogInformation(json);
+
                 var list = new List<ZoomParticipant>();
                 if (doc.RootElement.TryGetProperty("participants", out var arr))
                 {
                     foreach (var p in arr.EnumerateArray())
                     {
+                        /*var hasLeave = p.TryGetProperty("leave_time", out var lt) && lt.ValueKind != JsonValueKind.Null && !string.IsNullOrEmpty(lt.GetString());
+                        if (hasLeave) continue;*/
+
                         var ipAddress = p.GetProperty("ip_address").GetString() ?? string.Empty;
 
-                        _log.LogInformation("Ip address: " + ipAddress);
+                        //_log.LogInformation("Ip address: " + ipAddress);
                             
                         list.Add(new ZoomParticipant
                         {
