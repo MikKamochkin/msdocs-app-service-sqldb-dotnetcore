@@ -514,6 +514,11 @@
                             <i class="fa-regular fa-calendar-plus"></i>
                         </a>
                     </li>
+                    <li>
+                        <a asp-controller="Teachers" asp-action="LessonHistory" title="History">
+                            <i class="fa-regular fa-calendar-days"></i>
+                        </a>
+                    </li>
                 </ul>
 
                 <div class="burger" id="burger">
@@ -580,7 +585,6 @@
 
             <hr />
 
-            <!-- NEW ENTRY form (add-only) -->
             <div class="new-entry-form">
                 <div class="form-group">
                     <label for="timeSelect">Time</label>
@@ -605,6 +609,19 @@
                 </div>
 
                 <button type="button" class="btn btn-primary" onclick="saveEntryAjax()">Add Lesson</button>
+
+                <form id="copyForm" method="post">
+                <input type="hidden" name="teacherId"    />
+                <input type="hidden" name="selectedDate" />
+                <button
+                    type="submit"
+                    formmethod="post"
+                    formaction="@Url.Action("CopyLastWeek","Teachers")"
+                    class="btn btn-info ml-2"
+                    onclick="prepareCopy('copyForm')">
+                    Copy Last Week
+                </button>
+            </form>
             </div>
 
             <table class="table table-bordered" id="entriesTable" aria-describedby="dayOfWeek">
@@ -641,6 +658,18 @@
             const durationMap = @Html.Raw(ViewBag.DurationMapJson);
             const existing = @Html.Raw(existingJson);
             let rows = existing.slice();
+
+            const teacherId = '@ViewBag.TeacherId';
+
+            function prepareCopy(formId) {
+                const form = document.getElementById(formId);
+                if (!form) return;
+
+                const dt = document.getElementById('selectedDate').value;
+
+                form.querySelector('input[name="teacherId"]').value = teacherId;
+                form.querySelector('input[name="selectedDate"]').value = dt;
+            }
 
             // Ensure day of week is bold immediately
             $(function () {

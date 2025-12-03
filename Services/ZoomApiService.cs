@@ -53,8 +53,13 @@ namespace DotNetCoreSqlDb.Services
             {
                 using var client = await BuildClientAsync();
 
+                // /Metrics endpoint is for historical analysis, without it, it SHOULD show current participants in a meeting
+
+                /*var resp = await client.GetAsync(
+                    $"https://api.zoom.us/v2/metrics/meetings/{meetingId}/participants?type=live");*/
+
                 var resp = await client.GetAsync(
-                    $"https://api.zoom.us/v2/metrics/meetings/{meetingId}/participants?type=live");
+                    $"https://api.zoom.us/v2/meetings/{meetingId}/participants?type=live");
 
                 int.TryParse(resp.Headers.TryGetValues("X-RateLimit-Remaining", out var vals)
                                 ? vals.FirstOrDefault()

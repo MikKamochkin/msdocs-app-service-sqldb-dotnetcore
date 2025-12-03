@@ -113,6 +113,33 @@ namespace DotNetCoreSqlDb.Controllers
             return View(student);
         }
 
+        public class UpdateInvitationModel
+        {
+            public Guid ContactId { get; set; }
+            public bool Invitation { get; set; }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateInvitationPreference([FromBody] UpdateInvitationModel model)
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var studentId))
+                return Unauthorized();
+
+            // Make sure the contact belongs to the currently logged-in student
+            var contact = await _context.Contact
+                .FirstOrDefaultAsync(c => c.ID == model.ContactId && c.StudentID == studentId);
+
+            if (contact == null)
+                return NotFound();
+
+            contact.Invitation = model.Invitation;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true });
+        }
+
         // GET: /Students/Schedule
         public async Task<IActionResult> Schedule()
         {

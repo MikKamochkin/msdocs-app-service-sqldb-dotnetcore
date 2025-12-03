@@ -140,8 +140,14 @@ namespace DotNetCoreSqlDb.Controllers
                 var windowsZoneId = TZConvert.IanaToWindows(defaultZoneIana);
                 var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
 
-                var localStart = selectedDate;          // 00:00 local
-                var localEnd = selectedDate.AddDays(1); // next midnight
+                var localStart = new DateTime(
+                    selectedDate.Year,
+                    selectedDate.Month,
+                    selectedDate.Day,
+                    0,0,0,
+                    DateTimeKind.Unspecified);
+
+                var localEnd = localStart.AddDays(1);
 
                 var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, tzInfo);
                 var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, tzInfo);
@@ -255,7 +261,12 @@ namespace DotNetCoreSqlDb.Controllers
             var windowsZoneId = TZConvert.IanaToWindows(defaultZoneIana);
             var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
 
-            var localStart = selectedDate.Date;            // midnight local
+            var localStart = new DateTime(
+                selectedDate.Year,
+                selectedDate.Month,
+                selectedDate.Day,
+                0, 0, 0,
+                DateTimeKind.Unspecified);
             var localEnd = localStart.AddDays(1);        // next midnight
             var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, tzInfo);
             var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, tzInfo);
@@ -337,6 +348,111 @@ namespace DotNetCoreSqlDb.Controllers
                     DateTime = newDate,
                     Status = "Scheduled",
                     Duration = (int)entry.Assignment!.StudentUnitDuration,
+                    LessonAccountingType = "S100T100",
+                    Accounted = false
+                };
+
+                newEntries.Add(copy);
+                _context.Schedule.Add(copy);
+            }
+            //_logger.LogInformation("new entries count {}", newEntries.Count);
+            if (newEntries.Count > 0)
+            {
+                await _context.SaveChangesAsync();
+
+                var assignmentIds = newEntries.Select(e => e.AssignmentId).Distinct().ToList();
+
+                var affectedStudentIds = await _context.Assignments
+                    .Where(a => assignmentIds.Contains(a.Id))
+                    .Include(a => a.Group)
+                        .ThenInclude(g => g.StudentGroupCompositions)
+                    .SelectMany(a => a.Group!.StudentGroupCompositions)
+                    .Select(sgc => sgc.StudentId)
+                    .Distinct()
+                    .ToListAsync();
+
+                foreach (var studentId in affectedStudentIds)
+                {
+                    await _hub.Clients
+                        .Group($"student_{studentId}")
+                        .SendAsync("ScheduleChanged");
+                }
+
+                var updatedSchedule = await _context.Schedule
+                    .Include(s => s.Assignment!).ThenInclude(a => a.Teacher)
+                    .Where(s => s.Assignment!.TeacherId == teacherId)
+                    .OrderByDescending(s => s.DateTime)
+                    .Take(15)
+                    .Select(r => new
+                    {
+                        r.Id,
+                        r.AssignmentId,
+                        DateTime = r.DateTime.ToUniversalTime().ToString("o"),
+                        r.Status,
+                        r.Duration,
+                        TeacherId = r.Assignment!.Teacher!.Id,
+                        TeacherName = r.Assignment!.Teacher!.Name
+                    })
+                    .ToListAsync();
+
+                await _hub.Clients
+                    .Group($"teacher_{teacherId}")
+                    .SendAsync("ScheduleChanged", updatedSchedule);
+            }
+
+            return RedirectToAction(nameof(Manage), new
+            {
+                teacherId,
+                date = selectedDate.ToString("yyyy-MM-dd")
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ImportDefault(Guid teacherId, DateTime selectedDate)
+        {
+            var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
+            var windowsZoneId   = TZConvert.IanaToWindows(defaultZoneIana);
+            var tzInfo          = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
+
+            var weekday = selectedDate.DayOfWeek;
+
+            // Get all default rows for this teacher + weekday
+            var defaultEntries = await _context.DefaultSchedule
+                .Include(d => d.Assignment!)
+                .Where(d => d.Assignment!.TeacherId == teacherId &&
+                            d.DayOfWeek == weekday)
+                .ToListAsync();
+            
+            var newEntries = new List<Schedule>();
+
+            foreach (var def in defaultEntries)
+            {
+                var localDateTime = new DateTime(
+                selectedDate.Year,
+                selectedDate.Month,
+                selectedDate.Day,
+                def.DateTime.Hour,
+                def.DateTime.Minute,
+                def.DateTime.Second,
+                DateTimeKind.Unspecified);
+
+            var utcDateTime = TimeZoneInfo.ConvertTimeToUtc(localDateTime, tzInfo);
+
+            // Skip if something already exists for that teacher at that exact UTC time
+            var exists = await _context.Schedule.AnyAsync(s =>
+                s.Assignment!.TeacherId == teacherId &&
+                s.DateTime == utcDateTime);
+
+                if (exists)
+                    continue;
+
+                var copy = new Schedule
+                {
+                    Id = Guid.NewGuid(),
+                    AssignmentId = def.AssignmentId,
+                    DateTime = utcDateTime,
+                    Status = "Scheduled",
+                    Duration = (int)def.Assignment!.StudentUnitDuration,
                     LessonAccountingType = "S100T100",
                     Accounted = false
                 };

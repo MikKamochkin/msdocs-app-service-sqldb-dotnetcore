@@ -46,6 +46,15 @@
             </a>
         }
 
+        @* default Schedule *@
+        @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
+        {
+            var cssSchedule = btnClass("DefaultSchedule", "Index");
+            <a href="@Url.Action("Index", "DefaultSchedule")" class="@cssSchedule" title="Default Schedule">
+                <i class="fa-solid fa-calendar-week"></i>
+            </a>
+        }
+
         @* WhatsApp *@
         @*@{
             var cssWhatsApp = btnClass("Whatsapp", "Index");

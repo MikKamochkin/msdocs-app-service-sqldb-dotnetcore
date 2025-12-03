@@ -1,7 +1,7 @@
 @model List<DotNetCoreSqlDb.Models.Schedule>
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
-	ViewData["Title"] = "My Schedule";
+	ViewData["Title"] = "This Week's Lessons";
 	var existingJson = ViewBag.ExistingJson as string ?? "[]";
 	var timeZones = ViewBag.TimeZones as List<SelectListItem>;
 	var impersonating = ViewBag.Impersonating;
@@ -252,7 +252,7 @@
 		<nav>
 			<ul class="nav-links">
 				<li>
-					<a asp-controller="Teachers" asp-action="Schedule" title="Schedule" class="active-page">
+					<a asp-controller="Teachers" asp-action="Schedule" title="Schedule">
 						<i class="hgi hgi-stroke hgi-calendar-03"></i>
 					</a>
 				</li>
@@ -271,8 +271,8 @@
 						<i class="fa-regular fa-calendar-plus"></i>
 					</a>
 				</li>
-				<li>
-                    <a asp-controller="Teachers" asp-action="LessonHistory" title="History">
+                <li>
+                    <a asp-controller="Teachers" asp-action="LessonHistory" title="History" class="active-page">
                         <i class="fa-regular fa-calendar-days"></i>
                     </a>
                 </li>
@@ -291,6 +291,7 @@
 <div class="content-wrapper">
 	<div class="schedule-card">
 		<!-- CONTROLS -->
+        @*<div class="text-align: center"><b>Lessons from the start of this week until now<br><br></b></div>*@
 		<div class="controls">
 			<label for="timeZoneSelect">Time&nbsp;Zone:</label>
 			<select id="timeZoneSelect" name="timeZoneOffset">
@@ -316,7 +317,7 @@
 				<col style="width:15%" />
 				<col style="width:8%" />
 				<col style="width:6%" />
-				<col style="width:32%" />
+
 			</colgroup>
 			<thead>
 				<tr>
@@ -325,7 +326,6 @@
 					<th>Student</th>
 					<th>Status</th>
 					<th>Duration</th>
-					<th>Actions</th>
 				</tr>
 			</thead>
 			<tbody></tbody>
@@ -338,8 +338,6 @@
 	<partial name="_ImpersonatingBanner" />
 }
 
-
-
 @* ---------- SCRIPTS ---------- *@
 @section Scripts {
 	<script src="https://code.jquery.com/jquery-3.6.1.min.js"
@@ -347,120 +345,27 @@
 	<script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 	<script>
-		(async () => {
-
-			const teacherId = '@ViewBag.TeacherId';
-
-			const connection = new signalR.HubConnectionBuilder()
-				.withUrl("/hubs/scheduleHub")
-				.withAutomaticReconnect()
-				.build();
-
-			await connection.start();
-			await connection.invoke("JoinTeacherGroup", teacherId);
-			connection.on("ScheduleChanged", () => {
-				refreshRows();
-			});
-			connection.on("LessonStarted", () => {
-				refreshRows();
-			});
-		})();
-	</script>
-	<script>
-		const startLessonBase = '@Url.Action("StartLesson", "Teachers")';
-		const endLessonBase = '@Url.Action("EndLesson", "Teachers")';
 		(() => {
 			const { DateTime } = luxon;
-
-			/* ───────── CONSTANTS (match Zoom page) ───────── */
-			const minsBefore = 5;           // allow join 5 min before start
-			const minsAfter = 90;           // …and 15 min after the lesson ENDS
-			const meetingId = "7890699796";
-			const pwd = "eXdhK0tMUHQvRmVQb2Q0MHYySWVZUT09";
-			const deepLink = `zoommtg://zoom.us/join?action=join&confno=${meetingId}&pwd=${pwd}`;
-			const webLink = `https://us02web.zoom.us/j/${meetingId}?pwd=${pwd}`;
-			const tempTestLink = 'https://learn.microsoft.com/en-us/aspnet/core/web-api/action-return-types?view=aspnetcore-9.0';
-			const detailsBase = '@Url.Action("Zoom", "Teachers")';
-
 
 			/* ───────── DATA ───────── */
 			const raw = @Html.Raw(existingJson);
 			const rows = raw
 				.map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
 				//.sort((a, b) => DateTime.fromISO(a.DateTime) - DateTime.fromISO(b.DateTime)); // newest → oldest
-			rows.sort(sortByDateAsc);
+			rows.sort(sortByDateDesc);
 
 			function sortByDateAsc(a, b) {
 				return DateTime.fromISO(a.DateTime).toMillis() - DateTime.fromISO(b.DateTime).toMillis();
 			}
+            function sortByDateDesc(a, b) {
+				return DateTime.fromISO(b.DateTime).toMillis() - DateTime.fromISO(a.DateTime).toMillis();
+			}
 
-			window.nextRefreshTimeout = null;
-
-			window.refreshRows = async function refreshRows() {
-				try {
-					const response = await fetch('@Url.Action("ScheduleJson", "Teachers")')
-						.then(r => r.json());
-
-					if (window.nextRefreshTimeout) {
-                        clearTimeout(window.nextRefreshTimeout);
-                        window.nextRefreshTimeout = null;
-                    }
-
-					rows.length = 0;                             // clear array
-
-					const latest = response.rows || response;
-
-					latest.forEach(src => {
-						// tolerate both PascalCase and camelCase coming from JSON
-						const rawTime = src.DateTime ?? src.dateTime;
-						if (!rawTime) return;                   // skip bad rows
-
-						rows.push({
-							Id: src.Id ?? src.id,
-							TeacherId: src.TeacherId ?? src.teacherId,
-							StudentName: src.StudentName ?? src.studentName,
-							Status: src.Status ?? src.status,
-							// ensure we always have a *number*
-							Duration: Number(src.Duration ?? src.duration ?? 0),
-							DateTime: rawTime.endsWith('Z') ? rawTime : rawTime + 'Z',
-							CanJoinNow: (src.canJoinNow ?? src.CanJoinNow) === true,
-                            EnableAtUtc: (src.enableAtUtc ?? src.EnableAtUtc) ?? null,
-                            DisableAtUtc: (src.disableAtUtc ?? src.DisableAtUtc) ?? null,
-                            HighlightRow: (src.highlightRow ?? src.HighlightRow) === true
-						});
-					});
-
-					rows.sort(sortByDateAsc);
-					renderTable();
-
-					const nextRefreshMs = response.nextRefreshMs;
-                    if (Number.isFinite(nextRefreshMs) && nextRefreshMs > 0) {
-                        console.log("Setting next refresh timeout in: " + nextRefreshMs + "ms");
-                        window.nextRefreshTimeout = setTimeout(() => {
-                            refreshRows();
-                        }, nextRefreshMs);
-                    }
-					/*rows.sort(sortByDateAsc);
-					renderTable();                              // redraw*/
-				} catch (e) {
-					console.error("Refresh failed", e);
-				}
-			};
-
-			// Initial setup
             $(function () {
-                // Use refreshRows for initial load to handle timeout setup
-                refreshRows();
+                renderTable();
+                $('#timeZoneSelect').on('change', renderTable);
             });
-
-			// Clean up timeout when leaving page
-            window.addEventListener('beforeunload', function () {
-                if (window.nextRefreshTimeout) {
-                    clearTimeout(window.nextRefreshTimeout);
-                }
-            });
-
-			$('#timeZoneSelect').on('change', renderTable);
 
 			function renderTable() {
 				const zone = $('#timeZoneSelect').val();
@@ -473,145 +378,24 @@
 				/* ---------- render each <tr> ---------- */
 				rows.forEach(row => {
 					const startUtc = DateTime.fromISO(row.DateTime);
-					const diffMin = startUtc.diff(nowUtc, 'minutes').minutes;
-					const windowEnd = -(Number(row.Duration) + minsAfter);
 					const startLocal = startUtc.setZone(zone);
 					const isToday = startLocal.hasSame(nowLocal, 'day');
 					const status = row.Status;
 
-					let actionHtml = '';
-
-					
-                    if (row.CanJoinNow) {
-                        actionHtml = buildBtn('enabled', row.Id, row.Status)
-                    }
-		
 					tbody.append(`
-							<tr class="${row.HighlightRow ? 'highlight-row' : ''}">
+							<tr class="">
 								<td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
 								<td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
 								<td data-label="Student">${row.StudentName}</td>
 								<td data-label="Status">${row.Status}</td>
 								<td data-label="Duration">${row.Duration}&nbsp;min</td>
-								<td data-label="Actions">${actionHtml}</td>
 							</tr>`);
 						appendedCount++;
 				});
 
 				const domRowCount = $('#entriesTable tbody tr').length;
 			}
-
-			/* ---------- helpers ---------- */
-			function buildBtn(state, id, status) {
-				const cls = state === 'disabled'
-					? 'btn btn-success btn-md join-btn ml-2 disabled-btn'
-					: 'btn btn-success btn-md join-btn ml-2';
-				const extra = state === 'disabled' ? 'aria-disabled="true" tabindex="-1"' : '';
-				
-				let startOrJoin = "";
-				let endBtnStatus = "";
-				let startOrJoinClass = "";
-
-				if (status == "Ongoing") {
-					startOrJoin = "Rejoin";
-					startOrJoinClass = "btn btn-warning";
-
-				}
-				else {
-					startOrJoin = "Start";
-					startOrJoinClass = "btn btn-success";
-					endBtnStatus = "disabled"
-				}
-
-				//Dynamic link:
-				return `
-						
-						<a
-							href="${startLessonBase}?id=${id}"
-							class="${startOrJoinClass} btn-md ml-2 start-lesson-btn"
-							target="_blank"
-							rel="noopener noreferrer">
-							<strong>${startOrJoin} Lesson</strong>
-						</a>
-						<a
-							href="${detailsBase}?scheduleId=${id}"
-							class="btn btn-info btn-md ml-3"
-							title="Lesson details">
-							<i class="fa-solid fa-circle-info text-light"></i>
-						</a>
-						<button
-							class="btn btn-danger btn-md ml-2 end-lesson-btn ${endBtnStatus}"
-							data-id="${id}"
-							onclick="pingEndLesson('${id}'), refreshRows();"
-							<strong>End Lesson</strong>
-						</button>	
-						`;
-			}
-
-			/* open Zoom + browser fallback */
-
-			$(document).on('click', '.join-btn', function (e) {
-				if ($(this).hasClass('disabled-btn')) return;
-				e.preventDefault();
-				const $btn = $(this);
-				const url = $btn.attr('href');
-				window.open(url, '_blank');
-
-				setTimeout(() => window.open(weblink, '_blank'), 500);
-			});
 		})();
-
-		async function pingEndLesson(id) {
-			try {
-				const url = `${endLessonBase}?id=${id}`; // use query param for GET
-				const response = await fetch(url, {
-					method: 'GET',
-					headers: {
-						'Accept': 'application/json'
-					}
-				});
-
-				if (response.ok) {
-					//nsole.log("EndLesson called successfully");
-				} else {
-					//nsole.error("EndLesson call failed:", response.status);
-				}
-			} catch (error) {
-				//console.error("Error calling EndLesson:", error);
-			}
-			location.reload(true)
-		}
-
-		// ── PREVENT DOUBLE-CLICK ON START/END ─────────────────────────────
-		$(document).on('click', '.start-lesson-btn, .end-lesson-btn', function (e) {
-			const $btn = $(this);
-			// first click: add .disabled-btn (blocks pointer-events + greys it out)
-			$btn.addClass('disabled-btn');
-			// after 2s: restore
-			setTimeout(() => {
-				$btn.removeClass('disabled-btn');
-			}, 2000);
-
-			//location.reload(true);
-
-			// allow the first click to proceed (opening the new tab or firing pingEndLesson)
-		});
-
-		// 1) Intercept the Start-Lesson link
-		// Intercept the Start-Lesson link
-		/*$(document).on('click', '.start-lesson-btn', function (e) {
-			e.preventDefault();
-			const url = $(this).attr('href');
-
-			// Open Zoom in a new tab
-			window.open(url, '_blank');
-
-			// Reload this page after a short delay
-			setTimeout(() => {
-				window.location.reload(true);   // full reload
-			}, 800);
-		});*/
-
 
 	</script>
 }

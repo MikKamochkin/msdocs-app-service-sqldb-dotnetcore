@@ -11,9 +11,6 @@ namespace DotNetCoreSqlDb.Models
         [Key]
         public Guid Id { get; set; }
 
-        [ForeignKey("Assignment")]
-        public Guid? AssignmentId { get; set; }
-
         [ForeignKey("Schedule")]
         public Guid? ScheduleId { get; set; }
 
@@ -35,13 +32,14 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("StartTime")]
         public DateTime? StartTime { get; set; }
 
+        [DisplayName("EndTime")]
+        public DateTime? EndTime { get; set; }
+
         [DisplayName("Duration")]
         public int? Duration { get; set; } = 0;
 
         //----------------------------------------------------------------------------------------
         public DateTime? DateTime { get; set; }
-
-        public Assignments Assignment { get; set; } = null!;
 
         public Schedule Schedule { get; set; } = null!;
 

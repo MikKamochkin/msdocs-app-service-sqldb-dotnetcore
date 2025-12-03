@@ -53,6 +53,9 @@ var WassengerExpectedSecret = builder.Configuration["WASSENGER_WEBHOOK_EXPECTED_
 var ZoomClientId = builder.Configuration["ZoomClientId"];
 var ZoomClientSecret = builder.Configuration["ZoomClientSecret"];
 var ZoomAccountId = builder.Configuration["ZoomAccountId"];
+var TwilioAccountSid = builder.Configuration["TwilioAccountSid"];
+var TwilioAuthToken = builder.Configuration["TwilioAuthToken"];
+
 
 /* ───── 5.  MVC / auth / SignalR / session (unchanged) ─ */
 builder.Services.AddControllersWithViews();
@@ -80,6 +83,7 @@ builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
 builder.Services.AddScoped<IZoomApiService, ZoomApiService>();
 builder.Services.AddScoped<IZoomMeetingService, ZoomMeetingService>();
 builder.Services.AddScoped<IUpdateBalanceService, UpdateBalanceService>();
+builder.Services.AddScoped<ITwilioService, TwilioService>();
 
 builder.Services.AddHostedService<TimedHostedService>();
 

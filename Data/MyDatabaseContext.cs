@@ -51,6 +51,11 @@ namespace DotNetCoreSqlDb.Data
         public DbSet<DotNetCoreSqlDb.Models.Payer> Payer { get; set; } = default!;
 
         public DbSet<DotNetCoreSqlDb.Models.ZoomMeetingLog> ZoomMeetingLog { get; set; } = default!;
+        
+        public DbSet<DotNetCoreSqlDb.Models.TwilioLessonRemindersLog> TwilioLessonRemindersLog { get; set; } = default!;
+
+        public DbSet<DotNetCoreSqlDb.Models.DefaultSchedule> DefaultSchedule { get; set; } = default!;
+
 
 
         // method defines model-level constraints like unique indexes

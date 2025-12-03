@@ -28,16 +28,24 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly IZoomMeetingService _zoomSvc;
         private readonly IUpdateBalanceService _balanceSvc;
         private readonly IHubContext<ScheduleHub> _hub;
+        private readonly LogHelper _logHelper;
         private const int JoinEarlyMinutes = 5;
         private const int GraceAfterMinutes = 90;
 
-        public TeachersController(MyDatabaseContext context, ILogger<TeachersController> logger, IZoomMeetingService zoomSvc, IUpdateBalanceService balanceSvc, IHubContext<ScheduleHub> hub)
+        public TeachersController(
+            MyDatabaseContext context,
+            ILogger<TeachersController> logger,
+            IZoomMeetingService zoomSvc,
+            IUpdateBalanceService balanceSvc,
+            IHubContext<ScheduleHub> hub,
+            LogHelper logHelper)
         {
             _context = context;
             _logger = logger;
             _zoomSvc = zoomSvc;
             _balanceSvc = balanceSvc;
             _hub = hub;
+            _logHelper = logHelper;
         }
 
         // GET: Teacher/Index
@@ -293,7 +301,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             // 3) now start the new meeting    
-            _logger.LogInformation("Called StartLesson for schedule {ScheduleId}", id);
+            //_logger.LogInformation("Called StartLesson for schedule {ScheduleId}", id);
             await _zoomSvc.AssignMeetingsAsync(id);
 
             var sched = await _context.Schedule
@@ -314,6 +322,8 @@ namespace DotNetCoreSqlDb.Controllers
                 //TODO: Add error handling here
                 return NotFound();
 
+            await _logHelper.LogZoomMeetingStartAsync(id, lesson.Id);
+
             await _hub.Clients
                 .Group($"teacher_{teacherId}")
                 .SendAsync("LessonStarted");
@@ -325,6 +335,7 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> EndLesson(Guid id)
         {
             await _zoomSvc.EndMeetingsAsync(id);
+            await _logHelper.LogZoomMeetingEndAsync(id);
 
             var schedule = await _context.Schedule
                 .Include(s => s.Assignment)
@@ -431,6 +442,8 @@ namespace DotNetCoreSqlDb.Controllers
             var userId = User.FindFirst("UserID")?.Value;
             if (!Guid.TryParse(userId, out var teacherId))
                 return NotFound();
+
+            ViewBag.TeacherId = teacherId;
 
             // Selected date (defaults to today, local)
             var selectedDate = (date ?? DateTime.Today).Date;
@@ -724,6 +737,175 @@ namespace DotNetCoreSqlDb.Controllers
                 HighlightRow = highlightRow
             };
         }
+
+        public async Task<IActionResult> LessonHistory()
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            ViewBag.TeacherId = userId;
+            if (!Guid.TryParse(userId, out var teacherId))
+                return NotFound();
+
+            var utcNow = DateTime.UtcNow;
+            DateTime beginningOfWeek = utcNow.AddDays(-(int)(utcNow.DayOfWeek - DayOfWeek.Monday + 7) % 7);
+
+            var scheduleEntries = await _context.Schedule
+                .Include(s => s.Assignment)          // load the Assignment nav
+                    .ThenInclude(a => a.Group)      // then load its Group nav
+                .Where(s => s.Assignment!.TeacherId == teacherId)
+                .Where(s => s.DateTime > beginningOfWeek && s.DateTime < utcNow)
+                .Where(s => s.Status == "Taken")
+                .OrderByDescending(s => s.DateTime)
+                .ToListAsync();
+
+            var flatDtos = scheduleEntries.Select(s => LessonHistoryToDto(s)).ToList();
+
+            ViewBag.ExistingJson = JsonSerializer.Serialize(
+                flatDtos,
+                new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.IgnoreCycles }
+            );
+
+            // 5) Supply your time-zone list again
+            var timeZones = TimeZoneMapping.GetTimeZones();
+            var defaultZone = TZConvert.WindowsToIana("Eastern Standard Time");
+            var teachersTimezone = await _context.Teacher
+                .Where(s => s.Id == teacherId)
+                .Select(s => s.TimeZoneId)
+                .FirstOrDefaultAsync();
+
+            foreach (var tz in timeZones)
+            {
+                tz.Selected = tz.Value == teachersTimezone;
+            }
+            ViewBag.TimeZones = timeZones;
+
+            if (User.IsImpersonating())
+            {
+                ViewBag.Impersonating = true;
+            }
+
+            return View(scheduleEntries);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CopyLastWeek(Guid teacherId, DateTime selectedDate)
+        {
+            
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var currentTeacherId))
+                return Unauthorized();
+
+            teacherId = currentTeacherId;
+
+            //_logger.LogInformation("copy last week for {a}, teacher: {b}", selectedDate, teacherId);
+            var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
+            var windowsZoneId = TZConvert.IanaToWindows(defaultZoneIana);
+            var tzInfo = TimeZoneInfo.FindSystemTimeZoneById(windowsZoneId);
+
+            var lastWeekStartLocal = selectedDate.Date.AddDays(-7);
+            var lastWeekEndLocal = lastWeekStartLocal.AddDays(1);
+
+            var lastWeekStartUtc = TimeZoneInfo.ConvertTimeToUtc(lastWeekStartLocal, tzInfo);
+            var lastWeekEndUtc = TimeZoneInfo.ConvertTimeToUtc(lastWeekEndLocal, tzInfo);
+
+            var lastWeekEntries = await _context.Schedule
+                .Include(s => s.Assignment!)
+                .Where(s =>
+                    s.Assignment!.TeacherId == teacherId &&
+                    s.DateTime >= lastWeekStartUtc &&
+                    s.DateTime < lastWeekEndUtc)
+                .ToListAsync();
+
+            var newEntries = new List<Schedule>();
+            foreach (var entry in lastWeekEntries)
+            {
+                //_logger.LogInformation("entry: {a}", entry.Id);
+                var newDate = entry.DateTime.AddDays(7);
+
+                var exists = await _context.Schedule.AnyAsync(s =>
+                    s.Assignment!.TeacherId == teacherId &&
+                    s.DateTime == newDate);
+
+                if (exists)
+                    continue;
+
+                var copy = new Schedule
+                {
+                    Id = Guid.NewGuid(),
+                    AssignmentId = entry.AssignmentId,
+                    DateTime = newDate,
+                    Status = "Scheduled",
+                    Duration = (int)entry.Assignment!.StudentUnitDuration,
+                    LessonAccountingType = "S100T100",
+                    Accounted = false
+                };
+
+                newEntries.Add(copy);
+                _context.Schedule.Add(copy);
+            }
+            //_logger.LogInformation("new entries count {}", newEntries.Count);
+            if (newEntries.Count > 0)
+            {
+                await _context.SaveChangesAsync();
+
+                var assignmentIds = newEntries.Select(e => e.AssignmentId).Distinct().ToList();
+
+                var affectedStudentIds = await _context.Assignments
+                    .Where(a => assignmentIds.Contains(a.Id))
+                    .Include(a => a.Group)
+                        .ThenInclude(g => g.StudentGroupCompositions)
+                    .SelectMany(a => a.Group!.StudentGroupCompositions)
+                    .Select(sgc => sgc.StudentId)
+                    .Distinct()
+                    .ToListAsync();
+
+                foreach (var studentId in affectedStudentIds)
+                {
+                    await _hub.Clients
+                        .Group($"student_{studentId}")
+                        .SendAsync("ScheduleChanged");
+                }
+
+                var updatedSchedule = await _context.Schedule
+                    .Include(s => s.Assignment!).ThenInclude(a => a.Teacher)
+                    .Where(s => s.Assignment!.TeacherId == teacherId)
+                    .OrderByDescending(s => s.DateTime)
+                    .Take(15)
+                    .Select(r => new
+                    {
+                        r.Id,
+                        r.AssignmentId,
+                        DateTime = r.DateTime.ToUniversalTime().ToString("o"),
+                        r.Status,
+                        r.Duration,
+                        TeacherId = r.Assignment!.Teacher!.Id,
+                        TeacherName = r.Assignment!.Teacher!.Name
+                    })
+                    .ToListAsync();
+
+                await _hub.Clients
+                    .Group($"teacher_{teacherId}")
+                    .SendAsync("ScheduleChanged", updatedSchedule);
+            }
+
+            return RedirectToAction(nameof(EditSchedule), new
+            {
+                date = selectedDate.ToString("yyyy-MM-dd")
+            });
+        }
+
+        private LessonHistoryDto LessonHistoryToDto(Schedule s)
+        {
+            return new LessonHistoryDto
+            {
+                Id = s.Id,
+                AssignmentId = s.AssignmentId,
+                DateTime = s.DateTime,
+                Status = s.Status ?? "",
+                Duration = s.Duration,
+                StudentName = s.Assignment?.Group?.Name
+            };
+        }
+
         public sealed class ScheduleRowDto
         {
             public Guid Id { get; set; }
@@ -741,6 +923,17 @@ namespace DotNetCoreSqlDb.Controllers
         {
             public List<ScheduleRowDto> Rows { get; set; } = new();
             public long? NextRefreshMs { get; set; }
+        }
+
+        public sealed class LessonHistoryDto
+        {
+            public Guid Id { get; set; }
+            public Guid AssignmentId { get; set; }
+            public DateTime DateTime { get; set; }       
+            public string Status { get; set; } = "";
+            public int Duration { get; set; }
+            public string StudentName { get; set; } = "";
+
         }
     }
 }

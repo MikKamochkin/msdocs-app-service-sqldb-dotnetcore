@@ -116,19 +116,32 @@
             </thead>
             <tbody></tbody>
         </table>
-        <form id="copyForm" method="post">
-            <input type="hidden" name="teacherId"      id="copyTeacherId" />
-            <input type="hidden" name="selectedDate"   id="copySelectedDate" />
-
-            <button
-                type="submit"
-                formmethod="post"
-                formaction="@Url.Action("CopyLastWeek","Schedule")"
-                class="btn btn-info ml-2"
-                onclick="prepareCopy()">
-            Copy Last Week
-            </button>
-        </form>
+        <div class="d-inline-flex gap-2">
+            <form id="copyForm" method="post">
+                <input type="hidden" name="teacherId"    />
+                <input type="hidden" name="selectedDate" />
+                <button
+                    type="submit"
+                    formmethod="post"
+                    formaction="@Url.Action("CopyLastWeek","Schedule")"
+                    class="btn btn-info ml-2"
+                    onclick="prepareCopy('copyForm')">
+                    Copy Last Week
+                </button>
+            </form>
+            <form id="importDefaultForm" method="post">
+                <input type="hidden" name="teacherId"    />
+                <input type="hidden" name="selectedDate" />
+                <button
+                    type="submit"
+                    formmethod="post"
+                    formaction="@Url.Action("ImportDefault","Schedule")"
+                    class="btn btn-success ml-2"
+                    onclick="prepareCopy('importDefaultForm')">
+                    Import Default Schedule
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -322,13 +335,13 @@
             });
         }
 
-        function prepareCopy() {
-            // grab whatever is currently selected in your filters
-            const tid = document.getElementById('teacherSelect').value;
-            const dt  = document.getElementById('selectedDate').value;
-            // stick them into the hidden inputs
-            document.getElementById('copyTeacherId').value    = tid;
-            document.getElementById('copySelectedDate').value = dt;
+        function prepareCopy(formId) {
+            const form = document.getElementById(formId);
+            const tid  = document.getElementById('teacherSelect').value;
+            const dt   = document.getElementById('selectedDate').value;
+
+            form.querySelector('input[name="teacherId"]').value    = tid;
+            form.querySelector('input[name="selectedDate"]').value = dt;
         }
     </script>
 }

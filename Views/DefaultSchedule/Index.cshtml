@@ -1,0 +1,397 @@
+@model DotNetCoreSqlDb.ViewModels.DefaultSchedulePageVm
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    ViewData["Title"] = "Default Schedule (Weekly)";
+    var teacherAssignmentsJson = (string)ViewBag.TeacherAssignmentsJson;
+    var timeZones = ViewBag.TimeZones as List<SelectListItem>;
+    var defaultZone = ViewBag.DefaultZoneIana as string ?? "America/Toronto";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet" />
+<style>
+    #defaultCalendar {
+        max-width: 100%;
+        margin-top: 1rem;
+    }
+
+    .fc-toolbar-title {
+        font-size: 0;
+    }
+</style>
+
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
+    {
+        <partial name="_AdminSidebar" />
+    }
+
+    <div class="col">
+        <h2>Default Weekly Schedule</h2>
+        <p>
+            Select a teacher and timezone. Columns are days of the week, rows are time.
+            Click in the grid to set or change default lessons.
+        </p>
+
+        <div class="form-row mb-3">
+            <div class="form-group col-md-3">
+                <label for="teacherSelect">Teacher</label>
+                <select id="teacherSelect" class="form-control">
+                    <option value="">— select —</option>
+                    @foreach (var t in Model.Teachers)
+                    {
+                        <option value="@t.Id">@t.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group col-md-3">
+                <label for="timeZoneSelect">Time Zone</label>
+                <select id="timeZoneSelect" class="form-control">
+                    @if (timeZones != null)
+                    {
+                        foreach (var tz in timeZones)
+                        {
+                            if (tz.Selected)
+                            {
+                                <option value="@tz.Value" selected>@tz.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@tz.Value">@tz.Text</option>
+                            }
+                        }
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div id="defaultCalendar"></div>
+    </div>
+</div>
+
+<!-- Modal for adding/editing default slot -->
+<div class="modal fade" id="defaultSlotModal" tabindex="-1" role="dialog" aria-labelledby="defaultSlotModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="defaultSlotModalLabel">Edit Default Lesson</h5>
+                <button type="button" class="close" id="defaultSlotCloseBtn" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Time -->
+                <div class="form-group">
+                    <label for="modalTimeSelect">Time</label>
+                    <select id="modalTimeSelect" class="form-control"
+                        asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
+                </div>
+
+                <!-- Student -->
+                <div class="form-group">
+                    <label for="modalGroupSelect">Student</label>
+                    <select id="modalGroupSelect" class="form-control">
+                        <option value="">— select student —</option>
+                    </select>
+                </div>
+
+                <!-- Status -->
+                <div class="form-group">
+                    <label for="modalStatusSelect">Status</label>
+                    <select id="modalStatusSelect" class="form-control"
+                        asp-items="(IEnumerable<SelectListItem>)ViewBag.Statuses"></select>
+                </div>
+
+                <!-- Duration -->
+                <div class="form-group">
+                    <label for="modalDurationSelect">Duration</label>
+                    <select id="modalDurationSelect" class="form-control"
+                        asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonDurationTypes">
+                        <option value="">— select duration —</option>
+                    </select>
+                </div>
+
+                <!-- Accounting Type -->
+                <div class="form-group">
+                    <label for="modalAccountingSelect">Accounting Type</label>
+                    <select id="modalAccountingSelect" class="form-control"
+                        asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonAccountingType">
+                        <option value="">— select type —</option>
+                    </select>
+                </div>
+
+                <input type="hidden" id="modalDayOfWeek" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger mr-auto" id="modalDeleteBtn">Delete</button>
+                <button type="button" class="btn btn-secondary" id="defaultSlotCancelBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="modalSaveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+
+    <!-- make sure Bootstrap JS is loaded in your layout -->
+
+    <script>
+        const teacherAssignments = @Html.Raw(teacherAssignmentsJson);
+        const DateTime = luxon.DateTime;
+        const baseZone = '@defaultZone';  // where template times are defined (Eastern)
+
+        let currentSlot = null; // { teacherId, dayOfWeek, timeStr }
+
+        function populateStudentOptions(teacherId, assignmentId) {
+            const options = teacherAssignments[teacherId] || [];
+            const $sel = $('#modalGroupSelect');
+            $sel.empty();
+            $sel.append('<option value="">— select student —</option>');
+
+            options.forEach(o => {
+                const id = o.id || o.Id;
+                const name = o.groupName || o.GroupName || 'Unnamed';
+                const selected = assignmentId && id === assignmentId ? ' selected' : '';
+                $sel.append(`<option value="${id}"${selected}>${name}</option>`);
+            });
+        }
+
+        function openSlotModal(teacherId, isoString, existing) {
+            // isoString is e.g. "2000-01-03T18:00:00-05:00"
+            let dtDisplay;
+
+            if (typeof isoString === 'string') {
+                dtDisplay = DateTime.fromISO(isoString, { setZone: true });
+            } else {
+                const displayTz = $('#timeZoneSelect').val() || baseZone;
+                dtDisplay = DateTime.fromJSDate(isoString).setZone(displayTz);
+            }
+
+            const dtBase = dtDisplay.setZone(baseZone);
+
+            const weekday = dtBase.weekday;   // 1..7
+            const dayOfWeek = weekday % 7;      // C# DayOfWeek (Sun=0..Sat=6)
+            const timeStr = dtBase.toFormat('HH:mm');
+
+            // flag if there is an existing default entry
+            currentSlot = { teacherId, dayOfWeek, hasExisting: !!existing };
+
+            $('#modalDayOfWeek').val(dayOfWeek);
+            $('#modalTimeSelect').val(timeStr);
+
+            const assignmentId = existing ? (existing.assignmentId || existing.AssignmentId) : null;
+            populateStudentOptions(teacherId, assignmentId);
+
+            const status = existing ? (existing.status || existing.Status || 'Scheduled') : 'Scheduled';
+            $('#modalStatusSelect').val(status);
+
+            const duration = existing ? (existing.duration || existing.Duration || '') : '';
+            if (duration) {
+                $('#modalDurationSelect').val(duration.toString());
+            } else {
+                $('#modalDurationSelect').val('');
+            }
+
+            const accounting = existing ? (existing.accountingType || existing.LessonAccountingType || 'S100T100') : 'S100T100';
+            $('#modalAccountingSelect').val(accounting);
+
+            // show Delete only when editing an existing slot
+            if (currentSlot.hasExisting) {
+                $('#modalDeleteBtn').show();
+            } else {
+                $('#modalDeleteBtn').hide();
+            }
+
+            $('#defaultSlotModal').modal('show');
+        }
+
+
+
+
+        function saveCurrentSlot() {
+            if (!currentSlot) return;
+
+            const teacherId = currentSlot.teacherId;
+            const dayOfWeek = parseInt($('#modalDayOfWeek').val(), 10);
+            const time = $('#modalTimeSelect').val();
+            const assignmentId = $('#modalGroupSelect').val() || null;
+            const status = $('#modalStatusSelect').val() || 'Scheduled';
+            const duration = parseInt($('#modalDurationSelect').val() || '0', 10);
+            const accountingType = $('#modalAccountingSelect').val() || 'S100T100';
+
+            const payload = {
+                teacherId: teacherId,
+                dayOfWeek: dayOfWeek,
+                time: time,
+                assignmentId: assignmentId,
+                status: status,
+                duration: duration,
+                lessonAccountingType: accountingType
+            };
+
+            $.ajax({
+                url: '@Url.Action("UpdateCell", "DefaultSchedule")',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                success: function () {
+                    $('#defaultSlotModal').modal('hide');
+                    currentSlot = null;
+                    calendar.refetchEvents();
+                },
+                error: function (err) {
+                    alert('Save failed: ' + (err.responseText || 'error'));
+                }
+            });
+        }
+
+        function deleteCurrentSlot() {
+            if (!currentSlot || !currentSlot.hasExisting) {
+                $('#defaultSlotModal').modal('hide');
+                currentSlot = null;
+                return;
+            }
+
+            const teacherId = currentSlot.teacherId;
+            const dayOfWeek = parseInt($('#modalDayOfWeek').val(), 10);
+            const time = $('#modalTimeSelect').val();
+
+            const payload = {
+                teacherId: teacherId,
+                dayOfWeek: dayOfWeek,
+                time: time,
+                assignmentId: null,          // <-- triggers delete on server
+                status: 'Scheduled',
+                duration: 0,
+                lessonAccountingType: 'S100T100'
+            };
+
+            $.ajax({
+                url: '@Url.Action("UpdateCell", "DefaultSchedule")',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                success: function () {
+                    $('#defaultSlotModal').modal('hide');
+                    currentSlot = null;
+                    calendar.refetchEvents();
+                },
+                error: function (err) {
+                    alert('Delete failed: ' + (err.responseText || 'error'));
+                }
+            });
+        }
+
+
+        let calendar;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const calendarEl = document.getElementById('defaultCalendar');
+            const initialZone = document.getElementById('timeZoneSelect').value || baseZone;
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                initialDate: '2000-01-03', // reference Monday
+                allDaySlot: false,
+                firstDay: 1, // Monday
+                slotDuration: '00:30:00',
+                slotLabelInterval: '01:00:00', // or '00:30:00' if you want a label every row
+                slotLabelFormat: { hour: 'numeric', minute: '2-digit', hour12: false },
+                height: 'auto',
+                timeZone: initialZone, // display zone
+                nowIndicator: true,
+                headerToolbar: false,
+                dayHeaderFormat: { weekday: 'short' },
+                /*headerToolbar: {
+                    left: '',
+                    center: 'title',   // "January 3 – 9, 2000" etc., but conceptually "default week"
+                    right: ''          // no prev/next
+                },*/
+                navLinks: false,
+                businessHours: {
+                    // days of week. an array of zero-based day of week integers (0=Sunday)
+                    daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+
+                    startTime: '10:00', // a start time (10am in this example)
+                    endTime: '18:00', // an end time (6pm in this example)
+                },
+
+                events: function (fetchInfo, successCallback, failureCallback) {
+                    const teacherId = $('#teacherSelect').val();
+                    if (!teacherId) {
+                        successCallback([]);
+                        return;
+                    }
+
+                    $.ajax({
+                        url: '@Url.Action("Events", "DefaultSchedule")',
+                        data: { teacherId: teacherId },
+                        success: function (data) {
+                            successCallback(data);
+                        },
+                        error: function (err) {
+                            failureCallback(err);
+                        }
+                    });
+                },
+
+                dateClick: function (info) {
+                    const teacherId = $('#teacherSelect').val();
+                    if (!teacherId) {
+                        alert('Select a teacher first.');
+                        return;
+                    }
+
+                    // use dateStr instead of info.date
+                    openSlotModal(teacherId, info.dateStr, null);
+                },
+
+                eventClick: function (info) {
+                    const teacherId = $('#teacherSelect').val();
+                    if (!teacherId) return;
+
+                    const ext = info.event.extendedProps || {};
+                    const existing = {
+                        assignmentId: info.event.extendedProps.assignmentId,
+                        status: ext.status,
+                        duration: ext.duration,
+                        accountingType: ext.accountingType
+                    };
+
+                    // use startStr instead of info.event.start
+                    openSlotModal(teacherId, info.event.startStr, existing);
+                }
+            });
+
+            calendar.render();
+
+            $('#teacherSelect').on('change', function () {
+                calendar.refetchEvents();
+            });
+
+            $('#timeZoneSelect').on('change', function () {
+                const tz = $(this).val() || baseZone;
+                calendar.setOption('timeZone', tz);
+                calendar.refetchEvents();
+            });
+
+            $('#modalSaveBtn').on('click', saveCurrentSlot);
+
+            $('#defaultSlotCancelBtn').on('click', function () {
+                currentSlot = null;
+                $('#defaultSlotModal').modal('hide');
+            });
+
+            $('#defaultSlotCloseBtn').on('click', function () {
+                currentSlot = null;
+                $('#defaultSlotModal').modal('hide');
+            });
+
+            $('#modalDeleteBtn').on('click', deleteCurrentSlot);
+        });
+    </script>
+}

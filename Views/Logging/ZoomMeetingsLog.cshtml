@@ -1,0 +1,55 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.ZoomMeetingLog>
+@using Markdig
+
+@{
+    ViewData["Title"] = "Mail List";
+}
+
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+        
+        <div class="col-md-10">
+            <h2>Meetings</h2>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            ScheduleId
+                        </th>
+                        <th>
+                            Email
+                        </th>
+                        <th>
+                            Start Time
+                        </th>
+                        <th>
+                            Planned Duration
+                        </th>
+                        <th>
+                            End Time
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@Html.DisplayFor(modelItem => item.ScheduleId)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Email)</td>
+                            <td>@Html.DisplayFor(modelItem => item.StartTime)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Duration)</td>
+                            <td>@Html.DisplayFor(modelItem => item.EndTime)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+}

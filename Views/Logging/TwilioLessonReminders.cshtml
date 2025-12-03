@@ -1,0 +1,51 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.TwilioLessonRemindersLog>
+@using Markdig
+
+@{
+    ViewData["Title"] = "Mail List";
+}
+
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+        
+        <div class="col-md-10">
+            <h2>Reminders</h2>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            To
+                        </th>
+                        <th>
+                            Body
+                        </th>
+                        <th>
+                            Time Sent
+                        </th>
+                        <th>
+                            ScheduleId
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@Html.DisplayFor(modelItem => item.Number)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Body)</td>
+                            <td>@Html.DisplayFor(modelItem => item.DateTime)</td>
+                            <td>@Html.DisplayFor(modelItem => item.ScheduleId)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+}

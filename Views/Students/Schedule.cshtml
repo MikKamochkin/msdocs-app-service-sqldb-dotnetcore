@@ -115,43 +115,113 @@
         }
 
         /* ---------- MOBILE NAV ---------- */
-        @@media(max-width:768px) {
-            nav {
-                position: relative;
-                left: 0;
-                top: 0;
-                transform: none;
-                margin-top: 10px;
+        @@media (max-width: 768px) {
+
+            /* Header: keep full text visible and aligned nicely */
+            header {
+                height: 56px;
             }
 
-            .nav-links {
-                display: none;
+            .header-container {
                 width: 100%;
-                text-align: center;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 0 12px;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                position: relative;
+                /* still needed for nav dropdown positioning */
+            }
+
+            /* Override desktop absolute positioning on small screens */
+            #logo {
+                position: static;
+                left: auto;
+                top: auto;
+                transform: none;
+                font-size: 1rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 65%;
+                /* prevents overlap with burger */
+                color: #fff;
+            }
+
+            nav {
+                position: static;
+                left: auto;
+                top: auto;
+                transform: none;
+                margin-top: 0;
+            }
+
+            /* Burger visible only on mobile */
+            .burger {
+                display: block;
+                margin-top: 0;
+                margin-left: 10px; /* small gap from the icons, like Index */
+            }
+
+            /* Dropdown nav menu */
+            .nav-links {
                 position: absolute;
-                background: #333;
-                top: 60px;
+                top: 56px;
+                /* just under header */
                 left: 0;
-                z-index: 1;
+                right: 0;
+                display: none;
+                flex-direction: column;
+                background: #3c4c97;
+                /* mobile nav background */
+                padding: 8px 0;
+                z-index: 1001;
             }
 
             .nav-links.active {
-                display: block;
+                display: flex;
             }
 
             .nav-links li {
                 display: block;
-                margin: 10px 0;
+                width: 100%;
+                margin: 0;
             }
 
-            .burger {
-                display: block;
-                float: right;
-                margin-top: 15px;
+            .nav-links li a {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                width: 100%;
+                padding: 10px 16px;
+                color: #fff;
+                text-decoration: none;
+                border-radius: 0;
+                background: transparent;
             }
 
+            /* Icons inherit color so they stay visible on blue bg */
+            .nav-links li a i {
+                color: inherit;
+                font-size: 1.1rem;
+            }
+
+            /* Active item: subtle highlight instead of white box */
+            .nav-links li a.active-page {
+                background: rgba(255, 255, 255, 0.16);
+                border-left: 3px solid #ffe082;
+            }
+
+            /* Optional: slightly dim inactive links */
+            .nav-links li a:not(.active-page) {
+                opacity: 0.9;
+            }
+
+            /* Burger animation */
             .burger.active .line1 {
-                transform: rotate(45deg) translate(-5px, 6px);
+                transform: translateY(8px) rotate(45deg);
             }
 
             .burger.active .line2 {
@@ -159,9 +229,10 @@
             }
 
             .burger.active .line3 {
-                transform: rotate(-45deg) translate(-5px, -6px);
+                transform: translateY(-8px) rotate(-45deg);
             }
         }
+
 
         /* ---------- MAIN WRAPPER ---------- */
         .content-wrapper {
@@ -190,6 +261,17 @@
         .controls label {
             margin: 0;
             font-weight: bold;
+        }
+
+        /* display-only timezone label */
+        .timezone-display {
+            font-weight: 600;
+            margin-left: 0.35rem;
+        }
+
+        /* hide the underlying select from the UI, keep for JS */
+        .hidden-tz-select {
+            display: none;
         }
 
         .controls select {
@@ -247,27 +329,61 @@
         }
 
         /* ---------- MOBILE TABLE ---------- */
-        @@media(max-width:600px) {
+        @@media (max-width: 600px) {
+            #entriesTable {
+                border: 0;
+            }
+
+            #entriesTable colgroup {
+                display: none;
+            }
+
             #entriesTable thead {
                 display: none;
             }
 
-            #entriesTable tbody td {
+            #entriesTable tbody tr {
                 display: block;
+                margin-bottom: .75rem;
+                background: #fafbff;
+                border-radius: 8px;
+                border: 1px solid #e5e5e5;
+                overflow: hidden;
+            }
+
+            #entriesTable tbody td {
+                display: flex;
                 width: 100%;
-                text-align: right;
-                padding-left: 50%;
+                text-align: left;
+                padding: .5rem .75rem;
                 position: relative;
+                border-bottom: 1px solid #eee;
+            }
+
+            #entriesTable tbody td:last-child {
+                border-bottom: none;
             }
 
             #entriesTable tbody td::before {
                 content: attr(data-label);
-                position: absolute;
-                left: 1rem;
-                width: calc(50% - 1rem);
-                text-align: left;
                 font-weight: 600;
-                color: #666;
+                color: #555;
+                margin-right: .5rem;
+                flex: 0 0 40%;
+                max-width: 40%;
+            }
+
+            /* actions column: stack buttons full-width */
+            #entriesTable td[data-label="Actions"] {
+                flex-direction: column;
+                gap: .35rem;
+            }
+
+            #entriesTable td[data-label="Actions"] a {
+                width: 100%;
+                text-align: center;
+                font-size: .85rem;
+                padding: .4rem .5rem;
             }
         }
     </style>
@@ -297,8 +413,9 @@
             </ul>
 
             <div class="burger">
-                <div class="line1"></div>
-                <div class="line3"></div>
+                <div class="line line1"></div>
+                <div class="line line2"></div>
+                <div class="line line3"></div>
             </div>
         </nav>
     </div>
@@ -308,7 +425,7 @@
 <div class="content-wrapper">
     <div class="schedule-card">
         <!-- CONTROLS -->
-        <div class="controls">
+        @*<div class="controls">
             <label for="timeZoneSelect">Time Zone:</label>
             <select id="timeZoneSelect" name="timeZoneOffset">
                 @foreach (var tz in timeZones)
@@ -323,6 +440,32 @@
                     }
                 }
             </select>
+        </div>*@
+        @{
+            // Pick the selected time zone, or fall back to the first one
+            var selectedTz = timeZones?.FirstOrDefault(t => t.Selected)
+                            ?? timeZones?.FirstOrDefault();
+        }
+
+        <div class="controls">
+            <label>Time Zone:</label>
+
+            <!-- Display-only text -->
+            <span class="timezone-display">
+                @(selectedTz?.Text ?? "Not set")
+            </span>
+
+            <!-- Hidden value for JS to use -->
+            <input type="hidden"
+                id="timeZoneSelect"
+                name="timeZoneOffset"
+                value="@(selectedTz?.Value ?? "")" />
+        </div>
+        <div class="controls" style="font-size: small">
+            <div>To change time zone, click here: </div>
+            <a asp-controller="Students" asp-action="Index" title="Account">
+                <i class="fas fa-user-graduate"></i>
+            </a>
         </div>
 
         <!-- TABLE -->
@@ -359,6 +502,20 @@
     <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
 
     <script>
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const burger = document.querySelector('.burger');
+            const navLinks = document.querySelector('.nav-links');
+
+            if (burger && navLinks) {
+                burger.addEventListener('click', function () {
+                    burger.classList.toggle('active');
+                    navLinks.classList.toggle('active');
+                });
+            }
+        });
+
+
         (async () => {
 
             const studentId = '@ViewBag.StudentId';
@@ -371,7 +528,7 @@
             await connection.start();
             await connection.invoke("JoinStudentGroup", studentId);
             connection.on("ScheduleChanged", () => {
-                refreshRows();                 
+                refreshRows();
             });
         })();
 
@@ -492,17 +649,17 @@
                     //}
 
                     tbody.append(`
-                            <tr class="${r.HighlightRow ? 'highlight-row' : ''}">
-                            <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
-                            <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
-                            <td data-label="Teacher">${r.TeacherName}</td>
-                            <td data-label="Status">${r.Status}</td>
-                            <td data-label="Duration">${r.Duration}&nbsp;min</td>
-                            <td data-label="Actions">${actionHtml}</td>
-                            </tr>
-                        `);    
+                                <tr class="${r.HighlightRow ? 'highlight-row' : ''}">
+                                <td data-label="Date">${startLocal.toFormat('yyyy-LL-dd')}</td>
+                                <td data-label="Time">${startLocal.toFormat('hh:mm a')}</td>
+                                <td data-label="Teacher">${r.TeacherName}</td>
+                                <td data-label="Status">${r.Status}</td>
+                                <td data-label="Duration">${r.Duration}&nbsp;min</td>
+                                <td data-label="Actions">${actionHtml}</td>
+                                </tr>
+                            `);
                     appendedCount++;
-                    
+
                 });
 
                 const domRowCount = $('#entriesTable tbody tr').length;
@@ -512,21 +669,21 @@
             function buildBtn(state, id) {
                 const disabled = state === 'disabled';
                 const detailsBtn = `
-                            <a
-                                href="${detailsBase}?scheduleId=${id}"
-                                class="btn btn-info btn-md ml-3"
-                                title="Lesson details">
-                                <i class="fa-solid fa-circle-info text-light"></i>
-                                </a>`;
+                                <a
+                                    href="${detailsBase}?scheduleId=${id}"
+                                    class="btn btn-info btn-md ml-3"
+                                    title="Lesson details">
+                                    <i class="fa-solid fa-circle-info text-light"></i>
+                                    </a>`;
 
                 const waitBtn = `
-                            <a href="${waitRoomBase}?scheduleId=${id}"
-                                class="btn btn-primary btn-md ml-2${disabled ? " disabled-btn" : ""}"
-                                        ${disabled ? `aria-disabled="true" tabindex="-1"` : ""}"
-                                target="_blank"
-                                rel="noopener noreferrer">
-                                Join Lesson
-                            </a>`;
+                                <a href="${waitRoomBase}?scheduleId=${id}"
+                                    class="btn btn-primary btn-md ml-2${disabled ? " disabled-btn" : ""}"
+                                            ${disabled ? `aria-disabled="true" tabindex="-1"` : ""}"
+                                    target="_blank"
+                                    rel="noopener noreferrer">
+                                    Join Lesson
+                                </a>`;
                 return waitBtn + detailsBtn;
             }
 

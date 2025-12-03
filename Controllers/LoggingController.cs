@@ -16,16 +16,18 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly MyDatabaseContext _context;
         private readonly ILogger<LoggingController> _logger;
         private readonly IEmailSender _mailer;
-
+        private readonly ITwilioService _twilioSvc;
 
         public LoggingController(
             MyDatabaseContext context,
             ILogger<LoggingController> logger,
-            IEmailSender mailer)
+            IEmailSender mailer,
+            ITwilioService twilioSvc)
         {
             _context = context;
             _logger = logger;
             _mailer = mailer;
+            _twilioSvc = twilioSvc;
         }
 
         public async Task<IActionResult> Index()
@@ -53,5 +55,28 @@ namespace DotNetCoreSqlDb.Controllers
 
             return View(signIns);
         }
+
+        public async Task<IActionResult> TwilioLessonReminders()
+        {
+            var dayAgo = DateTime.UtcNow.AddHours(-24);
+            var reminders = await _context.TwilioLessonRemindersLog
+                .OrderByDescending(d => d.DateTime)
+                .Where(d => d.DateTime >= dayAgo)
+                .ToListAsync();
+
+            return View(reminders);
+        }
+
+        public async Task<IActionResult> ZoomMeetingsLog()
+        {
+            var dayAgo = DateTime.UtcNow.AddHours(-24);
+            var meetings = await _context.ZoomMeetingLog
+                .OrderByDescending(d => d.DateTime)
+                .Where(d => d.DateTime >= dayAgo)
+                .ToListAsync();
+
+            return View(meetings);
+        }
+
     }
 }

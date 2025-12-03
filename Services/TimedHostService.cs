@@ -6,11 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using DotNetCoreSqlDb.Services;
 
-/// <summary>
-/// Runs every 5-minute block **one minute before** the block boundary,
-/// i.e. hh:04, hh:09, … hh:54, hh:59.
-/// Shuts down cleanly when the host stops.
-/// </summary>
 public sealed class TimedHostedService : BackgroundService
 {
     private readonly ILogger<TimedHostedService> _logger;
@@ -24,14 +19,8 @@ public sealed class TimedHostedService : BackgroundService
         _scopeFactory = scopeFactory;
     }
 
-    // ------------------------------------------------------------------
-    // Entry point: kick off the scheduler and immediately return control
-    // to the host; the returned Task completes only when the host stops.
-    // ------------------------------------------------------------------
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("TimedHostedService started");
-
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -40,16 +29,10 @@ public sealed class TimedHostedService : BackgroundService
                 TimeSpan delay = GetDelayUntilNextRun(DateTime.Now);
                 if (delay < TimeSpan.Zero)
                 {
-                    //_logger.LogWarning("Calculated negative delay {Delay}, clamping to zero", delay);
                     delay = TimeSpan.Zero;
                 }
-                //_logger.LogInformation("Waiting {Delay} until next run. Fired at {now} v1", delay, DateTime.Now);
                 await Task.Delay(delay, stoppingToken);
-                //_logger.LogInformation("Waiting {Delay} until next run. Fired at {now} v2", delay, DateTime.Now);
 
-                //await Task.Delay(delay, stoppingToken);
-
-                // 2. Run the Zoom work.
                 await DoWorkAsync(stoppingToken);
             }
         }
@@ -75,8 +58,10 @@ public sealed class TimedHostedService : BackgroundService
             // Create a DI scope so scoped services (e.g. DbContext) work.
             using var scope = _scopeFactory.CreateScope();
             var zoomSvc = scope.ServiceProvider.GetRequiredService<IZoomMeetingService>();
+            var twilioSvc = scope.ServiceProvider.GetRequiredService<ITwilioService>();
             await zoomSvc.CleanupMeetingsAsync();
             await zoomSvc.MarkLessonAsSufficient();
+            await twilioSvc.RemindStudents();
             
         }
         catch (Exception ex)

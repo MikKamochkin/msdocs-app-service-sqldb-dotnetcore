@@ -136,8 +136,7 @@ namespace DotNetCoreSqlDb.Helpers
             await _context.SaveChangesAsync();
         }
 
-        public async Task LogZoomMeetingAsync(
-            Guid assignmentId,
+        public async Task LogZoomMeetingStartAsync(
             Guid scheduleId,
             Guid zoomMeetingId)
         {
@@ -146,7 +145,6 @@ namespace DotNetCoreSqlDb.Helpers
             {
                 var log = new ZoomMeetingLog
                 {
-                    AssignmentId = assignmentId,
                     DateTime = DateTime.Now,
                     ScheduleId = scheduleId,
                     ZoomMeetingId = zoomMeetingId,
@@ -158,19 +156,41 @@ namespace DotNetCoreSqlDb.Helpers
                 };
                 _context.ZoomMeetingLog.Add(log);
                 await _context.SaveChangesAsync();
-            }
-            else
+            }  
+        }
+
+        public async Task LogZoomMeetingEndAsync(Guid scheduleId)
+        {
+            var zoomMeeting = await _context.ZoomMeetings
+                .Where(zm => zm.ScheduleId == scheduleId)
+                .FirstOrDefaultAsync();
+                
+            var existingLog = await _context.ZoomMeetingLog
+                .FirstOrDefaultAsync(z => z.ScheduleId == scheduleId);
+
+            if (existingLog != null)
             {
-                var log = new ZoomMeetingLog
-                {
-                    AssignmentId = assignmentId,
-                    DateTime = DateTime.Now,
-                    ScheduleId = scheduleId
-                };
-                _context.ZoomMeetingLog.Add(log);
-                await _context.SaveChangesAsync();
+                existingLog.EndTime = DateTime.UtcNow;
             }
-            
+
+            await _context.SaveChangesAsync();
+        }
+
+
+        public async Task LogTwilioLessonReminderAsync(
+            string body,
+            string number,
+            Guid scheduleId)
+        {
+            var log = new TwilioLessonRemindersLog
+            {
+                Body = body,
+                Number = number,
+                DateTime = DateTime.UtcNow,
+                ScheduleId = scheduleId
+            };
+            _context.TwilioLessonRemindersLog.Add(log);
+            await _context.SaveChangesAsync();
         }
     }
 }
