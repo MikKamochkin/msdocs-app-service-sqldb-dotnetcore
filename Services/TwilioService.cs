@@ -56,23 +56,19 @@ namespace DotNetCoreSqlDb.Services
 
         public async Task RemindStudents()
         {
+            _logger.LogInformation("In RemindStudents");
             var now = DateTime.UtcNow;
-            var inFiftyNineMins = now.AddMinutes(59);
-            var inSixtyThreeMins = now.AddMinutes(63);
+            var oneHourFromNow = now.AddHours(1);
             
-            //lessons that are in an hour
-            /*
-            lesson is at 2pm est
-            it is 12:59
-            12:59 + 59 = 1:58
-            12:59 + 63 = 2:02
-            */
+            _logger.LogInformation("Checking for lessons that are after " + oneHourFromNow.AddMinutes(-2) + " and before " + oneHourFromNow.AddMinutes(3));
             var upcomingLessons = await _context.Schedule
-                .Where(s => s.DateTime > now && s.DateTime < inSixtyThreeMins && s.DateTime > inFiftyNineMins)
+                .Where(s => s.DateTime >= oneHourFromNow.AddMinutes(-2)
+                        && s.DateTime <= oneHourFromNow.AddMinutes(3))
                 .ToListAsync();
 
             foreach(var lesson in upcomingLessons)
             {
+                _logger.LogInformation("calling TextNumberForLessonReminder for lesson: " + lesson.Id);
                 await TextNumberForLessonReminder(lesson.Id); 
             }
         }
@@ -114,7 +110,7 @@ namespace DotNetCoreSqlDb.Services
             var teacherName = schedule.Assignment?.Teacher?.Name ?? "your teacher";
             
             foreach (var studentContact in studentContacts)
-            {
+            {   _logger.LogInformation("studentcontact id: " + studentContact.StudentId);
                 if (studentContact.PhoneNumber != null)
                 {
                     var normal = NormalizePhone(studentContact.PhoneNumber);
@@ -125,12 +121,13 @@ namespace DotNetCoreSqlDb.Services
                     }
 
                     var finalPhone = normal;
-
+                    _logger.LogInformation("Final phone: " + finalPhone);
                     //temp regex to only send to canadian numbers:
                     bool isCanadianNumber = Regex.IsMatch(finalPhone, @"^\+1");
-
+                    _logger.LogInformation("is canadian number? " + isCanadianNumber + " for number: " + finalPhone);
                     if (isCanadianNumber)
                     {
+                        _logger.LogInformation("Calling twillio api with number: " + finalPhone);
                         string lessonReminderBody = $"Hello {studentContact.StudentName}!\nThis is a reminder that you have a lesson scheduled at {lessonTimeEst} with {teacherName}";
                         await TextNumberWithTwilio(lessonReminderBody, finalPhone);
                         await _logHelper.LogTwilioLessonReminderAsync(lessonReminderBody, finalPhone, scheduleId);

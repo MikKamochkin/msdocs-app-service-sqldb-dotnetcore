@@ -66,7 +66,7 @@ public sealed class TimedHostedService : BackgroundService
         }
         catch (Exception ex)
         {
-            //_logger.LogError(ex, "Error running ZoomMeetingService in background");
+            _logger.LogError(ex, "Error running ZoomMeetingService in background");
         }
         /*try
         {
