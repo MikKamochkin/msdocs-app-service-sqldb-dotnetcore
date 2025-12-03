@@ -322,7 +322,7 @@ namespace DotNetCoreSqlDb.Controllers
                 //TODO: Add error handling here
                 return NotFound();
 
-            await _logHelper.LogZoomMeetingStartAsync(id, lesson.Id);
+            //await _logHelper.LogZoomMeetingStartAsync(id, lesson.Id);
 
             await _hub.Clients
                 .Group($"teacher_{teacherId}")
@@ -335,7 +335,7 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> EndLesson(Guid id)
         {
             await _zoomSvc.EndMeetingsAsync(id);
-            await _logHelper.LogZoomMeetingEndAsync(id);
+            //await _logHelper.LogZoomMeetingEndAsync(id);
 
             var schedule = await _context.Schedule
                 .Include(s => s.Assignment)
