@@ -60,7 +60,17 @@ public sealed class TimedHostedService : BackgroundService
             var zoomSvc = scope.ServiceProvider.GetRequiredService<IZoomMeetingService>();
             var twilioSvc = scope.ServiceProvider.GetRequiredService<ITwilioService>();
             await zoomSvc.CleanupMeetingsAsync();
-            await zoomSvc.MarkLessonAsSufficient();
+            
+            //TODO: UNCOMMENT WHEN MARKLESSONASSUFFICIENT IS FIXED.
+            /*
+            2025-12-03T04:14:00.1460569Z fail: TimedHostedService[0]
+            2025-12-03T04:14:00.1461229Z       Error running ZoomMeetingService in background
+            2025-12-03T04:14:00.1461348Z       System.NullReferenceException: Object reference not set to an instance of an object.
+            2025-12-03T04:14:00.1476305Z          at DotNetCoreSqlDb.Services.ZoomMeetingService.MarkLessonAsSufficient() in /home/runner/work/msdocs-app-service-sqldb-dotnetcore/msdocs-app-service-sqldb-dotnetcore/Services/ZoomMeetingService.cs:line 308
+            2025-12-03T04:14:00.1481515Z          at TimedHostedService.DoWorkAsync(CancellationToken ct) in /home/runner/work/msdocs-app-service-sqldb-dotnetcore/msdocs-app-service-sqldb-dotnetcore/Services/TimedHostService.cs:line 63
+            2025-12-03T04:15:06  No new trace in the past 1 min(s).
+            */
+            //await zoomSvc.MarkLessonAsSufficient();
             await twilioSvc.RemindStudents();
             
         }
