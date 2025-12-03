@@ -132,14 +132,14 @@ namespace DotNetCoreSqlDb.Services
                     if (isCanadianNumber)
                     {
                         string lessonReminderBody = $"Hello {studentContact.StudentName}!\nThis is a reminder that you have a lesson scheduled at {lessonTimeEst} with {teacherName}";
-                        await textNumberWithTwilio(lessonReminderBody, finalPhone);
+                        await TextNumberWithTwilio(lessonReminderBody, finalPhone);
                         await _logHelper.LogTwilioLessonReminderAsync(lessonReminderBody, finalPhone, scheduleId);
                     }
                 }
             }
         }
 
-        public async Task textNumberWithTwilio(string textBody, string number)
+        public async Task TextNumberWithTwilio(string textBody, string number)
         {
             try
             {

@@ -47,58 +47,80 @@ namespace DotNetCoreSqlDb.Services
 
         public async Task<ZoomParticipantViewModel> ListLiveMeetingParticipantsAsync(string meetingId)
         {
-            //_log.LogInformation("Remaining: ");
             await _throttle.WaitAsync();
             try
             {
                 using var client = await BuildClientAsync();
 
-                // /Metrics endpoint is for historical analysis, without it, it SHOULD show current participants in a meeting
+                var allParticipants = new List<ZoomParticipant>();
+                int remaining = 0;
+                string? nextPageToken = null;
 
-                /*var resp = await client.GetAsync(
-                    $"https://api.zoom.us/v2/metrics/meetings/{meetingId}/participants?type=live");*/
-
-                var resp = await client.GetAsync(
-                    $"https://api.zoom.us/v2/meetings/{meetingId}/participants?type=live");
-
-                int.TryParse(resp.Headers.TryGetValues("X-RateLimit-Remaining", out var vals)
-                                ? vals.FirstOrDefault()
-                                : null,
-                            out int remaining);
-
-                if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
-                    return new ZoomParticipantViewModel { RateLimitRemaining = remaining };
-                
-                resp.EnsureSuccessStatusCode();
-
-                var json = await resp.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-
-                //_log.LogInformation(json);
-
-                var list = new List<ZoomParticipant>();
-                if (doc.RootElement.TryGetProperty("participants", out var arr))
+                do
                 {
-                    foreach (var p in arr.EnumerateArray())
+                    var urlBuilder = new StringBuilder(
+                        $"https://api.zoom.us/v2/metrics/meetings/{meetingId}/participants?type=live&page_size=300");
+
+                    if (!string.IsNullOrEmpty(nextPageToken))
                     {
-                        /*var hasLeave = p.TryGetProperty("leave_time", out var lt) && lt.ValueKind != JsonValueKind.Null && !string.IsNullOrEmpty(lt.GetString());
-                        if (hasLeave) continue;*/
-
-                        var ipAddress = p.GetProperty("ip_address").GetString() ?? string.Empty;
-
-                        //_log.LogInformation("Ip address: " + ipAddress);
-                            
-                        list.Add(new ZoomParticipant
-                        {
-                            UserName = p.GetProperty("user_name").GetString() ?? string.Empty,
-                            JoinTime = p.GetProperty("join_time").GetString() ?? string.Empty
-                        });
+                        urlBuilder.Append("&next_page_token=")
+                                  .Append(Uri.EscapeDataString(nextPageToken));
                     }
-                }
+
+                    var resp = await client.GetAsync(urlBuilder.ToString());
+
+                    // Rate-limit header
+                    int.TryParse(
+                        resp.Headers.TryGetValues("X-RateLimit-Remaining", out var vals)
+                            ? vals.FirstOrDefault()
+                            : null,
+                        out remaining);
+
+                    // Meeting not found or not live
+                    if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        return new ZoomParticipantViewModel
+                        {
+                            Participants = new List<ZoomParticipant>(),
+                            RateLimitRemaining = remaining
+                        };
+                    }
+
+                    resp.EnsureSuccessStatusCode();
+
+                    var json = await resp.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("participants", out var arr))
+                    {
+                        foreach (var p in arr.EnumerateArray())
+                        {
+                            // If leave_time is present AND non-null/non-empty, the user has left – skip them
+                            if (p.TryGetProperty("leave_time", out var lt) &&
+                                lt.ValueKind != JsonValueKind.Null &&
+                                !string.IsNullOrEmpty(lt.GetString()))
+                            {
+                                continue;
+                            }
+
+                            allParticipants.Add(new ZoomParticipant
+                            {
+                                UserName = p.GetProperty("user_name").GetString() ?? string.Empty,
+                                JoinTime = p.GetProperty("join_time").GetString() ?? string.Empty
+                            });
+                        }
+                    }
+
+                    nextPageToken = root.TryGetProperty("next_page_token", out var tokenEl)
+                        ? tokenEl.GetString()
+                        : null;
+
+                } while (!string.IsNullOrEmpty(nextPageToken));
 
                 return new ZoomParticipantViewModel
                 {
-                    Participants = list,
+                    Participants = allParticipants,
                     RateLimitRemaining = remaining
                 };
             }
@@ -107,6 +129,7 @@ namespace DotNetCoreSqlDb.Services
                 _throttle.Release();
             }
         }
+
 
         //Calls Zoom api to create a meeting for the host by Id
         //Return a ZoomCreateMeetingResult object with info about the meeting to be stored in ZoomMeetings table
@@ -197,7 +220,7 @@ namespace DotNetCoreSqlDb.Services
 
                 using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
                 Console.WriteLine($" GETLIVEMEETINGUUID ({resp.StatusCode}) – {await resp.Content.ReadAsStringAsync()}");
-            
+
                 var list = new List<string>();
                 if (doc.RootElement.TryGetProperty("meetings", out var meetings))
                 {

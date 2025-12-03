@@ -353,7 +353,7 @@
 			const rows = raw
 				.map(r => ({ ...r, DateTime: r.DateTime.endsWith('Z') ? r.DateTime : r.DateTime + 'Z' }))
 				//.sort((a, b) => DateTime.fromISO(a.DateTime) - DateTime.fromISO(b.DateTime)); // newest → oldest
-			rows.sort(sortByDateDesc);
+			rows.sort(sortByDateAsc);
 
 			function sortByDateAsc(a, b) {
 				return DateTime.fromISO(a.DateTime).toMillis() - DateTime.fromISO(b.DateTime).toMillis();
