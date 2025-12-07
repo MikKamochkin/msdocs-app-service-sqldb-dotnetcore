@@ -143,6 +143,7 @@ namespace DotNetCoreSqlDb.Controllers
                 .ToListAsync();
 
             ViewBag.StudentName = student.Name;
+            ViewBag.StudentId = id;
 
             var transactions = await _context.StudentBalanceTransactionLog
                 .Where(s => s.ScheduleId == null && s.StudentId == id)

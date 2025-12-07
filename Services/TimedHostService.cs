@@ -71,7 +71,7 @@ public sealed class TimedHostedService : BackgroundService
             2025-12-03T04:15:06  No new trace in the past 1 min(s).
             */
             //await zoomSvc.MarkLessonAsSufficient();
-            await twilioSvc.RemindStudents();
+            //await twilioSvc.RemindStudents();
             
         }
         catch (Exception ex)

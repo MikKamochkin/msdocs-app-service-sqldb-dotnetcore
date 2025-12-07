@@ -534,3 +534,11 @@ span.ms-2.small {
         padding-left: 15px; /* Reset padding on mobile */
     }
 }
+
+.notes-cell {
+    max-width: 260px;      /* tweak as you like */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: red;
+}

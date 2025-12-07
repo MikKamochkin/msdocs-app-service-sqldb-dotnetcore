@@ -155,26 +155,35 @@ namespace DotNetCoreSqlDb.Controllers
                 existing = await _context.Schedule
                     .Include(s => s.Assignment!)
                         .ThenInclude(a => a.Group!)
+                            .ThenInclude(g => g.StudentGroupCompositions)
+                                .ThenInclude(sgc => sgc.Student)
                     .Where(s =>
                         s.Assignment!.TeacherId == teacherId &&
                         s.DateTime >= startUtc &&
-                        s.DateTime < endUtc
+                        s.DateTime < endUtc &&
+                        s.Status != "Deleted"
                     )
                     .OrderBy(s => s.DateTime)
                     .ToListAsync();
             }
 
-            // Flatten into JSON payload with UTC ISO strings
-            var flat = existing.Select(r => new
+            var flat = existing.Select(r => new ScheduleRowDto
             {
-                r.Id,
-                r.AssignmentId,
+                Id = r.Id,
+                AssignmentId = r.AssignmentId,
                 DateTime = r.DateTime.ToUniversalTime().ToString("o"),
-                r.Status,
-                r.Duration,
-                r.Accounted,
-                r.LessonAccountingType,
-                GroupName = r.Assignment!.Group!.Name
+                Status = r.Status,
+                Duration = r.Duration,
+                Accounted = r.Accounted,
+                LessonAccountingType = r.LessonAccountingType,
+                GroupName = r.Assignment?.Group?.Name ?? string.Empty,
+
+                // Sum of all notes of all students in the group for THIS schedule row
+                MainNotes = string.Join(" ",
+                    r.Assignment?.Group?.StudentGroupCompositions?
+                        .Select(sgc => sgc.Student?.MainNotes)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                    ?? Enumerable.Empty<string>())
             }).ToList();
 
             ViewBag.ExistingJson = JsonSerializer.Serialize(flat, new JsonSerializerOptions
@@ -184,6 +193,20 @@ namespace DotNetCoreSqlDb.Controllers
 
             return View(existing);
         }
+
+        public sealed class ScheduleRowDto
+        {
+            public Guid Id { get; set; }
+            public Guid AssignmentId { get; set; }
+            public string DateTime { get; set; } = "";
+            public string Status { get; set; } = "";
+            public int Duration { get; set; }
+            public string LessonAccountingType { get; set; } = "";
+            public string MainNotes { get; set;} = "";
+            public bool Accounted { get; set; }
+            public string GroupName { get; set; } = "";
+        }
+
 
         // POST: Schedule/Manage
         [HttpPost, ValidateAntiForgeryToken]
@@ -199,9 +222,24 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 foreach (var id in toDelete)
                 {
+                    bool existsInZoomMeetingLog = await _context.ZoomMeetingLog.AnyAsync(z => z.ScheduleId == id);
                     var s = await _context.Schedule.FindAsync(id);
-                    if (s != null)
+                    if (s == null)
+                    {
+                        continue;
+                    }
+                    if (s.Status == "Ongoing")
+                    {
+                        continue;
+                    }
+                    if (!existsInZoomMeetingLog)
+                    {
                         _context.Schedule.Remove(s);
+                    }
+                    else
+                    {
+                        s.Status = "Deleted";
+                    }
                 }
             }
 
@@ -636,6 +674,11 @@ namespace DotNetCoreSqlDb.Controllers
                 var studentIds = entity.Assignment?.Group?.StudentGroupCompositions?
                     .Select(sgc => sgc.StudentId)
                     .ToList() ?? new List<Guid>();
+
+                if (entity.Status == "Ongoing")
+                {
+                    return BadRequest("Cannot delete an ongoing class.");
+                }
 
                 _context.Schedule.Remove(entity);
                 await _context.SaveChangesAsync();

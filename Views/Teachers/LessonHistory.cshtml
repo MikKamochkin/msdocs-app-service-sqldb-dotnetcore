@@ -1,10 +1,15 @@
 @model List<DotNetCoreSqlDb.Models.Schedule>
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
 	ViewData["Title"] = "This Week's Lessons";
 	var existingJson = ViewBag.ExistingJson as string ?? "[]";
 	var timeZones = ViewBag.TimeZones as List<SelectListItem>;
 	var impersonating = ViewBag.Impersonating;
+
+	int week = ViewBag.Week;
+	var monday = ViewBag.Monday;
+	var sunday = ViewBag.Sunday;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -242,6 +247,50 @@
 				color: #666;
 			}
 		}*/
+
+				/* ---------- PAGINATION (Prev / Next) ---------- */
+		.pagination {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: .75rem;
+			margin-top: 1.25rem;
+			list-style: none;
+			padding-left: 0;
+		}
+
+		.pagination .page-item {
+			display: inline-block;
+		}
+
+		.pagination .page-link {
+			display: inline-block;
+			padding: .5rem 1rem;
+			border-radius: 6px;
+			border: 1px solid #6981ec;   /* same blue as theme */
+			background: #fff;
+			color: #6981ec;
+			text-decoration: none;
+			font-size: .9rem;
+			cursor: pointer;
+			transition: all .25s;
+		}
+
+		.pagination .page-link:hover {
+			background: #6981ec;
+			color: #fff;
+		}
+
+		/* Disabled state – similar to a disabled "Copy last week" */
+		.pagination .page-item.disabled .page-link {
+			border-color: #6c757d;
+			color: #6c757d;
+			background: #fff;
+			cursor: not-allowed;
+			opacity: 0.7;
+			pointer-events: none;
+		}
+
 	</style>
 </head>
 <!-- NAV -->
@@ -308,6 +357,27 @@
 				}
 			</select>
 		</div>
+		<ul class="pagination">
+				@*<li class="page-item @(week <= 0 ? "disabled" : "")">*@
+				<li>
+					<a class="page-link" href="@Url.Action("LessonHistory", new { week = week - 1})">Prev</a>
+				</li>
+				@*(<li class="page-item disabled">
+					<span class="page-link">@(pageNumber) / @(totalPagesCount) (@total total)</span>
+				</li>*@
+				<li class="page-item @(week >= 0 ? "disabled" : "")">
+					<a class="page-link" href="@Url.Action("LessonHistory", new { week = week + 1 })">Next</a>
+				</li>
+			</ul>
+			<div style="font-weight:200; font-size:1.1rem; text-align:center;">
+				@{
+					var sameMonth = monday.Month == sunday.Month;
+					var text = sameMonth
+						? $"{monday:MMM d}–{sunday:d, yyyy}"      // Oct 6–13, 2025
+						: $"{monday:MMM d} – {sunday:MMM d, yyyy}"; // Sep 29 – Oct 6, 2025
+				}
+				Classes from @text
+			</div>
 
 		<!-- TABLE -->
 		<table id="entriesTable">
@@ -345,6 +415,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 	<script>
+		const week = @week;
 		(() => {
 			const { DateTime } = luxon;
 

@@ -111,6 +111,7 @@ namespace DotNetCoreSqlDb.Controllers
                     .ThenInclude(a => a.Group)      // then load its Group nav
                 .Where(s => s.Assignment!.TeacherId == teacherId)
                 .Where(s => s.DateTime > sixHoursAgo)
+                .Where(s => s.Status != "Deleted")
                 .OrderBy(s => s.DateTime)
                 .Take(15)
                 .ToListAsync();
@@ -322,7 +323,7 @@ namespace DotNetCoreSqlDb.Controllers
                 //TODO: Add error handling here
                 return NotFound();
 
-            //await _logHelper.LogZoomMeetingStartAsync(id, lesson.Id);
+            await _logHelper.LogZoomMeetingStartAsync(id, lesson.Id);
 
             await _hub.Clients
                 .Group($"teacher_{teacherId}")
@@ -335,7 +336,7 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> EndLesson(Guid id)
         {
             await _zoomSvc.EndMeetingsAsync(id);
-            //await _logHelper.LogZoomMeetingEndAsync(id);
+            await _logHelper.LogZoomMeetingEndAsync(id);
 
             var schedule = await _context.Schedule
                 .Include(s => s.Assignment)
@@ -375,6 +376,7 @@ namespace DotNetCoreSqlDb.Controllers
                     .ThenInclude(a => a.Group)      // then load its Group nav
                 .Where(s => s.Assignment!.TeacherId == teacherId)
                 .Where(s => s.DateTime > sixHoursAgo)
+                .Where(s => s.Status != "Deleted")
                 .OrderBy(s => s.DateTime)
                 .Take(15)
                 .ToListAsync();
@@ -536,23 +538,23 @@ namespace DotNetCoreSqlDb.Controllers
             var existing = await _context.Schedule
                 .Include(s => s.Assignment!).ThenInclude(a => a.Group!)
                 .Where(s => s.Assignment!.TeacherId == teacherId &&
-                            s.DateTime >= startUtc && s.DateTime < endUtc)
+                            s.DateTime >= startUtc && s.DateTime < endUtc && s.Status != "Deleted")
                 .OrderBy(s => s.DateTime)
                 .ToListAsync();
 
-            var flat = existing.Select(r => new
+            // Map your existing Schedule models to DTOs
+            var flat = existing.Select(r => new ScheduleEditDto
             {
-                r.Id,
-                r.AssignmentId,
-                DateTime = r.DateTime.ToUniversalTime().ToString("o"),
-                r.Duration,
+                Id = r.Id,
+                DateTime = r.DateTime.ToUniversalTime(),   // Keep as DateTime, formatting happens in JS if needed
+                Duration = r.Duration,
                 GroupName = r.Assignment!.Group!.Name,
-                IsExisting = true,  // important: disables edit/delete in the view
-                r.HasReachedMinimumDuration,
-                r.Status
-
+                IsExisting = true,                         // same as before
+                CanDelete = !r.HasReachedMinimumDuration ?? false,                         // explicit field in DTO
+                Status = r.Status
             }).ToList();
 
+            // Serialize for your JS
             ViewBag.ExistingJson = JsonSerializer.Serialize(flat, new JsonSerializerOptions
             {
                 ReferenceHandler = ReferenceHandler.IgnoreCycles
@@ -568,6 +570,17 @@ namespace DotNetCoreSqlDb.Controllers
             public Guid AssignmentId { get; set; }
             public DateTime DateTime { get; set; }
             public int Duration { get; set; }
+        }
+
+        public class ScheduleEditDto
+        {
+            public Guid Id { get; set; }
+            public DateTime DateTime { get; set; }
+            public int Duration { get; set; }
+            public string GroupName { get; set; } = "";
+            public bool IsExisting { get; set; }
+            public bool CanDelete { get; set; }
+            public string Status { get; set; } = "";
         }
 
         // Teachers can only create new rows; if Id is present, we reject it
@@ -667,6 +680,10 @@ namespace DotNetCoreSqlDb.Controllers
                 return BadRequest("This lesson cannot be deleted");
             }
 
+            if (entity.Status == "Ongoing")
+            {
+                return BadRequest("An ongoing lesson cannot be deleted");
+            }
 
             // Collect affected IDs before delete
             var affectedStudentIds = entity.Assignment?.Group?.StudentGroupCompositions?
@@ -674,7 +691,16 @@ namespace DotNetCoreSqlDb.Controllers
                 .Distinct()
                 .ToList() ?? new List<Guid>();
 
-            _context.Schedule.Remove(entity);
+            bool existsInZoomMeetingLog = await _context.ZoomMeetingLog.AnyAsync(z => z.ScheduleId == entity.Id);
+            if (!existsInZoomMeetingLog)
+            {
+                _context.Schedule.Remove(entity);
+            }
+            else
+            {
+                entity.Status = "Deleted";
+            }
+            
             await _context.SaveChangesAsync();
 
             // Notify students
@@ -738,21 +764,25 @@ namespace DotNetCoreSqlDb.Controllers
             };
         }
 
-        public async Task<IActionResult> LessonHistory()
+        public async Task<IActionResult> LessonHistory(int week = 0)
         {
+            _logger.LogInformation("week: " + week);
             var userId = User.FindFirst("UserID")?.Value;
             ViewBag.TeacherId = userId;
             if (!Guid.TryParse(userId, out var teacherId))
                 return NotFound();
 
             var utcNow = DateTime.UtcNow;
-            DateTime beginningOfWeek = utcNow.AddDays(-(int)(utcNow.DayOfWeek - DayOfWeek.Monday + 7) % 7);
+            DateTime beginningOfWeek = utcNow.Date.AddDays(-(int)(utcNow.DayOfWeek - DayOfWeek.Monday + 7) % 7);
+            DateTime mondayWithWeekOffset = beginningOfWeek.AddDays(week * 7);
+            DateTime sundayWithWeekOffset = mondayWithWeekOffset.AddDays(7);
+            _logger.LogInformation("monday: " + mondayWithWeekOffset);
 
             var scheduleEntries = await _context.Schedule
                 .Include(s => s.Assignment)          // load the Assignment nav
                     .ThenInclude(a => a.Group)      // then load its Group nav
                 .Where(s => s.Assignment!.TeacherId == teacherId)
-                .Where(s => s.DateTime > beginningOfWeek && s.DateTime < utcNow)
+                .Where(s => s.DateTime > mondayWithWeekOffset && s.DateTime < sundayWithWeekOffset)
                 .Where(s => s.Status == "Taken")
                 .OrderByDescending(s => s.DateTime)
                 .ToListAsync();
@@ -782,7 +812,9 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 ViewBag.Impersonating = true;
             }
-
+            ViewBag.Week = week;
+            ViewBag.Monday = mondayWithWeekOffset;
+            ViewBag.Sunday = sundayWithWeekOffset;
             return View(scheduleEntries);
         }
 

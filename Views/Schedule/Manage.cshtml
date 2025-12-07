@@ -106,12 +106,13 @@
         <table class="table table-bordered" id="entriesTable">
             <thead>
                 <tr>
-                    <th>Time</th>
-                    <th>Student</th>
-                    <th>Status</th>
-                    <th>Duration</th>
-                    <th>Accounting Type</th>
-                    <th class="text-center">🗑️</th>
+                    <th style="width: 5%;">Time</th>
+                    <th style="width: 20%;">Student</th>
+                    <th style="width: 5%;">Status</th>
+                    <th style="width: 5%;">Duration</th>
+                    <th style="width: 7%;">Accounting Type</th>
+                    <th style="width: 40%;">Notes</th>
+                    <th class="text-center" style="width: 5%;">🗑️</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -185,6 +186,21 @@
             input.form.submit();
         }
 
+        function truncateForDisplay(text, maxLen) {
+            if (!text) return '';
+            const clean = text.toString().replace(/\s+/g, ' ').trim();
+            if (clean.length <= maxLen) return clean;
+            return clean.substring(0, maxLen - 1) + '…';
+        }
+
+        function htmlEscape(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
         function renderTable() {
             const zone = $('#timeZoneSelect').val();
             rows.sort((a, b) =>
@@ -198,6 +214,9 @@
                 // highlight if this is the one we're editing
                 const isEditing = editingRow && editingRow.Id === r.Id;
                 const cls = isEditing ? 'table-info' : '';
+                const fullNotes = r.MainNotes || '';
+                const shortNotes = truncateForDisplay(fullNotes, 60);
+                const notesTitle = htmlEscape(fullNotes);
 
                 tbody.append(`
                 <tr class="${cls}" data-id="${r.Id}">
@@ -206,6 +225,9 @@
                     <td onclick="editRow(${i})">${r.Status}</td>
                     <td onclick="editRow(${i})">${r.Duration}</td>
                     <td onclick="editRow(${i})">${r.LessonAccountingType}</td>
+                    <td onclick="editRow(${i})" class="notes-cell" title="${notesTitle}">
+                        ${shortNotes}
+                    </td>
                     <td class="text-center">
                     <button class="btn btn-sm btn-danger" onclick="deleteRow(${i})">×</button>
                     </td>
