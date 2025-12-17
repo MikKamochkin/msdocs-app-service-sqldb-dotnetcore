@@ -1,10 +1,26 @@
 @using DotNetCoreSqlDb.Services
+@using System.Text.RegularExpressions
 @{
     ViewData["Title"] = "Zoom Meetings";
     var items = (ViewBag.ZoomRows as IEnumerable<dynamic>) ?? Enumerable.Empty<dynamic>();
     var isFree = true;
     var remaining = ViewBag.RateLimitRemaining;
 }
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@ViewData["Title"]</title>
+
+	<style>
+        .free-row{
+            background-color: rgb(215, 235, 214);
+        }
+        .busy-row{
+            background-color: rgb(240, 220, 198);
+        }
+    </style>
+</head>
 <div class="row no-gutters">
     @if (User.IsInRole("admin") || User.IsInRole("support")  || User.IsInRole("assistant"))
     {
@@ -15,17 +31,15 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Email</th>
+                    <th>Teacher</th>
+                    <th>Group Name</th>
                     <th>Participants</th>
                     <th>Join URL</th>
                     <th>MeetingId</th>
                     <th>MeetingPassword</th>
-                    <th>IsFree</th>
                     <th>StartTime</th>
                     <th>Duration</th>
-                    <th>ScheduleId</th>
-                    <th>Group Name</th>
-                    <th>Id</th>
+                    <th>Email</th>  
                 </tr>
             </thead>
             <tbody>
@@ -34,7 +48,8 @@
                     string rowClass = item.IsBusy ? "busy-row" : "free-row";
                     isFree = !item.IsBusy;
                     <tr class="@rowClass">
-                        <td>@item.Email</td>
+                        <td>@item.TeacherName</td>
+                        <td>@item.GroupName</td>
                         <td>
                             @if (((IReadOnlyList<ZoomParticipant>)item.Participants).Any())
                             {
@@ -56,12 +71,9 @@
                         <td>@item.JoinUrl</td>
                         <td>@item.MeetingId</td>
                         <td>@item.MeetingPassword</td>
-                        <td>@isFree</td>
                         <td>@item.StartTime</td>
                         <td>@item.Duration</td>
-                        <td>@item.ScheduleId</td>
-                        <td>@item.GroupName</td>
-                        <td>@item.Id</td>
+                        <td>@Regex.Match(item.Email, @"\d+").Value</td> 
                     </tr>
                 }
             </tbody>

@@ -45,7 +45,8 @@ namespace DotNetCoreSqlDb.Controllers
                     z.Duration,
                     z.ScheduleId,
                     z.UUid,
-                    GroupName = z.Schedule!.Assignment!.Group!.Name
+                    GroupName = z.Schedule!.Assignment!.Group!.Name,
+                    TeacherName = z.Schedule!.Assignment!.Teacher!.Name
                 })
                 .OrderBy(z => z.IsBusy)
                 .ToListAsync();
@@ -68,7 +69,8 @@ namespace DotNetCoreSqlDb.Controllers
                         r.ScheduleId,
                         r.GroupName,
                         r.UUid,
-                        Participants = new List<ZoomParticipant>()
+                        Participants = new List<ZoomParticipant>(),
+                        r.TeacherName
                     };
                 }
 
@@ -86,7 +88,8 @@ namespace DotNetCoreSqlDb.Controllers
                     r.ScheduleId,
                     r.GroupName,
                     UUid = (string?)r.UUid,
-                    Participants = vm.Participants
+                    Participants = vm.Participants,
+                    r.TeacherName
                 };
             }));
 

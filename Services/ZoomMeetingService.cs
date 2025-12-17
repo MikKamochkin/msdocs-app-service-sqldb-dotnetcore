@@ -8,7 +8,7 @@ using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
 using DotNetCoreSqlDb.Hubs;
 using Microsoft.AspNetCore.SignalR;
-
+using DotNetCoreSqlDb.Helpers;
 
 namespace DotNetCoreSqlDb.Services
 {
@@ -18,17 +18,20 @@ namespace DotNetCoreSqlDb.Services
         private readonly IZoomApiService _zoomApiService;
         private readonly ILogger<ZoomMeetingService> _logger;
         private readonly IHubContext<ZoomMeetingHub> _hub;
+        private readonly LogHelper _logHelper;
 
         public ZoomMeetingService(
             MyDatabaseContext context,
             IZoomApiService zoomApiService,
             ILogger<ZoomMeetingService> logger,
-            IHubContext<ZoomMeetingHub> hub)
+            IHubContext<ZoomMeetingHub> hub,
+            LogHelper logHelper)
         {
             _context = context;
             _zoomApiService = zoomApiService;
             _logger = logger;
             _hub = hub;
+            _logHelper = logHelper;
 
         }
 
@@ -43,6 +46,8 @@ namespace DotNetCoreSqlDb.Services
                 var schedule = await _context.Schedule
                     .FirstOrDefaultAsync(s => s.Id == scheduleId);
 
+                if (schedule == null) return;
+                
                 ZoomMeetings? freeSlot = null;
                 try
                 {
@@ -113,7 +118,7 @@ namespace DotNetCoreSqlDb.Services
                     _logger.LogError(
                         ex,
                         "Failed to assign or persist Zoom meeting for schedule {ScheduleId}",
-                        schedule.Id);
+                        schedule!.Id);
                 }
 
                 _logger.LogInformation("From meetingservice; found schedule entry with id: {id}", scheduleId);
@@ -136,7 +141,7 @@ namespace DotNetCoreSqlDb.Services
                 {
                     /*await _zoomApiService.EndMeetingAsync(
                             zoomRow.ZoomId);*/
-                    await _zoomApiService.EndZoomMeetingAsync(zoomRow.MeetingId);
+                    await _zoomApiService.EndZoomMeetingAsync(zoomRow.MeetingId!);
                 }
                 catch (Exception ex)
                 {
@@ -184,10 +189,10 @@ namespace DotNetCoreSqlDb.Services
             _logger.LogError("Could not find a ZoomMeeting row with scheduleId {scheduleID}", scheduleId);
         }
 
-        //Automatic meating cleanup that runs from timer and ends all meetings that ended >= 15 mins ago
+        //Automatic meating cleanup that runs from timer and ends all meetings that ended >= 90 mins ago
         public async Task CleanupMeetingsAsync()
         {
-            const int bufferAfterMeetingEnd = 70; // min
+            const int bufferAfterMeetingEnd = 90; // min
 
             var nowUtc = DateTime.UtcNow;
             var busySlots = await _context.ZoomMeetings
@@ -225,8 +230,9 @@ namespace DotNetCoreSqlDb.Services
                 {
                     /*await _zoomApiService.EndMeetingAsync(
                             slot.ZoomId);*/
-                    await _zoomApiService.EndZoomMeetingAsync(slot.MeetingId);
 
+                    await _zoomApiService.EndZoomMeetingAsync(slot.MeetingId!);
+                    
                     var schedId = slot.ScheduleId;
                     if (schedId != null)
                     {
@@ -238,6 +244,8 @@ namespace DotNetCoreSqlDb.Services
                         {
                             schedule.Status = "Taken";
                         }
+
+                        await _logHelper.LogZoomMeetingEndAsync(schedId.Value);
 
                         await _context.SaveChangesAsync();
                     }

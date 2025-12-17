@@ -28,6 +28,12 @@ builder.Services.AddTransient<IEmailSender, MailKitEmailSender>();
 builder.Services.AddScoped<LogHelper>();
 builder.Services.AddScoped<IDataConversionService, DataConversionService>();
 
+builder.Services.Configure<EmailInboxSettings>(
+    builder.Configuration.GetSection("EmailInboxPay"));
+
+builder.Services.AddScoped<IEmailInboxReader, ImapEmailReader>();
+
+
 
 /* ───── 3.  Database context + cache (unchanged) ─────── */
 if (builder.Environment.IsDevelopment())

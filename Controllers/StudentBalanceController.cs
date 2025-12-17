@@ -194,7 +194,6 @@ namespace DotNetCoreSqlDb.Controllers
             });
         }
 
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToBalance(Guid balanceId, float unitsToAdd, float amountPaid,

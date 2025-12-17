@@ -62,6 +62,11 @@ namespace DotNetCoreSqlDb.Controllers
 
             var user = await _context.User.FirstOrDefaultAsync(u => u.ID.ToString() == userId);
 
+            if (user == null)
+            {
+                return NotFound();
+            }
+
             if (teacher == null)
             {
                 return NotFound();
@@ -251,7 +256,7 @@ namespace DotNetCoreSqlDb.Controllers
 
         public class TimeZoneUpdateModel
         {
-            public string TimeZoneId { get; set; }
+            public string TimeZoneId { get; set; } = string.Empty;
         }
 
         //Check if there's already a lesson with this teacher, if yes, end that first.
@@ -272,14 +277,14 @@ namespace DotNetCoreSqlDb.Controllers
 
             // 2) grab the first ZoomMeeting on any *other* schedule for that same teacher
             var previousLesson = await _context.ZoomMeetings
-                .Include(zm => zm.Schedule)
+                .Include(zm => zm.Schedule!)
                     .ThenInclude(s => s.Assignment)
                 .Where(zm =>
-                    zm.Schedule.Assignment!.TeacherId == teacherId &&  // same teacher
+                    zm.Schedule!.Assignment!.TeacherId == teacherId &&  // same teacher
                     zm.ScheduleId != id &&          // different schedule
                     zm.IsBusy                                     // still busy
                 )
-                .OrderByDescending(zm => zm.Schedule.DateTime)       // most recent first
+                .OrderByDescending(zm => zm.Schedule!.DateTime)       // most recent first
                 .FirstOrDefaultAsync();
 
             if (previousLesson != null)
@@ -293,6 +298,7 @@ namespace DotNetCoreSqlDb.Controllers
                     ?? throw new InvalidOperationException("ZoomMeeting.ScheduleId was null");
 
                 await _zoomSvc.EndMeetingsAsync(prevSchedId);
+                await _logHelper.LogZoomMeetingEndAsync(prevSchedId);
             }
             else
             {
@@ -323,13 +329,21 @@ namespace DotNetCoreSqlDb.Controllers
                 //TODO: Add error handling here
                 return NotFound();
 
-            await _logHelper.LogZoomMeetingStartAsync(id, lesson.Id);
+            bool existsInZoomMeetingLog = await _context.ZoomMeetingLog
+                .AsNoTracking()
+                .Where(zml => zml.ScheduleId == id)
+                .AnyAsync();
+
+            if (!existsInZoomMeetingLog)
+            {
+                await _logHelper.LogZoomMeetingStartAsync(id, lesson.Id);
+            }
 
             await _hub.Clients
                 .Group($"teacher_{teacherId}")
                 .SendAsync("LessonStarted");
 
-            return Redirect(lesson.JoinUrl);
+            return Redirect(lesson.JoinUrl!);
         }
 
         [HttpGet]
@@ -339,11 +353,17 @@ namespace DotNetCoreSqlDb.Controllers
             await _logHelper.LogZoomMeetingEndAsync(id);
 
             var schedule = await _context.Schedule
-                .Include(s => s.Assignment)
+                .Include(s => s.Assignment!)
                     .ThenInclude(a => a.Group)
                         .ThenInclude(g => g.StudentGroupCompositions)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
+            
+            if (schedule == null)
+            {
+                return NotFound();
+            }
+            
             var affectedStudentIds = schedule.Assignment?.Group?.StudentGroupCompositions?
                 .Select(sgc => sgc.StudentId)
                 .Distinct()

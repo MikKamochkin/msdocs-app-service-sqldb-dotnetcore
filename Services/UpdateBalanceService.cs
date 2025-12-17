@@ -12,6 +12,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.Storage;
 using DotNetCoreSqlDb.Services;
 using DotNetCoreSqlDb.Helpers;
+using Microsoft.AspNetCore.Mvc;
 
 
 
@@ -266,5 +267,25 @@ namespace DotNetCoreSqlDb.Services
             }
         }
 
+        public async Task AddToBalanceAsync(Guid balanceId, float unitsToAdd, float amountPaid,
+        string adminNotes, string currency, string payerNotes, string paymentReference, string paymentType)
+        {
+            var balance = await _context.StudentBalance.FindAsync(balanceId);
+
+            if (balance == null)
+            {
+                return;
+            }
+
+            balance.Balance += unitsToAdd;
+            await _context.SaveChangesAsync();
+
+            if (balance != null)
+            {
+                var student = await _context.Student.FindAsync(balance.StudentId);
+                Guid assignmentId = balance.AssignmentId;
+                await _logHelper.LogStudentBalanceAsync(student.ID, assignmentId, currency, paymentType, paymentReference, payerNotes, adminNotes, unitsToAdd, amountPaid);
+            }
+        }
     }
 }

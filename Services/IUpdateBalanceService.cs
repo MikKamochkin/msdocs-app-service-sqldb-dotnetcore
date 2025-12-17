@@ -9,5 +9,8 @@ namespace DotNetCoreSqlDb.Services
         Task UpdateStudentBalanceAsync(CancellationToken cancellationToken, Guid scheduleId);
 
         Task UndoTransactionAsync(CancellationToken cancellationToken, Guid scheduleId, string originalAccountingType);
+
+        Task AddToBalanceAsync(Guid balanceId, float unitsToAdd, float amountPaid,
+        string adminNotes, string currency, string payerNotes, string paymentReference, string paymentType);
     }
 }

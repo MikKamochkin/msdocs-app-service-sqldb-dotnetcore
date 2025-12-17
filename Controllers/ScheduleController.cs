@@ -217,6 +217,7 @@ namespace DotNetCoreSqlDb.Controllers
             List<Guid>? toDelete,
             int timeZoneOffset)
         {
+            //NO LONGER USES TODELETE, INSTEAD USES DELETEENTRY ENDPOINT
             // 1) Remove any flagged-for-deletion rows
             if (toDelete != null)
             {
@@ -274,7 +275,7 @@ namespace DotNetCoreSqlDb.Controllers
             // Query StudentGroupCompositions linked to those assignments via GroupId
             var affectedStudentIds = await _context.Assignments
                 .Where(a => assignmentIds.Contains(a.Id))
-                .Include(a => a.Group)
+                .Include(a => a.Group!)
                     .ThenInclude(g => g.StudentGroupCompositions)
                 .SelectMany(a => a.Group!.StudentGroupCompositions)
                 .Select(sgc => sgc.StudentId)
@@ -402,7 +403,7 @@ namespace DotNetCoreSqlDb.Controllers
 
                 var affectedStudentIds = await _context.Assignments
                     .Where(a => assignmentIds.Contains(a.Id))
-                    .Include(a => a.Group)
+                    .Include(a => a.Group!)
                         .ThenInclude(g => g.StudentGroupCompositions)
                     .SelectMany(a => a.Group!.StudentGroupCompositions)
                     .Select(sgc => sgc.StudentId)
@@ -507,7 +508,7 @@ namespace DotNetCoreSqlDb.Controllers
 
                 var affectedStudentIds = await _context.Assignments
                     .Where(a => assignmentIds.Contains(a.Id))
-                    .Include(a => a.Group)
+                    .Include(a => a.Group!)
                         .ThenInclude(g => g.StudentGroupCompositions)
                     .SelectMany(a => a.Group!.StudentGroupCompositions)
                     .Select(sgc => sgc.StudentId)
@@ -570,8 +571,8 @@ namespace DotNetCoreSqlDb.Controllers
 
             // 1) Pull in the tracked entity (if it exists)
             var entity = await _context.Schedule
-                .Include(s => s.Assignment)
-                .ThenInclude(a => a.Group)
+                .Include(s => s.Assignment!)
+                .ThenInclude(a => a.Group!)
                 .ThenInclude(g => g.StudentGroupCompositions)
                 .FirstOrDefaultAsync(s => s.Id == dto.Id);
 
@@ -621,7 +622,7 @@ namespace DotNetCoreSqlDb.Controllers
             // Get all student IDs in the group
             var studentIds = await _context.Assignments
                 .Where(a => a.Id == entity.AssignmentId)
-                .SelectMany(a => a.Group.StudentGroupCompositions)
+                .SelectMany(a => a.Group!.StudentGroupCompositions)
                 .Select(sgc => sgc.StudentId)
                 .ToListAsync();
 
@@ -660,10 +661,10 @@ namespace DotNetCoreSqlDb.Controllers
         {
             // Load the entity with related data before deleting
             var entity = await _context.Schedule
-                .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Group)
+                .Include(s => s.Assignment!)
+                    .ThenInclude(a => a.Group!)
                         .ThenInclude(g => g.StudentGroupCompositions)
-                .Include(s => s.Assignment)
+                .Include(s => s.Assignment!)
                     .ThenInclude(a => a.Teacher)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
@@ -680,7 +681,15 @@ namespace DotNetCoreSqlDb.Controllers
                     return BadRequest("Cannot delete an ongoing class.");
                 }
 
-                _context.Schedule.Remove(entity);
+                bool existsInZoomMeetingLog = await _context.ZoomMeetingLog.AnyAsync(z => z.ScheduleId == entity.Id);
+                if (!existsInZoomMeetingLog)
+                {
+                    _context.Schedule.Remove(entity);
+                }
+                else
+                {
+                    entity.Status = "Deleted";
+                }
                 await _context.SaveChangesAsync();
 
                 // Broadcast to all affected students

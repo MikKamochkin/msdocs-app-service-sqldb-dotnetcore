@@ -21,7 +21,7 @@
 
 		/* ---------- PAGE BACKGROUND ---------- */
 		body {
-			font-family: Helvetica, sans-serif;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 			/*background: linear-gradient(to bottom right, #b2e7ff, #ffffff);*/
 			background: #e8ecfc;
 			min-height: 100vh;
@@ -235,23 +235,35 @@
 		/* table styling */
 		.table {
 			width: 100%;
-			border-collapse: collapse;
+			border-collapse: separate;
+			/* important for visible radius */
+			border-spacing: 0;
 			margin-top: 1rem;
 			font-size: .95rem;
+			overflow: hidden;
 		}
 
 		.table thead th {
-			background: #e9efff;
+			background: #e8ecfc;
 			color: #333;
-			font-weight: 600;
+			font-weight: 700;
 			padding: .75rem 1rem;
 			text-align: left;
-			border-bottom: 1px solid #d4d9ff;
 		}
+
+		/* Round the outer header corners */
+		.table thead th:first-child {
+			border-top-left-radius: 12px;
+		}
+
+		.table thead th:last-child {
+			border-top-right-radius: 12px;
+		}
+
 
 		.table tbody td {
 			padding: .65rem 1rem;
-			border-bottom: 1px solid #f0f0f0;
+			border-bottom: none;
 			color: #444;
 		}
 
@@ -274,6 +286,29 @@
 			background-color: #fff9cc;
 			/* light yellow */
 		}
+
+		.table tbody tr.transaction-row {
+			cursor: pointer;
+		}
+
+		.table tbody tr.transaction-row {
+			cursor: pointer;
+			transition: background-color 0.15s ease;
+		}
+
+		.table tbody tr.transaction-row:hover {
+			background-color: #ffe657;
+			/*box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);*/
+			transform: scale(1.03);
+			/* slightly darker yellow highlight */
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+
+		}
+
+
+
+
+
 
 		.time-zone .selector {
 			vertical-align: middle;
@@ -303,6 +338,147 @@
 
 		}
 
+		/* ---------- TRANSACTION CARD STYLE ---------- */
+
+		.modal-dialog {
+			max-width: 500px;
+		}
+
+		.modal-content {
+			border-radius: 14px;
+			box-shadow: 0 12px 35px rgba(15, 23, 42, 0.18);
+		}
+
+		.modal-header {
+			background: #f0f3ff;
+			border-bottom: 1px solid #d7dcf9;
+			padding: 10px 16px;
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+		}
+
+		.modal-title {
+			font-size: 1.1rem;
+			font-weight: 700;
+			color: #1f2933;
+		}
+
+		/* --- SECTION TITLES --- */
+		.transaction-section-title {
+			font-size: 1.1rem;
+			/* Bigger */
+			font-weight: 800;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			color: #4c58a7;
+			margin: 12px 0 12px;
+			text-align: center;
+			padding-left: 0;
+			margin-bottom: 20px;
+		}
+
+		/* --- 2-COLUMN LAYOUT FOR THE BODY --- */
+		.transaction-columns {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			/* Lesson | Payment */
+			gap: 20px;
+			padding: 0 10px;
+		}
+
+		/* --- INDIVIDUAL DETAILS GRID INSIDE EACH SIDE --- */
+		.transaction-details {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 10px;
+		}
+
+		/* --- DETAIL PILL --- */
+		.transaction-detail-row {
+			display: flex;
+			flex-direction: column;
+			background: #f7f8ff;
+			border-radius: 10px;
+			padding: 10px 12px;
+			box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+		}
+
+		/* --- LABEL --- */
+		.transaction-detail-label {
+			font-size: 0.9rem;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			color: #363941;
+			margin-bottom: 3px;
+			text-align: center;
+			padding-left: 0;
+		}
+
+		/* --- VALUE --- */
+		.transaction-detail-value {
+			font-size: 0.95rem;
+			font-weight: 500;
+			color: #111827;
+			word-break: break-word;
+			text-align: center;
+			padding-left: 0;
+		}
+
+		/* Positive / Negative */
+		.value-positive {
+			color: #15803d;
+			font-weight: 600;
+		}
+
+		.value-negative {
+			color: #b91c1c;
+			font-weight: 600;
+		}
+
+		.modal-footer {
+			border-top: 1px solid #d7dcf9;
+			padding: 10px 16px;
+		}
+
+		.modal-dialog {
+			max-width: 540px !important;
+			/* adjust to taste */
+			margin: 1.75rem auto;
+			/* keep modal centered */
+		}
+
+		/* Make each column a proper full-width column container */
+		.transaction-columns>div {
+			width: 100%;
+		}
+
+		/* Ensure the details grid and each pill truly stretch full column width */
+		.transaction-details {
+			width: 100%;
+		}
+
+		.transaction-detail-row {
+			width: 100%;
+			align-items: center;
+			/* centers children on the same axis as title */
+		}
+
+		/* Make label/value take full width so "center" is the same reference box */
+		.transaction-detail-label,
+		.transaction-detail-value {
+			width: 100%;
+			text-align: center;
+		}
+
+		.transaction-line {
+			margin-bottom: 20px; /* Adds space between each label-value pair */
+		}
+
+
+
+
 		/* ---------- RESPONSIVE PROFILE ---------- */
 		@@media(max-width:600px) {
 			.profile-section {
@@ -327,6 +503,12 @@
 
 			.table thead {
 				display: none;
+				border: none !important;
+			}
+
+			.table td,
+			.table th {
+				border: none !important;
 			}
 
 			.table tbody td {
@@ -401,18 +583,196 @@
 						@foreach (var item in Model)
 						{
 							var rowClass = !string.IsNullOrEmpty(item.Status) ? "lesson-row" : "transaction-row";
+							// For transaction rows (Status null/empty) this is the TransactionLog Id
+							var id = string.IsNullOrEmpty(item.Status) ? item.TransactionId : item.ScheduleId;
 
-							<tr class="@rowClass">
+							<tr class="@rowClass" data-id="@id">
 								<td>@item.DateTime</td>
 								<td>@(item.Status == null ? "Payment" : item.Status)</td>
 								<td>@(item.DurationMinutes != null ? item.DurationMinutes + " minutes" : "")</td>
 								<td>@item.TeacherName</td>
-								<td>@(item.Amount > 0 ? "+" + item.Amount : item.Amount)</td>
+								<td style="display: flex; justify-content: space-between; align-items: center;">
+									<span>
+										@(item.Amount > 0 ? "+" + item.Amount : item.Amount)
+									</span>
+
+									@if (string.IsNullOrEmpty(item.Status))
+									{
+										<i class="fa fa-info-circle" style="color:#6b6f86;"></i>
+									}
+								</td>
+
 							</tr>
 						}
+
 					</tbody>
 				</table>
 			</div>
 		</div>
 	</div>
+	<div class="modal fade" id="transactionModal" tabindex="-1" role="dialog" aria-labelledby="transactionModalLabel"
+		aria-hidden="true">
+		<div class="modal-dialog modal-sm" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<div>
+						<h5 class="modal-title" id="transactionModalLabel">Transaction Details</h5>
+						@*<div id="transactionSummary" class="transaction-summary"></div>*@
+					</div>
+
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+
+
+				<div class="modal-body">
+
+					<div class="transaction-columns">
+
+						<!-- LEFT COLUMN: LESSON -->
+						<!-- LEFT COLUMN: LESSON -->
+						<div>
+							<div class="transaction-section-title">Lesson</div>
+
+							<div class="transaction-lines">
+								<div class="transaction-line">
+									<div class="transaction-detail-label">Payment Date</div>
+									<div class="transaction-detail-value" id="tdDate"></div>
+								</div>
+
+								<div class="transaction-line">
+									<div class="transaction-detail-label">Teacher</div>
+									<div class="transaction-detail-value" id="tdTeacher"></div>
+								</div>
+
+								<div class="transaction-line">
+									<div class="transaction-detail-label">Units Added</div>
+									<div class="transaction-detail-value" id="tdUnits"></div>
+								</div>
+							</div>
+						</div>
+
+						<!-- RIGHT COLUMN: PAYMENT -->
+						<div>
+							<div class="transaction-section-title">Payment</div>
+
+							<div class="transaction-lines">
+								<div class="transaction-line">
+									<div class="transaction-detail-label">Amount Paid</div>
+									<div class="transaction-detail-value" id="tdAmountPaid"></div>
+								</div>
+
+								<div class="transaction-line">
+									<div class="transaction-detail-label">Currency</div>
+									<div class="transaction-detail-value" id="tdCurrency"></div>
+								</div>
+
+								<div class="transaction-line">
+									<div class="transaction-detail-label">Payer Notes</div>
+									<div class="transaction-detail-value" id="tdPayerNotes"></div>
+								</div>
+
+								<div class="transaction-line">
+									<div class="transaction-detail-label">Reference</div>
+									<div class="transaction-detail-value" id="tdReference"></div>
+								</div>
+
+								<div class="transaction-line">
+									<div class="transaction-detail-label">Type</div>
+									<div class="transaction-detail-value" id="tdType"></div>
+								</div>
+							</div>
+						</div>
+
+
+					</div>
+
+				</div>
+
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+						Close
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
 </body>
+
+@section Scripts {
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+	<script>
+		$(function () {
+
+			// row click -> open modal
+			$('.table tbody').on('click', 'tr[data-id]', function () {
+				var $row = $(this);
+
+				// Only open modal for transaction rows (payments)
+				if (!$row.hasClass('transaction-row')) {
+					return;
+				}
+
+				var id = $row.data('id');
+				if (!id) {
+					console.warn('Clicked row has no data-id');
+					return;
+				}
+
+				// Visually highlight selected row
+				$row.addClass('table-active').siblings().removeClass('table-active');
+
+				// (You commented out #transactionSummary in the HTML,
+				// so it's safer to remove this block or re-enable the element.)
+
+				// Clear previous styling
+				$('#tdUnits').removeClass('value-positive value-negative');
+				$('#tdAmountPaid').removeClass('value-positive value-negative');
+
+				// GET /Students/GetTransactionDetails?transactionLogId=...
+				$.getJSON('@Url.Action("GetTransactionDetails", "Students")', { transactionLogId: id })
+					.done(function (data) {
+						$('#tdDate').text(
+							data.dateTime
+								? new Date(data.dateTime).toLocaleDateString(undefined, {
+									year: 'numeric',
+									month: 'short',
+									day: '2-digit'
+								})
+								: '—'
+						);
+						$('#tdTeacher').text(data.teacher || '—');
+
+						$('#tdUnits').text(data.units ?? '—');
+						if (data.units > 0) {
+							$('#tdUnits').addClass('value-positive');
+						}
+
+						$('#tdAmountPaid').text('$' + data.amountPaid ?? '—');
+						if (data.amountPaid > 0) {
+							$('#tdAmountPaid').addClass('value-positive');
+						} else if (data.amountPaid < 0) {
+							$('#tdAmountPaid').addClass('value-negative');
+						}
+
+						$('#tdCurrency').text(data.currency || '—');
+						$('#tdPayerNotes').text(data.payerNotes || '—');
+						$('#tdReference').text(data.reference || '—');
+						$('#tdType').text(data.type || '—');
+
+						$('#transactionModal').modal('show');
+					})
+					.fail(function (xhr, status, err) {
+						console.error('Error loading transaction details:', status, err);
+						alert('Sorry, could not load transaction details.');
+					});
+			});
+
+			// when modal closes -> remove highlight from all rows
+			$('#transactionModal').on('hidden.bs.modal', function () {
+				$('.table tbody tr').removeClass('table-active');
+			});
+		});
+	</script>
+}

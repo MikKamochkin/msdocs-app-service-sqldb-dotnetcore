@@ -546,6 +546,30 @@ namespace DotNetCoreSqlDb.Controllers
             };
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetTransactionDetails(Guid transactionLogId)
+        {
+            //_logger.LogInformation("get transactiondetails for id: " + transactionLogId);
+            var tx = await _context.StudentBalanceTransactionLog
+                .Include(t => t.Assignment).ThenInclude(a => a.Teacher)
+                .FirstOrDefaultAsync(t => t.Id == transactionLogId);
+
+            if (tx == null) return NotFound();
+
+
+            return Json(new
+            {
+                DateTime = tx.DateTime?.ToString("g"),
+                Teacher = tx.Assignment?.Teacher?.Name,
+                Units = tx.TransactionAmount,
+                AmountPaid = tx.AmountPaid,
+                Currency = tx.Currency,
+                PayerNotes = tx.PayerNotes,
+                Reference = tx.PaymentReference,
+                Type = tx.PaymentType
+            });
+        }
+
         // DTO sent to the view/JS
         public sealed class ScheduleRowDto
         {

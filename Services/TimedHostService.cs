@@ -59,7 +59,10 @@ public sealed class TimedHostedService : BackgroundService
             using var scope = _scopeFactory.CreateScope();
             var zoomSvc = scope.ServiceProvider.GetRequiredService<IZoomMeetingService>();
             var twilioSvc = scope.ServiceProvider.GetRequiredService<ITwilioService>();
+            var emailReader  = scope.ServiceProvider.GetRequiredService<IEmailInboxReader>();
+           
             await zoomSvc.CleanupMeetingsAsync();
+            await emailReader.CheckInboxAsync();
             
             //TODO: UNCOMMENT WHEN MARKLESSONASSUFFICIENT IS FIXED.
             /*
