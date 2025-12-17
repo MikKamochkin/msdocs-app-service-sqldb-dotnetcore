@@ -174,7 +174,7 @@ namespace DotNetCoreSqlDb.Services
 
             if (payers == null || payers.Count() == 0)
             {
-                string error = "Failed because there are more than 0 payers";
+                string error = "Failed because payer not found";
                 await SendForManual(message, error);
                 return;
             } 
