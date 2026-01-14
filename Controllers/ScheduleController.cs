@@ -25,13 +25,15 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly IHubContext<ScheduleHub> _hub;
         private readonly ILogger<TeachersController> _logger;
         private readonly IUpdateBalanceService _balanceSvc;
+        private readonly IEmailSender _mailer;
 
-        public ScheduleController(MyDatabaseContext context, IHubContext<ScheduleHub> hub, ILogger<TeachersController> logger, IUpdateBalanceService balanceSvc)
+        public ScheduleController(MyDatabaseContext context, IHubContext<ScheduleHub> hub, ILogger<TeachersController> logger, IUpdateBalanceService balanceSvc, IEmailSender mailer)
         {
             _context = context;
             _hub = hub;
             _logger = logger;
             _balanceSvc = balanceSvc;
+            _mailer = mailer;
         }
 
         // GET: Schedule/Manage
@@ -543,6 +545,64 @@ namespace DotNetCoreSqlDb.Controllers
                     .Group($"teacher_{teacherId}")
                     .SendAsync("ScheduleChanged", updatedSchedule);
             }
+
+            return RedirectToAction(nameof(Manage), new
+            {
+                teacherId,
+                date = selectedDate.ToString("yyyy-MM-dd")
+            });
+        }
+
+        
+        [HttpPost]
+        public async Task<IActionResult> SendEmailAboutScheduleChange(Guid teacherId, DateTime selectedDate)
+        {
+            //_logger.LogInformation("in SendEmailAboutScheduleChange ");
+            var teacher = await _context.Teacher.FirstOrDefaultAsync(t => t.Id == teacherId);
+            
+            if (teacher == null)
+            {
+                TempData["Error"] = "Failed to send email about schedule change";
+                return RedirectToAction(nameof(Manage), new
+                {
+                    teacherId,
+                    date = selectedDate.ToString("yyyy-MM-dd")
+                });
+            }
+            
+            var teacherEmail = teacher.Email;
+            
+            if (teacherEmail == null)
+            {
+                TempData["Error"] = "Failed to send email about schedule change because teacher doesn't have an email";
+                return RedirectToAction(nameof(Manage), new
+                {
+                    teacherId,
+                    date = selectedDate.ToString("yyyy-MM-dd")
+                });
+            }
+
+            string date = selectedDate.ToString("yyyy-MM-dd");
+            var html = $"""
+                        <p>Your schedule has been changed for {date}.</p>
+                        <p>
+                            Please sign in <a href="https://torontofrench.ca/" target="_blank" style="color: #1a73e8;">here</a> to see your new schedule.
+                        </p>
+                        """;
+                        
+                        string to = teacherEmail;
+                        string subject = "Schedule Changed for " + date;
+                        await _mailer.SendAsync(
+                            to: to,
+                            subject: subject,
+                            htmlBody: html);
+
+                        _logger.LogInformation("Sent email to: " + to);
+
+                        //await _logHelper.LogMailAsync(to, subject, html);
+
+
+            
 
             return RedirectToAction(nameof(Manage), new
             {

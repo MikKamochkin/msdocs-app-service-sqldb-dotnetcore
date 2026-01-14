@@ -4,6 +4,7 @@ using DotNetCoreSqlDb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DotNetCoreSqlDb.Migrations
 {
     [DbContext(typeof(MyDatabaseContext))]
-    partial class MyDatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20251217211152_AddedEmailPaymentsLog")]
+    partial class AddedEmailPaymentsLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -138,9 +141,6 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.Property<DateTime?>("DateTime")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("EmailSubject")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool?>("HandledAutomatically")
                         .HasColumnType("bit");

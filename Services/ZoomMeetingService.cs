@@ -305,6 +305,7 @@ namespace DotNetCoreSqlDb.Services
 
             await _context.SaveChangesAsync();
 
+            //TODO: fix ts
             var lessonsWithFirstMutualPresenceTime = await _context.ZoomMeetings
                 .Include(z => z.Schedule)
                 .Where(z => z.FirstMutualPresenceTime != null)

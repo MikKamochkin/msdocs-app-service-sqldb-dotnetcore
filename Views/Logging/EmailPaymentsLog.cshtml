@@ -1,0 +1,70 @@
+@model IEnumerable<DotNetCoreSqlDb.Models.EmailPaymentsLog>
+@using Markdig
+
+@{
+    ViewData["Title"] = "Email Payments Log";
+}
+
+<div class="row no-gutters">
+    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    {
+        <partial name="_AdminSidebar" />
+        
+        <div class="col-md-10">
+            <h2>Payments</h2>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            Handled Automatically
+                        </th>
+                        <th>
+                            DateTime
+                        </th>
+                        <th>
+                            Reason For Failure
+                        </th>
+                        <th>
+                            Student Name
+                        </th>
+                        <th>
+                            Payer Name
+                        </th>
+                        <th>
+                            Email Subject
+                        </th>
+                        <th>
+                            Amount Paid
+                        </th>
+                        <th>
+                            Units Added
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                @(item.HandledAutomatically == true ? "Yes" :
+                                item.HandledAutomatically == false ? "No" : "—")
+                            </td>
+                            <td>@Html.DisplayFor(modelItem => item.DateTime)</td>
+                            <td>@Html.DisplayFor(modelItem => item.ReasonForFailure)</td>
+                            <td>@Html.DisplayFor(modelItem => item.StudentName)</td>
+                            <td>@Html.DisplayFor(modelItem => item.PayerName)</td>
+                            <td>@Html.DisplayFor(modelItem => item.EmailSubject)</td>
+                            <td>@Html.DisplayFor(modelItem => item.StudentBalanceTransactionLog.AmountPaid)</td>
+                            <td>@Html.DisplayFor(modelItem => item.StudentBalanceTransactionLog.TransactionAmount)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+}

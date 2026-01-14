@@ -8,7 +8,12 @@
     var timeZones = ViewBag.TimeZones as List<SelectListItem>;
     var tokens = AntiForgery.GetAndStoreTokens(ViewContext.HttpContext);
 }
-
+<style>
+    .notifyTeacher-btn {
+        background-color: #8b0000;
+        color: #fff;
+    }
+</style>
 <div class="row no-gutters">
     @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
     {
@@ -22,21 +27,28 @@
         <form asp-action="Manage" method="get" class="form-row mb-3 align-items-end">
             <div class="form-group col-md-2">
                 <label for="teacherSelect">Teacher</label>
-                <select id="teacherSelect" name="teacherId" class="form-control"
-                        asp-items="(SelectList)ViewBag.Teachers"
-                        onchange="this.form.submit()">
-                    <option value="">— select —</option>
-                </select>
+
+                <div class="d-flex align-items-center">
+                    <select id="teacherSelect" name="teacherId" class="form-control"
+                        asp-items="(SelectList)ViewBag.Teachers" onchange="this.form.submit()" style="flex: 1 1 auto;">
+                        <option value="">— select —</option>
+                    </select>
+                    <button type="button" class="btn-sm btn-outline-secondary ml-2" onclick="selectNextTeacher()">
+                        Next →
+                    </button>
+                </div>
             </div>
             <div class="form-group col-md-4 d-flex align-items-center">
                 <button type="button" class="btn btn-outline-secondary mr-2" onclick="shiftDay(-1)">← Prev</button>
                 <b><input type="date" id="selectedDate" name="date" value="@ViewBag.SelectedDate"
-                    class="form-control mr-2" onchange="this.form.submit()" /></b>
+                        class="form-control mr-2" onchange="this.form.submit()" /></b>
                 <span id="dayOfWeek" class="ml-2 font-weight-bold">
                     @if (ViewBag.SelectedDate != null)
                     {
                         var date = DateTime.Parse(ViewBag.SelectedDate.ToString());
-                        <b><h2>&nbsp;&nbsp;@date.ToString("dddd")&nbsp;&nbsp;</h2></b>
+                        <b>
+                            <h2>&nbsp;&nbsp;@date.ToString("dddd")&nbsp;&nbsp;</h2>
+                        </b>
                     }
                 </span>
                 <button type="button" class="btn btn-outline-secondary ml-2" onclick="shiftDay(1)">Next →</button>
@@ -49,16 +61,16 @@
                 <label for="timeZoneSelect">Time Zone</label>
                 <select id="timeZoneSelect" class="form-control" onchange="renderTable()">
                     @foreach (var tz in timeZones)
+                    {
+                        if (tz.Selected)
                         {
-                            if (tz.Selected)
-                            {
-                                <option value="@tz.Value" selected>@tz.Text</option>
-                            }
-                            else
-                            {
-                                <option value="@tz.Value">@tz.Text</option>
-                            }
+                            <option value="@tz.Value" selected>@tz.Text</option>
                         }
+                        else
+                        {
+                            <option value="@tz.Value">@tz.Text</option>
+                        }
+                    }
                 </select>
             </div>
         </div>
@@ -72,32 +84,32 @@
         <div class="form-inline col-md-3">
             <label class="mr-2">Time</label>
             <select id="timeSelect" class="form-control mr-3"
-                    asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
+                asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
 
             <label class="mr-2">Student</label>
-            <select id="groupSelect" class="form-control mr-3"
-                    asp-items="(IEnumerable<SelectListItem>)ViewBag.Groups">
+            <select id="groupSelect" class="form-control mr-3" asp-items="(IEnumerable<SelectListItem>)ViewBag.Groups">
                 <option value="" selected>— select student —</option>
             </select>
 
             <label class="mr-2">Status</label>
             <select id="statusSelect" class="form-control mr-3"
-                    asp-items="(IEnumerable<SelectListItem>)ViewBag.Statuses"></select>
+                asp-items="(IEnumerable<SelectListItem>)ViewBag.Statuses"></select>
 
             <label class="mr-2">Duration</label>
             <select id="durationSelect" class="form-control mr-3"
-                    asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonDurationTypes">
+                asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonDurationTypes">
                 <option value="" selected>— select duration —</option>
             </select>
 
             <label class="mr-2">Accounting Type</label>
             <select id="lessonAccountingType" class="form-control mr-3"
-                    asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonAccountingType">
+                asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonAccountingType">
                 <option value="" selected>— select type —</option>
             </select>
             <br>
             <button type="button" class="btn btn-primary" onclick="saveEntryAjax()">Save Entry</button>
-            <button type="button" class="btn btn-secondary ml-2" id="cancelEditBtn" style="display:none;" onclick="cancelEdit()">Cancel</button>
+            <button type="button" class="btn btn-secondary ml-2" id="cancelEditBtn" style="display:none;"
+                onclick="cancelEdit()">Cancel</button>
         </div>
 
 
@@ -119,27 +131,29 @@
         </table>
         <div class="d-inline-flex gap-2">
             <form id="copyForm" method="post">
-                <input type="hidden" name="teacherId"    />
+                <input type="hidden" name="teacherId" />
                 <input type="hidden" name="selectedDate" />
-                <button
-                    type="submit"
-                    formmethod="post"
-                    formaction="@Url.Action("CopyLastWeek","Schedule")"
-                    class="btn btn-info ml-2"
-                    onclick="prepareCopy('copyForm')">
+                <button type="submit" formmethod="post" formaction="@Url.Action("CopyLastWeek", "Schedule")"
+                    class="btn btn-info ml-2" onclick="prepareCopy('copyForm')">
                     Copy Last Week
                 </button>
             </form>
             <form id="importDefaultForm" method="post">
-                <input type="hidden" name="teacherId"    />
+                <input type="hidden" name="teacherId" />
                 <input type="hidden" name="selectedDate" />
-                <button
-                    type="submit"
-                    formmethod="post"
-                    formaction="@Url.Action("ImportDefault","Schedule")"
-                    class="btn btn-success ml-2"
-                    onclick="prepareCopy('importDefaultForm')">
+                <button type="submit" formmethod="post" formaction="@Url.Action("ImportDefault", "Schedule")"
+                    class="btn btn-success ml-2" onclick="prepareCopy('importDefaultForm')">
                     Import Default Schedule
+                </button>
+            </form>
+            <form id="notifyTeacherForm" method="post">
+                <input type="hidden" name="teacherId" />
+                <input type="hidden" name="selectedDate" />
+                <button type="submit" formmethod="post"
+                    formaction="@Url.Action("SendEmailAboutScheduleChange", "Schedule")"
+                    class="btn notifyTeacher-btn ml-2" onclick="prepareCopy('notifyTeacherForm')">
+                    <i class="fa-regular fa-paper-plane"></i> <i class="fa-regular fa-envelope"></i> <i
+                        class="fa-solid fa-chalkboard-user"></i>
                 </button>
             </form>
         </div>
@@ -157,7 +171,7 @@
         let rows = existing.slice();
         let editingRow = null;
 
-        $(function(){
+        $(function () {
             renderTable();
             if (!editingRow) {
                 const sel = $('#groupSelect').val();
@@ -178,11 +192,11 @@
             const d = new Date(input.value);
             d.setDate(d.getDate() + delta);
             input.value = d.toISOString().slice(0, 10);
-            
+
             // Update day of week display
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             $('#dayOfWeek').text(days[d.getDay()]);
-            
+
             input.form.submit();
         }
 
@@ -205,12 +219,12 @@
             const zone = $('#timeZoneSelect').val();
             rows.sort((a, b) =>
                 DateTime.fromISO(a.DateTime).toMillis()
-            - DateTime.fromISO(b.DateTime).toMillis()
+                - DateTime.fromISO(b.DateTime).toMillis()
             );
 
             const tbody = $('#entriesTable tbody').empty();
             rows.forEach((r, i) => {
-                const dt  = DateTime.fromISO(r.DateTime).setZone(zone).toFormat('HH:mm');
+                const dt = DateTime.fromISO(r.DateTime).setZone(zone).toFormat('HH:mm');
                 // highlight if this is the one we're editing
                 const isEditing = editingRow && editingRow.Id === r.Id;
                 const cls = isEditing ? 'table-info' : '';
@@ -219,27 +233,27 @@
                 const notesTitle = htmlEscape(fullNotes);
 
                 tbody.append(`
-                <tr class="${cls}" data-id="${r.Id}">
-                    <td onclick="editRow(${i})">${dt}</td>
-                    <td onclick="editRow(${i})">${r.GroupName}</td>
-                    <td onclick="editRow(${i})">${r.Status}</td>
-                    <td onclick="editRow(${i})">${r.Duration}</td>
-                    <td onclick="editRow(${i})">${r.LessonAccountingType}</td>
-                    <td onclick="editRow(${i})" class="notes-cell" title="${notesTitle}">
-                        ${shortNotes}
-                    </td>
-                    <td class="text-center">
-                    <button class="btn btn-sm btn-danger" onclick="deleteRow(${i})">×</button>
-                    </td>
-                </tr>
-                `);
+                        <tr class="${cls}" data-id="${r.Id}">
+                            <td onclick="editRow(${i})">${dt}</td>
+                            <td onclick="editRow(${i})">${r.GroupName}</td>
+                            <td onclick="editRow(${i})">${r.Status}</td>
+                            <td onclick="editRow(${i})">${r.Duration}</td>
+                            <td onclick="editRow(${i})">${r.LessonAccountingType}</td>
+                            <td onclick="editRow(${i})" class="notes-cell" title="${notesTitle}">
+                                ${shortNotes}
+                            </td>
+                            <td class="text-center">
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow(${i})">×</button>
+                            </td>
+                        </tr>
+                        `);
             });
         }
 
         function editRow(i) {
             // Remove highlight from previously edited row if any
             $('#entriesTable tbody tr').removeClass('table-info');
-            
+
             editingRow = rows[i];
             const r = editingRow;
             const zone = $('#timeZoneSelect').val();
@@ -248,10 +262,10 @@
             $('#statusSelect').val(r.Status);
             $('#durationSelect').val(r.Duration);
             $('#lessonAccountingType').val(r.LessonAccountingType);
-            
+
             // Highlight the selected row
             $(`#entriesTable tbody tr[data-id="${r.Id}"]`).addClass('table-info');
-            
+
             // Show cancel button
             $('#cancelEditBtn').show();
         }
@@ -263,21 +277,21 @@
             $('#statusSelect').val('');
             $('#durationSelect').val('');
             $('#lessonAccountingType').val('');
-            
+
             // Remove all highlights
             $('#entriesTable tbody tr').removeClass('table-info');
-            
+
             // Hide cancel button
             $('#cancelEditBtn').hide();
         }
 
         function saveEntryAjax() {
-            const t    = $('#timeSelect').val();
-            const g    = $('#groupSelect').val();
-            const s    = $('#statusSelect').val();
-            const d0   = $('#selectedDate').val();
-            const dur  = +$('#durationSelect').val();
-            const lt   = $('#lessonAccountingType').val();
+            const t = $('#timeSelect').val();
+            const g = $('#groupSelect').val();
+            const s = $('#statusSelect').val();
+            const d0 = $('#selectedDate').val();
+            const dur = +$('#durationSelect').val();
+            const lt = $('#lessonAccountingType').val();
             const zone = $('#timeZoneSelect').val();
             const token = $('#__RequestVerificationToken').val();
 
@@ -287,16 +301,16 @@
 
             // build the payload without an empty-string Id
             const dto = {
-            AssignmentId:         g,
-            DateTime:             luxon.DateTime.fromISO(`${d0}T${t}`, { zone }).toUTC().toISO(),
-            Status:               s,
-            Duration:             dur,
-            LessonAccountingType: lt
+                AssignmentId: g,
+                DateTime: luxon.DateTime.fromISO(`${d0}T${t}`, { zone }).toUTC().toISO(),
+                Status: s,
+                Duration: dur,
+                LessonAccountingType: lt
             };
 
             // if we're editing an existing row, add its Id
             if (editingRow) {
-            dto.Id = editingRow.Id;
+                dto.Id = editingRow.Id;
             }
 
             $.ajax({
@@ -307,13 +321,13 @@
                 data: JSON.stringify(dto),
                 success(response) {
                     const updated = {
-                        Id:                    response.id,
-                        AssignmentId:          response.assignmentId,
-                        DateTime:              response.dateTime,
-                        Status:                response.status,
-                        Duration:              response.duration,
-                        LessonAccountingType:  response.lessonAccountingType,
-                        GroupName:             $('#groupSelect option:selected').text()
+                        Id: response.id,
+                        AssignmentId: response.assignmentId,
+                        DateTime: response.dateTime,
+                        Status: response.status,
+                        Duration: response.duration,
+                        LessonAccountingType: response.lessonAccountingType,
+                        GroupName: $('#groupSelect option:selected').text()
                     };
 
                     if (editingRow) {
@@ -359,11 +373,37 @@
 
         function prepareCopy(formId) {
             const form = document.getElementById(formId);
-            const tid  = document.getElementById('teacherSelect').value;
-            const dt   = document.getElementById('selectedDate').value;
+            const tid = document.getElementById('teacherSelect').value;
+            const dt = document.getElementById('selectedDate').value;
 
-            form.querySelector('input[name="teacherId"]').value    = tid;
+            form.querySelector('input[name="teacherId"]').value = tid;
             form.querySelector('input[name="selectedDate"]').value = dt;
         }
+
+        function selectNextTeacher() {
+            const sel = document.getElementById('teacherSelect');
+            if (!sel || sel.options.length <= 1) return;
+
+            // Find the first real teacher option (skip placeholder empty value)
+            const firstTeacherIndex = Array.from(sel.options).findIndex(o => (o.value || '').trim() !== '');
+            if (firstTeacherIndex === -1) return;
+
+            let i = sel.selectedIndex;
+
+            // If nothing selected or placeholder selected, start at first teacher
+            if (i < firstTeacherIndex) {
+                sel.selectedIndex = firstTeacherIndex;
+                sel.form.submit();
+                return;
+            }
+
+            // Otherwise move to next teacher; wrap to first teacher when at end
+            i++;
+            if (i >= sel.options.length) i = firstTeacherIndex;
+
+            sel.selectedIndex = i;
+            sel.form.submit();
+        }
+
     </script>
 }

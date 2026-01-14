@@ -55,6 +55,8 @@ namespace DotNetCoreSqlDb.Data
         public DbSet<DotNetCoreSqlDb.Models.TwilioLessonRemindersLog> TwilioLessonRemindersLog { get; set; } = default!;
 
         public DbSet<DotNetCoreSqlDb.Models.DefaultSchedule> DefaultSchedule { get; set; } = default!;
+        
+        public DbSet<DotNetCoreSqlDb.Models.EmailPaymentsLog> EmailPaymentsLog { get; set; } = default!;
 
 
 

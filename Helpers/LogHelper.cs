@@ -87,7 +87,7 @@ namespace DotNetCoreSqlDb.Helpers
             await _context.SaveChangesAsync();
         }
 
-        public async Task LogStudentBalanceAsync(
+        public async Task<Guid> LogStudentBalanceAsync(
             Guid studentId,
             Guid assignmentId,
             string currency,
@@ -114,6 +114,8 @@ namespace DotNetCoreSqlDb.Helpers
             };
             _context.StudentBalanceTransactionLog.Add(log);
             await _context.SaveChangesAsync();
+
+            return log.Id;
         }
 
         public async Task LogStudentBalanceAsync(
@@ -192,5 +194,48 @@ namespace DotNetCoreSqlDb.Helpers
             _context.TwilioLessonRemindersLog.Add(log);
             await _context.SaveChangesAsync();
         }
+
+        public async Task LogEmailPaymentsAsync(
+            bool WasHandledAutomatically,
+            string Reason,
+            string Subject
+            )
+        {
+            var log = new EmailPaymentsLog
+            {
+                Id = Guid.NewGuid(),
+                HandledAutomatically = WasHandledAutomatically,
+                DateTime = DateTime.UtcNow,
+                ReasonForFailure = Reason,
+                EmailSubject = Subject
+
+            };
+            _context.EmailPaymentsLog.Add(log);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task LogEmailPaymentsAsync(
+            bool WasHandledAutomatically,
+            Guid StudentBalanceTransactionLogId,
+            string StudentName,
+            string PayerName,
+            string Subject
+            )
+        {
+            var log = new EmailPaymentsLog
+            {
+                Id = Guid.NewGuid(),
+                HandledAutomatically = WasHandledAutomatically,
+                DateTime = DateTime.UtcNow,
+                StudentBalanceTransactionLogId = StudentBalanceTransactionLogId,
+                StudentName = StudentName,
+                PayerName = PayerName,
+                EmailSubject = Subject
+
+            };
+            _context.EmailPaymentsLog.Add(log);
+            await _context.SaveChangesAsync();
+        }
+
     }
 }

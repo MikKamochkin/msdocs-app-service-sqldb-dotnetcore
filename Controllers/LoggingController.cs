@@ -78,5 +78,17 @@ namespace DotNetCoreSqlDb.Controllers
             return View(meetings);
         }
 
+        public async Task<IActionResult> EmailPaymentsLog()
+        {
+            var weekAgo = DateTime.UtcNow.Date.AddDays(-7);
+            var payments = await _context.EmailPaymentsLog
+                .Include(e => e.StudentBalanceTransactionLog)
+                .OrderByDescending(d => d.DateTime)
+                .Where(d => d.DateTime >= weekAgo)
+                .ToListAsync();
+
+            return View(payments);
+        }
+
     }
 }

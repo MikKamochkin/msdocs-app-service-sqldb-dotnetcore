@@ -17,7 +17,7 @@ public static class DropdownOptions
     {
         new SelectListItem { Text = "Google Khinich School", Value = "Google Khinich School" },
         new SelectListItem { Text = "Google Toronto French", Value = "Google Toronto French" },
-        new SelectListItem { Text = "Facebok Khinich School", Value = "Facebok Khinich School" },
+        new SelectListItem { Text = "Facebook Khinich School", Value = "Facebok Khinich School" },
         new SelectListItem { Text = "Facebook Toronto French", Value = "Facebook Toronto French" },
         new SelectListItem { Text = "Instagram Khinich School", Value = "Instagram Khinich School" },
         new SelectListItem { Text = "Instagram Toronto French", Value = "Instagram Toronto French" },

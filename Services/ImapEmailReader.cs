@@ -13,6 +13,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Models;
+using DotNetCoreSqlDb.Helpers;
 
 namespace DotNetCoreSqlDb.Services
 {
@@ -23,19 +24,22 @@ namespace DotNetCoreSqlDb.Services
         private readonly MyDatabaseContext _context;
         private readonly IUpdateBalanceService _updateBalanceSvc;
         private readonly IEmailSender _mailer;
+        private readonly LogHelper _logHelper;
 
         public ImapEmailReader(
             IOptions<EmailInboxSettings> options,
             ILogger<ImapEmailReader> logger,
             MyDatabaseContext context,
             IUpdateBalanceService updateBalanceSvc,
-            IEmailSender mailer)
+            IEmailSender mailer,
+            LogHelper logHelper)
         {
             _settings = options.Value;
             _logger   = logger;
             _context = context;
             _updateBalanceSvc = updateBalanceSvc;
             _mailer = mailer;
+            _logHelper = logHelper;
         }
 
         public async Task CheckInboxAsync()
@@ -113,6 +117,8 @@ namespace DotNetCoreSqlDb.Services
                         to: "torontofrench02@gmail.com",
                         subject: "Non Etransfer email",
                         htmlBody: "Subject: " + subject + "\nBody:\n" + textBody);
+                
+                await _logHelper.LogEmailPaymentsAsync(false, "Not an Etransfer", subject);
                 return;
             }
             return;
@@ -137,7 +143,9 @@ namespace DotNetCoreSqlDb.Services
                 note: $"Reason: {error}"
             );
 
-                return;
+            var subject = message.Subject ?? "";
+            await _logHelper.LogEmailPaymentsAsync(false, error, subject);
+            return;
         }
 
         private async Task HandleEtransferEmail(string body, string subject, MimeMessage message)
@@ -280,7 +288,7 @@ namespace DotNetCoreSqlDb.Services
                 ? refMatch.Groups[1].Value.Trim()
                 : "";
 
-            await _updateBalanceSvc.AddToBalanceAsync(
+            var transactionLogId = await _updateBalanceSvc.AddToBalanceAsync(
                 balance!.Id,
                 unitsToAdd,
                 amount,
@@ -289,6 +297,17 @@ namespace DotNetCoreSqlDb.Services
                 payerNotes,
                 reference,
                 "INTERAC");
+
+            if (transactionLogId.HasValue)
+            {
+                await _logHelper.LogEmailPaymentsAsync(
+                    WasHandledAutomatically: true,
+                    StudentBalanceTransactionLogId: transactionLogId.Value,
+                    StudentName: student.Name,
+                    PayerName: sentFrom,
+                    Subject: message.Subject);
+            }
+
         }
     }
 }
