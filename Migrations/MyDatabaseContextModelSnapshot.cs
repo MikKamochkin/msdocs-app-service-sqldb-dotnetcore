@@ -185,32 +185,6 @@ namespace DotNetCoreSqlDb.Migrations
                     b.ToTable("Group");
                 });
 
-            modelBuilder.Entity("DotNetCoreSqlDb.Models.InteracPaymentsQueue", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("AddedToQueueTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Body")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("From")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReasonForFailure")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Subject")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("InteracPaymentsQueue");
-                });
-
             modelBuilder.Entity("DotNetCoreSqlDb.Models.MailLog", b =>
                 {
                     b.Property<Guid>("Id")

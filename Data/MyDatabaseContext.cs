@@ -58,8 +58,6 @@ namespace DotNetCoreSqlDb.Data
         
         public DbSet<DotNetCoreSqlDb.Models.EmailPaymentsLog> EmailPaymentsLog { get; set; } = default!;
 
-        public DbSet<DotNetCoreSqlDb.Models.InteracPaymentsQueue> InteracPaymentsQueue { get; set; } = default!;
-
 
 
         // method defines model-level constraints like unique indexes
