@@ -17,17 +17,21 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly ILogger<LoggingController> _logger;
         private readonly IEmailSender _mailer;
         private readonly ITwilioService _twilioSvc;
+        private readonly IServiceScopeFactory _scopeFactory;
+
 
         public LoggingController(
             MyDatabaseContext context,
             ILogger<LoggingController> logger,
             IEmailSender mailer,
-            ITwilioService twilioSvc)
+            ITwilioService twilioSvc,
+            IServiceScopeFactory scopeFactory)
         {
             _context = context;
             _logger = logger;
             _mailer = mailer;
             _twilioSvc = twilioSvc;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task<IActionResult> Index()
@@ -90,5 +94,26 @@ namespace DotNetCoreSqlDb.Controllers
             return View(payments);
         }
 
+        public async Task<IActionResult> InteracPaymentsQueue()
+        {
+            var TwoWeeksAgo = DateTime.UtcNow.Date.AddDays(-14);
+            var queue = await _context.InteracPaymentsQueue
+                .OrderByDescending(d => d.AddedToQueueTime)
+                .Where(d => d.AddedToQueueTime >= TwoWeeksAgo)
+                .ToListAsync();
+
+            return View(queue);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ReRunEmailProcessing()
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var emailReader  = scope.ServiceProvider.GetRequiredService<IEmailInboxReader>();
+
+            await emailReader.CheckInboxAsync();
+
+            return RedirectToAction("InteracPaymentsQueue");
+        }
     }
 }
