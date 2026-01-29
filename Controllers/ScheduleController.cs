@@ -584,14 +584,14 @@ namespace DotNetCoreSqlDb.Controllers
 
             string date = selectedDate.ToString("yyyy-MM-dd");
             var html = $"""
-                        <p>Your schedule has been changed for {date}.</p>
+                        <p>Your schedule has been updated for {date}.</p>
                         <p>
-                            Please sign in <a href="https://torontofrench.ca/" target="_blank" style="color: #1a73e8;">here</a> to see your new schedule.
+                            Please sign in <a href="https://torontofrench.ca/" target="_blank" style="color: #1a73e8;">here</a> to see your schedule.
                         </p>
                         """;
                         
                         string to = teacherEmail;
-                        string subject = "Schedule Changed for " + date;
+                        string subject = "Schedule Updated for " + date;
                         await _mailer.SendAsync(
                             to: to,
                             subject: subject,

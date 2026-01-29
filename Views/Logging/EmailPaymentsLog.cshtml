@@ -23,9 +23,6 @@
                             DateTime
                         </th>
                         <th>
-                            Reason For Failure
-                        </th>
-                        <th>
                             Student Name
                         </th>
                         <th>
@@ -51,7 +48,6 @@
                                 item.HandledAutomatically == false ? "No" : "—")
                             </td>
                             <td>@Html.DisplayFor(modelItem => item.DateTime)</td>
-                            <td>@Html.DisplayFor(modelItem => item.ReasonForFailure)</td>
                             <td>@Html.DisplayFor(modelItem => item.StudentName)</td>
                             <td>@Html.DisplayFor(modelItem => item.PayerName)</td>
                             <td>@Html.DisplayFor(modelItem => item.EmailSubject)</td>

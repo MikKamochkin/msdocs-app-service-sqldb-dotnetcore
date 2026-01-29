@@ -48,9 +48,6 @@ namespace DotNetCoreSqlDb.Services
 
             try
             {
-                /*_logger.LogInformation(
-                    "Connecting to IMAP {Host}:{Port} as {User}",
-                    _settings.Host, _settings.Port, _settings.Username);*/
 
                 var secureOption = _settings.UseSsl
                     ? SecureSocketOptions.SslOnConnect
@@ -64,12 +61,12 @@ namespace DotNetCoreSqlDb.Services
 
                 var uids = await inbox.SearchAsync(SearchQuery.NotSeen);
 
-                if (uids.Count > 0)
+                /*if (uids.Count > 0)
                 {
                     _logger.LogInformation(
                         "Found {Count} unread emails in inbox for {User}.",
                         uids.Count, _settings.Username);
-                }
+                }*/
 
                 foreach (var uid in uids)
                 {
@@ -77,7 +74,7 @@ namespace DotNetCoreSqlDb.Services
 
                     try
                     {
-                        await ProcessMessageAsync(message);
+                        await AddEmailToQueue(message);
                         await inbox.AddFlagsAsync(uid, MessageFlags.Seen, true);
                     }
                     catch (Exception ex)
@@ -89,6 +86,8 @@ namespace DotNetCoreSqlDb.Services
                 }
 
                 await client.DisconnectAsync(true);
+                
+                await ProcessEmailsInQueue();
             }
             catch (Exception ex)
             {
@@ -98,18 +97,46 @@ namespace DotNetCoreSqlDb.Services
             }
         }
 
-        private async Task ProcessMessageAsync(MimeMessage message)
+        private async Task AddEmailToQueue(MimeMessage message)
         {
-            var from     = message.From.ToString();
-            var subject  = message.Subject ?? "";
-            var textBody = message.TextBody ?? "";
-            var htmlBody = message.HtmlBody ?? "";
-            var date = message.Date;
+            var email = new InteracPaymentsQueue
+            {
+                Id = Guid.NewGuid(),
+                AddedToQueueTime = DateTime.UtcNow,
+                From = message.From.ToString(),
+                Subject = message.Subject,
+                Body = message.TextBody,
+                ReasonForFailure = ""
+            };
 
+            _context.InteracPaymentsQueue.Add(email);
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task ProcessEmailsInQueue()
+        {
+            var TwoWeeksAgo = DateTime.UtcNow.AddDays(-14);
+
+            var emailsInQueue = await _context.InteracPaymentsQueue
+                .Where(email => email.AddedToQueueTime > TwoWeeksAgo)
+                .ToListAsync();
+
+            foreach (var email in emailsInQueue)
+            {
+                var queueItemId = email.Id;
+                var from = email.From;
+                var subject = email.Subject;
+                var body = email.Body;
+                await ProcessEmailAsync(queueItemId, from!, subject!, body!);
+            }
+        }
+
+        private async Task ProcessEmailAsync(Guid queueItemId, string from, string subject, string textBody)
+        {
             bool isEtransfer = IsEtransfer(from);
             if (isEtransfer)
             {
-                await HandleEtransferEmail(textBody, subject, message);
+                await HandleEtransferEmail(queueItemId, textBody, subject);
             }
             else
             {
@@ -134,28 +161,34 @@ namespace DotNetCoreSqlDb.Services
             return from.Contains("notify@payments.interac.ca", StringComparison.OrdinalIgnoreCase);
         }
 
-        private async Task SendForManual(MimeMessage message, string error)
+        private async Task SetFailureReason(Guid queueItemId, string reason)
         {
-            await _mailer.ForwardAsync(
-                to: "torontofrench02@gmail.com",
-                subject: "Automatic E-Transfer Handling Failed",
-                originalMessage: message,
-                note: $"Reason: {error}"
-            );
+            var emailInQueue = await _context.InteracPaymentsQueue.FirstOrDefaultAsync(e => e.Id == queueItemId);
 
-            var subject = message.Subject ?? "";
-            await _logHelper.LogEmailPaymentsAsync(false, error, subject);
-            return;
+            if (emailInQueue == null)
+            {
+                return;
+            }
+            emailInQueue.ReasonForFailure = reason;
+        
+            await _context.SaveChangesAsync();
+
         }
-
-        private async Task HandleEtransferEmail(string body, string subject, MimeMessage message)
+        private async Task HandleEtransferEmail(Guid queueItemId, string body, string subject)
         {
+            var emailInQueue = await _context.InteracPaymentsQueue.FirstOrDefaultAsync(e => e.Id == queueItemId);
+
+            if (emailInQueue == null)
+            {
+                return;
+            }
+
             if (body == null)
             {
                 string error = "Failed because body of email is null";
-                await SendForManual(message, error);
+                await SetFailureReason(queueItemId, error);
                 return;
-            } //throw new ArgumentNullException(nameof(body));
+            }
 
             var text = body.Replace("\r\n", "\n");
 
@@ -176,14 +209,14 @@ namespace DotNetCoreSqlDb.Services
             if (payers.Count() > 1)
             {
                 string error = "Failed because there are more than 1 payers";
-                await SendForManual(message, error);
+                await SetFailureReason(queueItemId, error);
                 return;
             }
 
             if (payers == null || payers.Count() == 0)
             {
                 string error = "Failed because payer not found";
-                await SendForManual(message, error);
+                await SetFailureReason(queueItemId, error);
                 return;
             } 
             
@@ -200,14 +233,14 @@ namespace DotNetCoreSqlDb.Services
             if (balances == null || balances.Count() == 0)
             {
                 string error = "Failed because balance doesn't exist";
-                await SendForManual(message, error);
+                await SetFailureReason(queueItemId, error);
                 return;
             } 
 
             if (balances.Count() > 1)
             {
                 string error = "Failed because there are more than 1 balances";
-                await SendForManual(message, error);
+                await SetFailureReason(queueItemId, error);
                 return;
             } 
                
@@ -218,7 +251,7 @@ namespace DotNetCoreSqlDb.Services
             if (assignment == null)
             {
                 string error = "Failed because assignment doesn't exist";
-                await SendForManual(message, error);
+                await SetFailureReason(queueItemId, error);
                 return;
             } 
 
@@ -264,7 +297,7 @@ namespace DotNetCoreSqlDb.Services
                 if (amount % lessonCost != 0)
                 {
                     string error = "Failed because amount paid isnt divisble by lesson cost";
-                    await SendForManual(message, error);
+                    await SetFailureReason(queueItemId, error);
                     return;
                 } 
                 unitsToAdd = (int)(amount / lessonCost);
@@ -298,6 +331,10 @@ namespace DotNetCoreSqlDb.Services
                 reference,
                 "INTERAC");
 
+            _context.InteracPaymentsQueue.Remove(emailInQueue);
+            await _context.SaveChangesAsync();
+
+
             if (transactionLogId.HasValue)
             {
                 await _logHelper.LogEmailPaymentsAsync(
@@ -305,7 +342,7 @@ namespace DotNetCoreSqlDb.Services
                     StudentBalanceTransactionLogId: transactionLogId.Value,
                     StudentName: student.Name,
                     PayerName: sentFrom,
-                    Subject: message.Subject);
+                    Subject: subject);
             }
 
         }
