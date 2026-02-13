@@ -346,5 +346,173 @@ namespace DotNetCoreSqlDb.Services
             }
 
         }
+
+
+    //Same as the default handle, expect called from LoggingController/ApplyQueuedPayment.
+    //Used when there are more than 1 balances, and an admin manually selects to which balance this should be applied to
+    public async Task HandleEtransferEmailWithSelectedBalance(Guid queueItemId, string body, string subject, Guid balanceId)
+        {
+            var emailInQueue = await _context.InteracPaymentsQueue.FirstOrDefaultAsync(e => e.Id == queueItemId);
+
+            if (emailInQueue == null)
+            {
+                return;
+            }
+            
+             if (string.IsNullOrWhiteSpace(body))
+            {
+                string error = "Failed because body of email is null";
+                await SetFailureReason(queueItemId, error);
+                return;
+            }
+
+            var text = body.Replace("\r\n", "\n");
+
+            var sentFromMatch = Regex.Match(
+                subject,
+                @"from\s+(.+?)\s+and it has been",
+                RegexOptions.Multiline);
+
+            string sentFrom = sentFromMatch.Success
+                ? sentFromMatch.Groups[1].Value.Trim()
+                : "";
+
+            var payers = await _context.Payer
+                .Include(p => p.Student)
+                .Where(p => EF.Functions.Collate(p.Name, "Latin1_General_CS_AS") == sentFrom)
+                .ToListAsync();
+
+            /*if (payers.Count() > 1)
+            {
+                string error = "Failed because there are more than 1 payers";
+                await SetFailureReason(queueItemId, error);
+                return;
+            }*/
+
+            /*if (payers == null || payers.Count() == 0)
+            {
+                string error = "Failed because payer not found";
+                await SetFailureReason(queueItemId, error);
+                return;
+            } */
+            
+            
+            
+            //var student = payer!.Student;
+            
+            var balance = await _context.StudentBalance
+                .Include(sb => sb.Assignment)
+                    .ThenInclude(a => a.Teacher) // optional, only if you use Teacher somewhere
+                .FirstOrDefaultAsync(sb => sb.Id == balanceId);
+
+            if (balance == null)
+            {
+                string error = "Failed because the balance does not exist";
+                await SetFailureReason(queueItemId, error);
+                return;
+            }
+
+            var student = await _context.Student.Where(s => s.ID == balance.StudentId).FirstOrDefaultAsync();
+               
+            var assignment = balance?.Assignment;
+
+            if (assignment == null)
+            {
+                string error = "Failed because assignment doesn't exist";
+                await SetFailureReason(queueItemId, error);
+                return;
+            } 
+
+            var lessonCost = assignment.StudentUnitCost;
+
+            var amountMatch = Regex.Match(
+                text,
+                @"Amount:\s*\$?([\d,]+\.\d{2})\s*\(([A-Z]{3})\)",
+                RegexOptions.Multiline);
+
+            float amount = 0f;
+            string currency = "";
+
+            if (amountMatch.Success)
+            {
+                var amountStr = amountMatch.Groups[1].Value.Replace(",", "");
+                float.TryParse(amountStr, NumberStyles.Number, CultureInfo.InvariantCulture, out amount);
+                currency = amountMatch.Groups[2].Value;
+            }
+            else
+            {
+                // fallback: first $xx.xx
+                var fallback = Regex.Match(text, @"\$([\d,]+\.\d{2})");
+                if (fallback.Success)
+                {
+                    var amountStr = fallback.Groups[1].Value.Replace(",", "");
+                    float.TryParse(amountStr, NumberStyles.Number, CultureInfo.InvariantCulture, out amount);
+                }
+            }
+
+            int unitsToAdd;
+
+            if (lessonCost == 55 && amount == 250)
+            {
+                unitsToAdd = 5;
+            }
+            else if (lessonCost == 55 && amount == 500)
+            {
+                unitsToAdd = 10;
+            }
+            else
+            {   
+                if (amount % lessonCost != 0)
+                {
+                    string error = "Failed because amount paid isnt divisble by lesson cost";
+                    await SetFailureReason(queueItemId, error);
+                    return;
+                } 
+                unitsToAdd = (int)(amount / lessonCost);
+            }
+
+            var messageMatch = Regex.Match(
+                text,
+                @"Message:\s*(.+)",
+                RegexOptions.Multiline);
+
+            string payerNotes = messageMatch.Success
+                ? messageMatch.Groups[1].Value.Trim()
+                : "";
+
+            var refMatch = Regex.Match(
+                text,
+                @"Reference Number:\s*(\S+)",
+                RegexOptions.Multiline);
+
+            string reference = refMatch.Success
+                ? refMatch.Groups[1].Value.Trim()
+                : "";
+
+            var transactionLogId = await _updateBalanceSvc.AddToBalanceAsync(
+                balance!.Id,
+                unitsToAdd,
+                amount,
+                "Handled automatically",
+                currency,
+                payerNotes,
+                reference,
+                "INTERAC");
+
+            _context.InteracPaymentsQueue.Remove(emailInQueue);
+            await _context.SaveChangesAsync();
+
+
+            if (transactionLogId.HasValue)
+            {
+                await _logHelper.LogEmailPaymentsAsync(
+                    WasHandledAutomatically: true,
+                    StudentBalanceTransactionLogId: transactionLogId.Value,
+                    StudentName: student.Name,
+                    PayerName: sentFrom,
+                    Subject: subject);
+            }
+
+        }
     }
 }

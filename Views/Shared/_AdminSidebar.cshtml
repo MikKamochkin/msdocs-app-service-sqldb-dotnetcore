@@ -82,7 +82,7 @@
         }
 
         @* Logging*@
-        @if (User.IsInRole("admin") || User.IsInRole("support"))
+        @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
         {
             var cssLog = btnClass("Logging", "Index");
             <a href="@Url.Action("Index", "Logging")" class="@cssLog" title="Logs">

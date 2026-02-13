@@ -1,60 +1,494 @@
 @model IEnumerable<DotNetCoreSqlDb.Models.InteracPaymentsQueue>
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery AntiForgery
 
 @{
     ViewData["Title"] = "Interac Payments Queue";
+    var tokens = AntiForgery.GetAndStoreTokens(ViewContext.HttpContext);
+    const string MultiBalanceReason = "Failed because there are more than 1 balances";
+    const string MultiPayerReason = "Failed because there are more than 1 payers";
+    const string PayerNotFoundReason = "Failed because payer not found";
 }
+
+<input type="hidden" id="__RequestVerificationToken" value="@tokens.RequestToken" />
 
 <div class="row no-gutters">
     @if (User.IsInRole("admin") || User.IsInRole("support"))
     {
         <partial name="_AdminSidebar" />
-        
+
         <div class="col-md-10">
             <h2>Emails</h2>
 
-            
             <form asp-action="ReRunEmailProcessing" asp-controller="Logging" method="post">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-primary">
                     Re-Process the queue
                 </button>
             </form>
-            
-            <table class="table">
+
+            <table class="table" id="queueTable">
                 <thead>
                     <tr>
-                        <th>
-                            Subject
-                        </th>
-                        <th>
-                            Body
-                        </th>
-                        <th>
-                            Reason For Failure
-                        </th>
-                        <th>
-                            Added Time
-                        </th>
+                        <th>Subject</th>
+                        <th>Reason For Failure</th>
+                        <th>Added Time</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in Model)
                     {
-                        <tr>
-                            <td>@Html.DisplayFor(modelItem => item.Subject)</td>
-                            <td>@Html.DisplayFor(modelItem => item.Body)</td>
-                            <td>@Html.DisplayFor(modelItem => item.ReasonForFailure)</td>
-                            <td>@Html.DisplayFor(modelItem => item.AddedToQueueTime)</td>
+                        <tr class="queue-row" style="cursor:pointer;" data-payment-id="@item.Id"
+                            data-reason="@item.ReasonForFailure">
+                            <td>@item.Subject</td>
+                            <td>@item.ReasonForFailure</td>
+                            <td>@item.AddedToQueueTime</td>
                         </tr>
                     }
                 </tbody>
             </table>
-
-
         </div>
     }
 </div>
 
+<!-- Modal: Multiple balances / Multiple payers -->
+<div class="modal fade" id="multiBalanceModal" tabindex="-1" role="dialog" aria-labelledby="multiBalanceModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="multiBalanceModalLabel">Select balance</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-2" id="modalIntroText">
+                    <strong>Multiple balances found.</strong> Select which balance to apply this payment to:
+                </div>
+
+                <!-- Only shown for "more than 1 payers" -->
+                <div id="studentPickerWrap" style="display:none; margin-bottom:10px;">
+                    <label for="studentSelect"><strong>Select student</strong></label>
+                    <select id="studentSelect" class="form-control"></select>
+                    <small class="text-muted">
+                        Then select the balance for that student.
+                    </small>
+                    <hr />
+                </div>
+
+                <select id="balanceSelect" class="form-control"></select>
+
+                <div id="applyStatus" class="mt-2" style="min-height:1.25rem;"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    Cancel
+                </button>
+
+                <button id="applyPaymentBtn" type="button" class="btn btn-primary">
+                    Apply to selected balance
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Payer not found -->
+<div class="modal fade" id="payerNotFoundModal" tabindex="-1" role="dialog" aria-labelledby="payerNotFoundModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="payerNotFoundModalLabel">Link payer to student</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-2">
+                    <strong>Payer not found.</strong> Select the student this payer belongs to. A payer record will be created for that student.
+                </div>
+
+                <label for="payerStudentSelect"><strong>Select student</strong></label>
+                <select id="payerStudentSelect" class="form-control"></select>
+
+                <div id="payerLinkStatus" class="mt-2" style="min-height:1.25rem;"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    Cancel
+                </button>
+
+                <button id="linkPayerBtn" type="button" class="btn btn-primary">
+                    Add payer to selected student
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <script>
+        const MULTI_BALANCE_REASON = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(MultiBalanceReason));
+        const MULTI_PAYER_REASON = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(MultiPayerReason));
+        const PAYER_NOT_FOUND_REASON = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(PayerNotFoundReason));
+
+
+        let selectedPaymentId = null;
+
+        // Holds all returned options from GetBalanceOptions
+        // expected item: { studentId: "...", id: "...", label: "..." }
+        let allOptions = [];
+
+        function openModal() {
+            $("#multiBalanceModal").modal("show");
+        }
+
+        function closeModal() {
+            $("#multiBalanceModal").modal("hide");
+        }
+
+        function resetModalState() {
+            $("#balanceSelect").empty();
+            $("#applyStatus").text("");
+            $("#studentSelect").empty();
+            $("#studentPickerWrap").hide();
+            $("#modalIntroText").html("<strong>Multiple balances found.</strong> Select which balance to apply this payment to:");
+
+            selectedPaymentId = null;
+            allOptions = [];
+
+            $("#applyPaymentBtn").prop("disabled", false);
+        }
+
+        async function loadBalanceOptions(paymentId) {
+            const res = await fetch(`/Logging/GetBalanceOptions?paymentId=${paymentId}`, {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+
+            if (!res.ok) throw new Error("Failed to load balance options.");
+            return await res.json();
+        }
+
+        async function postApplyPayment(paymentId, balanceId) {
+            const token = $("#__RequestVerificationToken").val();
+
+            const form = new URLSearchParams();
+            form.append("paymentId", paymentId);
+            form.append("balanceId", balanceId);
+
+            const res = await fetch(`/Logging/ApplyQueuedPayment`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "RequestVerificationToken": token,
+                    "Accept": "application/json"
+                },
+                body: form.toString()
+            });
+
+            // safe parse
+            const text = await res.text();
+            let data = null;
+            if (text) {
+                try { data = JSON.parse(text); } catch { }
+            }
+
+            if (!res.ok) {
+                const msg = (data && data.message) ? data.message : "Apply failed.";
+                throw new Error(msg);
+            }
+
+            return data ?? { success: true };
+        }
+
+        function populateBalanceSelect(options) {
+            $("#balanceSelect").empty();
+
+            for (const opt of options) {
+                $("#balanceSelect").append(
+                    $("<option></option>").val(opt.id).text(opt.label)
+                );
+            }
+        }
+
+        function buildStudentDropdownFromOptions(options) {
+            // Map studentId -> studentName (first non-empty name wins)
+            const map = new Map();
+
+            for (const opt of options) {
+                const sid = (opt.studentId || "").toString();
+                if (!sid) continue;
+
+                const name = (opt.studentName || "").toString().trim();
+                if (!map.has(sid)) {
+                    map.set(sid, name);
+                } else {
+                    // If we previously stored empty name and now we have a real one, upgrade it
+                    if (!map.get(sid) && name) map.set(sid, name);
+                }
+            }
+
+            const studentIds = Array.from(map.keys());
+
+            // Sort alphabetically by student name (fallback to id)
+            studentIds.sort((a, b) => {
+                const an = (map.get(a) || "").toLowerCase();
+                const bn = (map.get(b) || "").toLowerCase();
+                if (an && bn) return an.localeCompare(bn);
+                if (an) return -1;
+                if (bn) return 1;
+                return a.localeCompare(b);
+            });
+
+            $("#studentSelect").empty();
+
+            for (const sid of studentIds) {
+                const name = map.get(sid) || "(Unnamed student)";
+                $("#studentSelect").append(
+                    $("<option></option>").val(sid).text(name)
+                );
+            }
+
+            return studentIds;
+        }
+
+
+        function filterOptionsByStudentId(studentId) {
+            const sid = (studentId || "").toString();
+            return allOptions.filter(o => (o.studentId || "").toString() === sid);
+        }
+
+        // When modal is fully hidden, cleanup
+        $("#multiBalanceModal").on("hidden.bs.modal", function () {
+            resetModalState();
+        });
+
+        // Clicking a queue row triggers modal for either reason
+        $(document).on("click", ".queue-row", async function () {
+            const paymentId = $(this).data("payment-id");
+            const reason = ($(this).data("reason") || "").toString().trim();
+
+            // CASE 3: payer not found
+            if (reason === PAYER_NOT_FOUND_REASON) {
+                payerLinkPaymentId = paymentId;
+                $("#payerLinkStatus").text("Loading students...");
+                $("#linkPayerBtn").prop("disabled", true);
+                $("#payerNotFoundModal").modal("show");
+
+                try {
+                    const students = await loadAllStudents();
+                    if (!students || students.length === 0) {
+                        $("#payerLinkStatus").text("No students found.");
+                        return;
+                    }
+
+                    populateStudentSelect(students);
+                    $("#payerLinkStatus").text("");
+                    $("#linkPayerBtn").prop("disabled", false);
+                } catch (e) {
+                    $("#payerLinkStatus").text(e.message || "Error loading students.");
+                }
+
+                return;
+            }
+
+            // Existing modal flows (multi balance / multi payer)
+            resetModalState();
+
+            const shouldHandle =
+                (reason === MULTI_BALANCE_REASON) ||
+                (reason === MULTI_PAYER_REASON);
+
+            if (!shouldHandle) return;
+
+            selectedPaymentId = paymentId;
+            openModal();
+
+            $("#applyStatus").text("Loading balances...");
+            $("#applyPaymentBtn").prop("disabled", true);
+
+            try {
+                const options = await loadBalanceOptions(paymentId);
+                allOptions = options || [];
+
+                if (!allOptions || allOptions.length === 0) {
+                    $("#applyStatus").text("No balances returned for this payment.");
+                    return;
+                }
+
+                if (reason === MULTI_BALANCE_REASON) {
+                    $("#modalIntroText").html("<strong>Multiple balances found.</strong> Select which balance to apply this payment to:");
+                    $("#studentPickerWrap").hide();
+                    populateBalanceSelect(allOptions);
+                }
+
+                if (reason === MULTI_PAYER_REASON) {
+                    $("#modalIntroText").html("<strong>Multiple payers found.</strong> Select the student, then choose a balance:");
+                    $("#studentPickerWrap").show();
+
+                    const studentIds = buildStudentDropdownFromOptions(allOptions);
+                    if (!studentIds || studentIds.length === 0) {
+                        $("#applyStatus").text("No student IDs returned for this payment.");
+                        return;
+                    }
+
+                    const firstStudentId = studentIds[0];
+                    $("#studentSelect").val(firstStudentId);
+
+                    const filtered = filterOptionsByStudentId(firstStudentId);
+                    populateBalanceSelect(filtered);
+
+                    if (!filtered || filtered.length === 0) {
+                        $("#applyStatus").text("No balances found for the selected student.");
+                        return;
+                    }
+                }
+
+                $("#applyStatus").text("");
+                $("#applyPaymentBtn").prop("disabled", false);
+            } catch (e) {
+                $("#applyStatus").text(e.message || "Error loading balances.");
+            }
+        });
+
+
+        // When student changes (multi-payer case), filter balance list
+        $("#studentSelect").on("change", function () {
+            if (!allOptions || allOptions.length === 0) return;
+
+            const studentId = $("#studentSelect").val();
+            const filtered = filterOptionsByStudentId(studentId);
+
+            populateBalanceSelect(filtered);
+
+            if (!filtered || filtered.length === 0) {
+                $("#applyStatus").text("No balances found for the selected student.");
+                $("#applyPaymentBtn").prop("disabled", true);
+            } else {
+                $("#applyStatus").text("");
+                $("#applyPaymentBtn").prop("disabled", false);
+            }
+        });
+
+        $("#applyPaymentBtn").on("click", async function () {
+            if (!selectedPaymentId) return;
+
+            const balanceId = $("#balanceSelect").val();
+            if (!balanceId) return;
+
+            $("#applyStatus").text("Applying...");
+            $("#applyPaymentBtn").prop("disabled", true);
+
+            try {
+                const result = await postApplyPayment(selectedPaymentId, balanceId);
+
+                if (result && result.success) {
+                    $("#applyStatus").text("Applied.");
+                    closeModal();
+                    location.reload();
+                } else {
+                    $("#applyStatus").text("Apply returned unexpected result.");
+                }
+            } catch (e) {
+                $("#applyStatus").text(e.message || "Error applying payment.");
+            } finally {
+                $("#applyPaymentBtn").prop("disabled", false);
+            }
+        });
+
+
+        let payerLinkPaymentId = null;
+
+        async function loadAllStudents() {
+            const res = await fetch(`/Logging/GetAllStudents`, {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+
+            if (!res.ok) throw new Error("Failed to load students.");
+            return await res.json();
+        }
+
+        function populateStudentSelect(students) {
+            $("#payerStudentSelect").empty();
+
+            for (const s of (students || [])) {
+                $("#payerStudentSelect").append(
+                    $("<option></option>").val(s.id).text(s.name)
+                );
+            }
+        }
+
+        async function postAddPayerToStudent(paymentId, studentId) {
+            const token = $("#__RequestVerificationToken").val();
+
+            const form = new URLSearchParams();
+            form.append("paymentId", paymentId);
+            form.append("studentId", studentId);
+
+            const res = await fetch(`/Logging/AddPayerToStudent`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "RequestVerificationToken": token,
+                    "Accept": "application/json"
+                },
+                body: form.toString()
+            });
+
+            const text = await res.text();
+            let data = null;
+            if (text) { try { data = JSON.parse(text); } catch {} }
+
+            if (!res.ok) {
+                const msg = (data && data.message) ? data.message : (text || "Failed to add payer.");
+                throw new Error(msg);
+            }
+
+            return data ?? { success: true };
+        }
+
+        $("#linkPayerBtn").on("click", async function () {
+            if (!payerLinkPaymentId) return;
+
+            const studentId = $("#payerStudentSelect").val();
+            if (!studentId) return;
+
+            $("#payerLinkStatus").text("Adding payer...");
+            $("#linkPayerBtn").prop("disabled", true);
+
+            try {
+                const result = await postAddPayerToStudent(payerLinkPaymentId, studentId);
+
+                if (result && result.success) {
+                    $("#payerLinkStatus").text("Payer added.");
+                    $("#payerNotFoundModal").modal("hide");
+
+                    // Option A (simple): reload and then click "Re-Process the queue"
+                    // Option B (better UX): automatically re-process queue right away:
+                    // document.querySelector('form[action*="ReRunEmailProcessing"]').submit();
+
+                    location.reload();
+                } else {
+                    $("#payerLinkStatus").text("Unexpected response.");
+                }
+            } catch (e) {
+                $("#payerLinkStatus").text(e.message || "Error adding payer.");
+            } finally {
+                $("#linkPayerBtn").prop("disabled", false);
+            }
+        });
+    </script>
 }

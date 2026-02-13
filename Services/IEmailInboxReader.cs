@@ -6,5 +6,7 @@ namespace DotNetCoreSqlDb.Services
     public interface IEmailInboxReader
     {
         Task CheckInboxAsync();
+
+        Task HandleEtransferEmailWithSelectedBalance(Guid paymentId, string body, string subject, Guid balanceId);
     }
 }
