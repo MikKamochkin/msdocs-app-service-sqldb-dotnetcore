@@ -37,8 +37,10 @@
                 <tbody>
                     @foreach (var item in Model)
                     {
-                        <tr class="queue-row" style="cursor:pointer;" data-payment-id="@item.Id"
-                            data-reason="@item.ReasonForFailure">
+                        <tr class="queue-row" style="cursor:pointer;"
+                            data-payment-id="@item.Id"
+                            data-reason="@item.ReasonForFailure"
+                            data-subject="@item.Subject">
                             <td>@item.Subject</td>
                             <td>@item.ReasonForFailure</td>
                             <td>@item.AddedToQueueTime</td>
@@ -279,10 +281,13 @@
         $(document).on("click", ".queue-row", async function () {
             const paymentId = $(this).data("payment-id");
             const reason = ($(this).data("reason") || "").toString().trim();
+            const subject = ($(this).data("subject") || "").toString();
 
             // CASE 3: payer not found
             if (reason === PAYER_NOT_FOUND_REASON) {
                 payerLinkPaymentId = paymentId;
+                const payerName = extractPayerNameFromSubject(subject) || "payer";
+                $("#payerNotFoundModalLabel").text(`Link ${payerName} to student`);
                 $("#payerLinkStatus").text("Loading students...");
                 $("#linkPayerBtn").prop("disabled", true);
                 $("#payerNotFoundModal").modal("show");
@@ -425,11 +430,17 @@
             $("#payerStudentSelect").empty();
 
             for (const s of (students || [])) {
+                const name = (s.name || "").toString().trim() || "(Unnamed student)";
+                const poe  = (s.parentOrEmployer || "").toString().trim();
+
+                const label = poe ? `${name} — ${poe}` : name;
+
                 $("#payerStudentSelect").append(
-                    $("<option></option>").val(s.id).text(s.name)
+                    $("<option></option>").val(s.id).text(label)
                 );
             }
         }
+
 
         async function postAddPayerToStudent(paymentId, studentId) {
             const token = $("#__RequestVerificationToken").val();
@@ -459,6 +470,17 @@
 
             return data ?? { success: true };
         }
+
+        
+        function extractPayerNameFromSubject(subject) {
+            const s = (subject || "").toString();
+
+            const m = s.match(/from\s+(.+?)\s+and it has been/i);
+            if (m && m[1]) return m[1].trim();
+
+            return null;
+        }
+
 
         $("#linkPayerBtn").on("click", async function () {
             if (!payerLinkPaymentId) return;
@@ -490,5 +512,7 @@
                 $("#linkPayerBtn").prop("disabled", false);
             }
         });
+
+        
     </script>
 }

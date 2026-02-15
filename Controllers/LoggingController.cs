@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [Authorize(Roles = "support, admin")]
+    [Authorize(Roles = "support, admin, assistant")]
     public class LoggingController : Controller
     {
         private readonly MyDatabaseContext _context;
@@ -207,7 +207,7 @@ namespace DotNetCoreSqlDb.Controllers
             var students = await _context.Student
                 .AsNoTracking()
                 .OrderBy(s => s.Name)
-                .Select(s => new { id = s.ID, name = s.Name })
+                .Select(s => new { id = s.ID, name = s.Name, parentOrEmployer = s.ParentOrEmployer })
                 .ToListAsync();
 
             return Ok(students);

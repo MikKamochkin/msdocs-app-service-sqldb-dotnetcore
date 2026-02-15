@@ -328,6 +328,34 @@
             color: #fff;
         }
 
+        /* ---------- DISABLED JOIN TOOLTIP ---------- */
+        .join-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .join-tooltip {
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+        }
+
+        .join-wrapper:hover .join-tooltip {
+            opacity: 1;
+        }
+
+
         /* ---------- MOBILE TABLE ---------- */
         @@media (max-width: 600px) {
             #entriesTable {
@@ -643,9 +671,9 @@
                     if (r.CanJoinNow) {
                         actionHtml = buildBtn('enabled', r.Id)
                     }
-                    /*else(){
+                    else{
                         actionHtml = buildBtn('disabled', r.Id);
-                    }*/
+                    }
                     //}
 
                     tbody.append(`
@@ -675,16 +703,31 @@
                                     title="Lesson details">
                                     <i class="fa-solid fa-circle-info text-light"></i>
                                     </a>`;
+                if (disabled) {
+                    return `
+                        <div class="join-wrapper">
+                            <a href="#"
+                            class="btn btn-primary btn-md ml-2 disabled-btn"
+                            aria-disabled="true"
+                            tabindex="-1">
+                                Join Lesson
+                            </a>
+                            <div class="join-tooltip">
+                                You will be able to join your lesson 5 minutes before it is scheduled to start
+                            </div>
+                        </div>
+                    ` + detailsBtn;
+                }
 
-                const waitBtn = `
-                                <a href="${waitRoomBase}?scheduleId=${id}"
-                                    class="btn btn-primary btn-md ml-2${disabled ? " disabled-btn" : ""}"
-                                            ${disabled ? `aria-disabled="true" tabindex="-1"` : ""}"
-                                    target="_blank"
-                                    rel="noopener noreferrer">
-                                    Join Lesson
-                                </a>`;
-                return waitBtn + detailsBtn;
+                // Enabled button (no tooltip wrapper)
+                return `
+                    <a href="${waitRoomBase}?scheduleId=${id}"
+                    class="btn btn-primary btn-md ml-2"
+                    target="_blank"
+                    rel="noopener noreferrer">
+                        Join Lesson
+                    </a>
+                ` + detailsBtn;
             }
 
             /* open Zoom + browser fallback */

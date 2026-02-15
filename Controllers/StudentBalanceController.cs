@@ -140,6 +140,7 @@ namespace DotNetCoreSqlDb.Controllers
                     .ThenInclude(t => t.Teacher)
                 .Include(b => b.Assignment)
                     .ThenInclude(a => a.Group)
+                .Where(a => a.Assignment.IsActive == true)
                 .ToListAsync();
 
             ViewBag.StudentName = student.Name;
