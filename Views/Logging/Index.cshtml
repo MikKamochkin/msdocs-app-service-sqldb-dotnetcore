@@ -2,7 +2,7 @@
     ViewData["Title"] = "Logs";
 }
 <div class="row no-gutters">
-    @if (User.IsInRole("admin") || User.IsInRole("support"))
+    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
     {
         <partial name="_AdminSidebar" />
     }

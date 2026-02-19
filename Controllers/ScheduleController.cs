@@ -493,7 +493,7 @@ namespace DotNetCoreSqlDb.Controllers
                     AssignmentId = def.AssignmentId,
                     DateTime = utcDateTime,
                     Status = "Scheduled",
-                    Duration = (int)def.Assignment!.StudentUnitDuration,
+                    Duration = def.Duration,
                     LessonAccountingType = "S100T100",
                     Accounted = false
                 };

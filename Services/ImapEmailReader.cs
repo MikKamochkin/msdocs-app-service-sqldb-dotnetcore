@@ -115,10 +115,10 @@ namespace DotNetCoreSqlDb.Services
 
         private async Task ProcessEmailsInQueue()
         {
-            var TwoWeeksAgo = DateTime.UtcNow.AddDays(-14);
+            var monthAgo = DateTime.UtcNow.AddMonths(-1);
 
             var emailsInQueue = await _context.InteracPaymentsQueue
-                .Where(email => email.AddedToQueueTime > TwoWeeksAgo)
+                .Where(email => email.AddedToQueueTime > monthAgo)
                 .ToListAsync();
 
             foreach (var email in emailsInQueue)
