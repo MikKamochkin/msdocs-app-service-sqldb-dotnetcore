@@ -1,5 +1,6 @@
 @{
     ViewData["Title"] = "Download CSV Files";
+    var token = (string)ViewBag.Token;
 }
 <div class="row no-gutters">
     @if (User.IsInRole("admin") || User.IsInRole("support"))
@@ -7,15 +8,15 @@
         <partial name="_AdminSidebar" />
     }
     <div class="col">
-    <h2>Download CSV Files!!!</h2>
+    <h2>Download CSV Files</h2>
     <ul>
         <li>
-            <a asp-action="DownloadAccountCsv" asp-controller="DataConversion">
+            <a class="btn btn-primary" asp-action="DownloadAccountCsv" asp-route-token="@token">
                 Download Account CSV
             </a>
         </li>
         <li>
-            <a asp-action="DownloadStudentCsv" asp-controller="DataConversion">
+            <a class="btn btn-primary" asp-action="DownloadStudentCsv" asp-route-token="@token">
                 Download Student CSV
             </a>
         </li>

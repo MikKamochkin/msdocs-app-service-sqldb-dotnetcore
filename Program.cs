@@ -33,6 +33,8 @@ builder.Services.Configure<EmailInboxSettings>(
 
 builder.Services.AddScoped<IEmailInboxReader, ImapEmailReader>();
 
+builder.Services.AddMemoryCache();
+
 
 
 /* ───── 3.  Database context + cache (unchanged) ─────── */

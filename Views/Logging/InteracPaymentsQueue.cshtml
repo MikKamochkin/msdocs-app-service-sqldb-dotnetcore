@@ -32,6 +32,7 @@
                         <th>Subject</th>
                         <th>Reason For Failure</th>
                         <th>Added Time</th>
+                        <th style="width: 1%; white-space: nowrap;">Delete</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -44,6 +45,14 @@
                             <td>@item.Subject</td>
                             <td>@item.ReasonForFailure</td>
                             <td>@item.AddedToQueueTime</td>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-sm btn-danger delete-queue-btn"
+                                        data-payment-id="@item.Id"
+                                        title="Delete this queue item">
+                                    Delete
+                                </button>
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -268,13 +277,13 @@
 
 
         function filterOptionsByStudentId(studentId) {
-            const sid = (studentId || "").toString();
-            return allOptions.filter(o => (o.studentId || "").toString() === sid);
-        }
+                const sid = (studentId || "").toString();
+                return allOptions.filter(o => (o.studentId || "").toString() === sid);
+            }
 
-        // When modal is fully hidden, cleanup
-        $("#multiBalanceModal").on("hidden.bs.modal", function () {
-            resetModalState();
+            // When modal is fully hidden, cleanup
+            $("#multiBalanceModal").on("hidden.bs.modal", function () {
+                resetModalState();
         });
 
         // Clicking a queue row triggers modal for either reason
@@ -440,6 +449,64 @@
                 );
             }
         }
+
+        async function postDeleteQueuedPayment(paymentId) {
+            const token = $("#__RequestVerificationToken").val();
+
+            const form = new URLSearchParams();
+            form.append("paymentId", paymentId);
+
+            const res = await fetch(`/Logging/DeleteQueuedPayment`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "RequestVerificationToken": token,
+                    "Accept": "application/json"
+                },
+                body: form.toString()
+            });
+
+            const text = await res.text();
+            let data = null;
+            if (text) { try { data = JSON.parse(text); } catch { } }
+
+            if (!res.ok) {
+                const msg = (data && data.message) ? data.message : (text || "Delete failed.");
+                throw new Error(msg);
+            }
+
+            return data ?? { success: true };
+        }
+
+        // IMPORTANT: stop propagation so row click doesn't fire
+        $(document).on("click", ".delete-queue-btn", async function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const paymentId = $(this).data("payment-id");
+            if (!paymentId) return;
+
+            const ok = confirm("Delete this queue entry? This cannot be undone.");
+            if (!ok) return;
+
+            const $btn = $(this);
+            const $row = $btn.closest("tr");
+
+            $btn.prop("disabled", true).text("Deleting...");
+
+            try {
+                const result = await postDeleteQueuedPayment(paymentId);
+                if (result && result.success) {
+                    $row.remove();
+                } else {
+                    alert("Delete returned unexpected result.");
+                    $btn.prop("disabled", false).text("Delete");
+                }
+            } catch (err) {
+                alert(err.message || "Error deleting queue item.");
+                $btn.prop("disabled", false).text("Delete");
+            }
+        });
 
 
         async function postAddPayerToStudent(paymentId, studentId) {

@@ -52,9 +52,9 @@ TODO:
 
 add "view balances" button to /groups index page next to each group; new page that has dropdown of all assignments with that groupid where isActive == true; show table foreach student in that assignment show their student balance (name: units)
 
-add isrealgroup to dbo.Group bool, if created from /groups/create set it to true, if a solo group for a student set it to false. in /group keep groups that has isrealgroup == true even when <=1 students:
+add  to dbo.Group bool, if created from /groups/create set it to true, if a solo group for a student set it to false. in /group keep groups that has  == true even when <=1 students:
 
-.Where(g => g.StudentGroupCompositions.Count > 1 || g.IsRealGroup == true)
+.Where(g => g.StudentGroupCompositions.Count > 1 || g. == true)
 
 
 

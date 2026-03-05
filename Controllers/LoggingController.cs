@@ -276,6 +276,23 @@ namespace DotNetCoreSqlDb.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "support, admin, assistant")]
+        public async Task<IActionResult> DeleteQueuedPayment(Guid paymentId)
+        {
+            var item = await _context.InteracPaymentsQueue
+                .FirstOrDefaultAsync(x => x.Id == paymentId);
+
+            if (item == null)
+                return NotFound(new { success = false, message = "Queue item not found." });
+
+            _context.InteracPaymentsQueue.Remove(item);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true });
+        }
+
 
 
 

@@ -6,6 +6,7 @@ using DotNetCoreSqlDb.Data;      // your DbContext namespace
 using DotNetCoreSqlDb.Services;  // <-- so IDataConversionService resolves
 using DotNetCoreSqlDb.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace DotNetCoreSqlDb.Controllers
 {
@@ -14,13 +15,16 @@ namespace DotNetCoreSqlDb.Controllers
     {
         private readonly MyDatabaseContext _context;
         private readonly IDataConversionService _conversionSvc;
+        private readonly IMemoryCache _cache;
 
         public DataConversionController(
             MyDatabaseContext context,
-            IDataConversionService conversionSvc)
+            IDataConversionService conversionSvc,
+            IMemoryCache cache)
         {
             _context = context;
             _conversionSvc = conversionSvc;
+            _cache = cache;
         }
 
         [HttpGet]
@@ -39,45 +43,44 @@ namespace DotNetCoreSqlDb.Controllers
             var (accountCsvBytes, studentCsvBytes) =
                 await _conversionSvc.GenerateCsvFilesAsync(students, contacts);
 
-            TempData["AccountCsv"] = System.Convert.ToBase64String(accountCsvBytes);
-            TempData["StudentCsv"] = System.Convert.ToBase64String(studentCsvBytes);
+            var token = Guid.NewGuid().ToString("N");
 
-            return RedirectToAction(nameof(DownloadLinks));
+            _cache.Set($"acct:{token}", accountCsvBytes, TimeSpan.FromMinutes(10));
+            _cache.Set($"stud:{token}", studentCsvBytes, TimeSpan.FromMinutes(10));
+
+            return RedirectToAction(nameof(DownloadLinks), new { token });
         }
 
         [HttpGet]
-        public IActionResult DownloadLinks()
+        public IActionResult DownloadLinks(string token)
         {
-            if (!TempData.ContainsKey("AccountCsv") ||
-                !TempData.ContainsKey("StudentCsv"))
-            {
-                return RedirectToAction(nameof(Index));
-            }
+            if (string.IsNullOrWhiteSpace(token)) return RedirectToAction(nameof(Index));
+
+            // If either is missing, token expired/invalid
+            if (!_cache.TryGetValue($"acct:{token}", out _)) return RedirectToAction(nameof(Index));
+            if (!_cache.TryGetValue($"stud:{token}", out _)) return RedirectToAction(nameof(Index));
+
+            ViewBag.Token = token;
             return View();
         }
 
         [HttpGet]
-        public IActionResult DownloadAccountCsv()
+        public IActionResult DownloadAccountCsv(string token)
         {
-            if (!TempData.ContainsKey("AccountCsv"))
-                return NotFound();
+            if (string.IsNullOrWhiteSpace(token)) return NotFound();
 
-            var base64 = TempData["AccountCsv"] as string;
-            var bytes = System.Convert.FromBase64String(base64);
-            TempData.Keep("AccountCsv");
+            if (!_cache.TryGetValue($"acct:{token}", out byte[] bytes)) return NotFound();
             return File(bytes, "text/csv", "target_account.csv");
         }
 
         [HttpGet]
-        public IActionResult DownloadStudentCsv()
+        public IActionResult DownloadStudentCsv(string token)
         {
-            if (!TempData.ContainsKey("StudentCsv"))
-                return NotFound();
+            if (string.IsNullOrWhiteSpace(token)) return NotFound();
 
-            var base64 = TempData["StudentCsv"] as string;
-            var bytes = System.Convert.FromBase64String(base64);
-            TempData.Keep("StudentCsv");
+            if (!_cache.TryGetValue($"stud:{token}", out byte[] bytes)) return NotFound();
             return File(bytes, "text/csv", "target_student.csv");
         }
+
     }
 }
