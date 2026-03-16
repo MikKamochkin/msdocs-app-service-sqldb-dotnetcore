@@ -484,9 +484,10 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> GetJoinUrl(Guid scheduleId)
         {
             var zoom = await _context.ZoomMeetings
+                .AsNoTracking()
                 .FirstOrDefaultAsync(z => z.ScheduleId == scheduleId);
 
-            if (zoom == null)
+            if (zoom == null || string.IsNullOrWhiteSpace(zoom.JoinUrl))
                 return NoContent();          // 204 → not ready
 
             return Ok(new { joinUrl = zoom.JoinUrl });

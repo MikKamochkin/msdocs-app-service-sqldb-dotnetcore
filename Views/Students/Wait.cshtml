@@ -158,12 +158,56 @@
             (function () {
                 const scheduleId = '@scheduleId';
                 const checkUrl = `@Url.Action("GetJoinUrl","Students")?scheduleId=${scheduleId}`;
+
+                let redirected = false;
+                let pollHandle = null;
+
+                function goToJoinUrl(link) {
+                    if (redirected || !link) return;
+                    redirected = true;
+
+                    if (pollHandle) {
+                        clearInterval(pollHandle);
+                        pollHandle = null;
+                    }
+
+                    window.location.href = link;
+                }
+
+                async function checkJoinUrl() {
+                    if (redirected) return;
+
+                    try {
+                        const resp = await fetch(checkUrl, { cache: 'no-store' });
+
+                        if (resp.ok) {
+                            const { joinUrl } = await resp.json();
+                            if (joinUrl) {
+                                goToJoinUrl(joinUrl);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('GetJoinUrl failed', err);
+                    }
+                }
+
                 const connection = new signalR.HubConnectionBuilder()
                     .withUrl("/hubs/zoomMeetingHub")
+                    .withAutomaticReconnect()
                     .build();
 
                 connection.on('MeetingCreated', link => {
-                    window.location.href = link;
+                    goToJoinUrl(link);
+                });
+
+                connection.onreconnected(async () => {
+                    try {
+                        await connection.invoke('JoinGroup', scheduleId);
+                    } catch (err) {
+                        console.error('Rejoin group failed', err);
+                    }
+
+                    await checkJoinUrl();
                 });
 
                 async function init() {
@@ -174,16 +218,16 @@
                         console.error('SignalR error', err);
                     }
 
-                    try {
-                        const resp = await fetch(checkUrl);
-                        if (resp.status === 200) {
-                            const { joinUrl } = await resp.json();
-                            window.location.href = joinUrl;
-                        }
-                    } catch (err) {
-                        console.error('Initial check failed', err);
-                    }
+                    await checkJoinUrl();
+                    pollHandle = setInterval(checkJoinUrl, 2000);
                 }
+
+                window.addEventListener('beforeunload', () => {
+                    if (pollHandle) {
+                        clearInterval(pollHandle);
+                        pollHandle = null;
+                    }
+                });
 
                 init();
             })();
