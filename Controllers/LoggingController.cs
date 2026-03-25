@@ -97,10 +97,10 @@ namespace DotNetCoreSqlDb.Controllers
 
         public async Task<IActionResult> InteracPaymentsQueue()
         {
-            var TwoWeeksAgo = DateTime.UtcNow.Date.AddMonths(-1);
+            var MonthAgo = DateTime.UtcNow.Date.AddMonths(-1);
             var queue = await _context.InteracPaymentsQueue
                 .OrderByDescending(d => d.AddedToQueueTime)
-                .Where(d => d.AddedToQueueTime >= TwoWeeksAgo)
+                .Where(d => d.AddedToQueueTime >= MonthAgo)
                 .ToListAsync();
 
             return View(queue);
@@ -114,6 +114,7 @@ namespace DotNetCoreSqlDb.Controllers
             var emailReader = scope.ServiceProvider.GetRequiredService<IEmailInboxReader>();
 
             await emailReader.CheckInboxAsync();
+            await emailReader.ProcessEmailsInQueue();
 
             return RedirectToAction("InteracPaymentsQueue");
         }
@@ -290,6 +291,33 @@ namespace DotNetCoreSqlDb.Controllers
             _context.InteracPaymentsQueue.Remove(item);
             await _context.SaveChangesAsync();
 
+            return Ok(new { success = true });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "support, admin, assistant")]
+        public async Task<IActionResult> ReprocessQueuedPayment(Guid paymentId)
+        {
+            var item = await _context.InteracPaymentsQueue
+                .FirstOrDefaultAsync(x => x.Id == paymentId);
+
+            if (item == null)
+                return NotFound(new { success = false, message = "Queue item not found." });
+
+            using var scope = _scopeFactory.CreateScope();
+            var emailReader = scope.ServiceProvider.GetRequiredService<IEmailInboxReader>();
+
+            var subject = item.Subject;
+
+            var body = item.Body;
+
+            if (body == null || subject == null)
+            {
+                return BadRequest();
+            }
+
+            await emailReader.HandleEtransferEmail(paymentId, body, subject);
             return Ok(new { success = true });
         }
 

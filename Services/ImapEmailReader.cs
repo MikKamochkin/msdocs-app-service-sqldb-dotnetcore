@@ -87,7 +87,7 @@ namespace DotNetCoreSqlDb.Services
 
                 await client.DisconnectAsync(true);
                 
-                await ProcessEmailsInQueue();
+                //await ProcessEmailsInQueue();
             }
             catch (Exception ex)
             {
@@ -106,14 +106,15 @@ namespace DotNetCoreSqlDb.Services
                 From = message.From.ToString(),
                 Subject = message.Subject,
                 Body = message.TextBody,
-                ReasonForFailure = ""
+                ReasonForFailure = "",
+                ReplyTo = message.ReplyTo.ToString()
             };
-
+            
             _context.InteracPaymentsQueue.Add(email);
             await _context.SaveChangesAsync();
         }
 
-        private async Task ProcessEmailsInQueue()
+        public async Task ProcessEmailsInQueue()
         {
             var monthAgo = DateTime.UtcNow.AddMonths(-1);
 
@@ -174,7 +175,7 @@ namespace DotNetCoreSqlDb.Services
             await _context.SaveChangesAsync();
 
         }
-        private async Task HandleEtransferEmail(Guid queueItemId, string body, string subject)
+        public async Task HandleEtransferEmail(Guid queueItemId, string body, string subject)
         {
             var emailInQueue = await _context.InteracPaymentsQueue.FirstOrDefaultAsync(e => e.Id == queueItemId);
 

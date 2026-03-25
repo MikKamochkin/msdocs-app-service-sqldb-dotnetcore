@@ -30,8 +30,10 @@
                 <thead>
                     <tr>
                         <th>Subject</th>
+                        <th>Email</th>
                         <th>Reason For Failure</th>
                         <th>Added Time</th>
+                        <th style="width: 1%; white-space: nowrap;">Process</th>
                         <th style="width: 1%; white-space: nowrap;">Delete</th>
                     </tr>
                 </thead>
@@ -43,8 +45,17 @@
                             data-reason="@item.ReasonForFailure"
                             data-subject="@item.Subject">
                             <td>@item.Subject</td>
+                            <td>@item.ReplyTo</td>
                             <td>@item.ReasonForFailure</td>
                             <td>@item.AddedToQueueTime</td>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-sm btn-primary process-queue-btn"
+                                        data-payment-id="@item.Id"
+                                        title="Reprocess this queue item">
+                                    Process
+                                </button>
+                            </td>
                             <td>
                                 <button type="button"
                                         class="btn btn-sm btn-danger delete-queue-btn"
@@ -477,6 +488,64 @@
 
             return data ?? { success: true };
         }
+
+        async function postReprocessQueuedPayment(paymentId) {
+            const token = $("#__RequestVerificationToken").val();
+
+            const form = new URLSearchParams();
+            form.append("paymentId", paymentId);
+
+            const res = await fetch(`/Logging/ReprocessQueuedPayment`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "RequestVerificationToken": token,
+                    "Accept": "application/json"
+                },
+                body: form.toString()
+            });
+
+            const text = await res.text();
+            let data = null;
+            if (text) {
+                try { data = JSON.parse(text); } catch { }
+            }
+
+            if (!res.ok) {
+                const msg = (data && data.message) ? data.message : (text || "Process failed.");
+                throw new Error(msg);
+            }
+
+            return data ?? { success: true };
+        }
+
+        $(document).on("click", ".process-queue-btn", async function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const paymentId = $(this).data("payment-id");
+            if (!paymentId) return;
+
+            const ok = confirm("Reprocess this queue entry now?");
+            if (!ok) return;
+
+            const $btn = $(this);
+
+            $btn.prop("disabled", true).text("Processing...");
+
+            try {
+                const result = await postReprocessQueuedPayment(paymentId);
+                if (result && result.success) {
+                    location.reload();
+                } else {
+                    alert("Process returned unexpected result.");
+                    $btn.prop("disabled", false).text("Process");
+                }
+            } catch (err) {
+                alert(err.message || "Error processing queue item.");
+                $btn.prop("disabled", false).text("Process");
+            }
+        });
 
         // IMPORTANT: stop propagation so row click doesn't fire
         $(document).on("click", ".delete-queue-btn", async function (e) {

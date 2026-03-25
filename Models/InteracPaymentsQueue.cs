@@ -20,5 +20,6 @@ namespace DotNetCoreSqlDb.Models
         public string? Body { get; set; }
 
         public string? ReasonForFailure { get; set; }
+        public string? ReplyTo { get; set; }
     }
 }
