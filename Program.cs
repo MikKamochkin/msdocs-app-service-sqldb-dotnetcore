@@ -8,6 +8,7 @@ using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using System.Net.Http.Headers;
 using DotNetCoreSqlDb.Hubs;
 using DotNetCoreSqlDb.Helpers;
+using Azure.Storage.Blobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,16 +44,25 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddDbContext<MyDatabaseContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("MyDbConnection")));
     builder.Services.AddDistributedMemoryCache();
+
+    builder.Services.AddSingleton(_ =>
+        new BlobServiceClient(
+            builder.Configuration.GetConnectionString("AzureBlobStorage")));
 }
 else
 {
     builder.Services.AddDbContext<MyDatabaseContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")));
+
     builder.Services.AddStackExchangeRedisCache(options =>
     {
         options.Configuration = builder.Configuration["AZURE_REDIS_CONNECTIONSTRING"];
         options.InstanceName = "SampleInstance";
     });
+
+    builder.Services.AddSingleton(_ =>
+        new BlobServiceClient(
+            builder.Configuration.GetConnectionString("AZURE_STORAGEBLOB_CONNECTIONSTRING"))); 
 }
 
 /* ───── 4.  Wassenger (existing) ─────────────────────── */
@@ -92,6 +102,8 @@ builder.Services.AddScoped<IZoomApiService, ZoomApiService>();
 builder.Services.AddScoped<IZoomMeetingService, ZoomMeetingService>();
 builder.Services.AddScoped<IUpdateBalanceService, UpdateBalanceService>();
 builder.Services.AddScoped<ITwilioService, TwilioService>();
+builder.Services.AddScoped<IConversationService, ConversationService>();
+builder.Services.AddScoped<IBlobService, BlobService>();
 
 builder.Services.AddHostedService<TimedHostedService>();
 
@@ -105,6 +117,17 @@ builder.Services.AddSession(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var blobServiceClient =
+        scope.ServiceProvider.GetRequiredService<BlobServiceClient>();
+
+    var containerClient =
+        blobServiceClient.GetBlobContainerClient("blob-container");
+
+    await containerClient.CreateIfNotExistsAsync();
+}
 
 /* ───── 6.  Pipeline (unchanged) ────────────────────── */
 if (!app.Environment.IsDevelopment())
@@ -125,6 +148,7 @@ app.MapControllers();
 app.MapHub<WhatsAppHub>("/hubs/whstatus");
 app.MapHub<ZoomMeetingHub>("/hubs/zoomMeetingHub");
 app.MapHub<ScheduleHub>("/hubs/scheduleHub");
+app.MapHub<ConversationHub>("/hubs/conversationHub");
 
 
 app.MapControllerRoute(

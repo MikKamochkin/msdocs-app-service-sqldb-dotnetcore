@@ -60,6 +60,11 @@ namespace DotNetCoreSqlDb.Data
 
         public DbSet<DotNetCoreSqlDb.Models.InteracPaymentsQueue> InteracPaymentsQueue { get; set; } = default!;
 
+        public DbSet<DotNetCoreSqlDb.Models.Conversations> Conversations { get; set; } = default!;
+        
+        public DbSet<DotNetCoreSqlDb.Models.Messages> Messages { get; set; } = default!;
+        public DbSet<DotNetCoreSqlDb.Models.MessageAttachment> MessageAttachment { get; set; } = default!;
+
 
 
         // method defines model-level constraints like unique indexes

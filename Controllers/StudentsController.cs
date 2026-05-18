@@ -16,6 +16,7 @@ using Microsoft.Build.Execution;
 using NuGet.Common;
 using DotNetCoreSqlDb.ViewModels;
 using Twilio.TwiML.Voice;
+using DotNetCoreSqlDb.Services;
 
 
 
@@ -27,15 +28,19 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly MyDatabaseContext _context;
         private readonly IHubContext<ZoomMeetingHub> _hub;
         private readonly ILogger<TeachersController> _logger;
+        private readonly IConversationService _conversationService;
+        private readonly IBlobService _blobService;
 
         private const int JoinEarlyMinutes = 5;    // allow join this many minutes before start
         private const int GraceAfterMinutes = 90;
 
-        public StudentsController(MyDatabaseContext context, IHubContext<ZoomMeetingHub> hub, ILogger<TeachersController> logger)
+        public StudentsController(MyDatabaseContext context, IHubContext<ZoomMeetingHub> hub, ILogger<TeachersController> logger,  IConversationService conversationService, IBlobService blobService)
         {
             _context = context;
             _hub = hub;
             _logger = logger;
+            _conversationService = conversationService;
+            _blobService = blobService;
         }
 
         // GET: Students/Index
@@ -593,6 +598,177 @@ namespace DotNetCoreSqlDb.Controllers
         {
             public List<ScheduleRowDto> Rows { get; set; } = new();
             public long? NextRefreshMs { get; set; }   // null when nothing upcoming
+        }
+
+
+        
+        [HttpGet]
+        public async Task<IActionResult> Conversations()
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var studentID))
+                return NotFound();
+
+            ViewBag.StudentId = studentID;
+
+            var conversations = await _context.Conversations
+                .Include(c => c.Teacher)
+                .Where(c => c.StudentID == studentID && c.IsActive)
+                .OrderByDescending(c => c.LastMessageTime)
+                .ToListAsync();
+
+            ViewBag.Conversations = conversations;
+
+            _logger.LogInformation("Student {StudentId} has {Count} conversations", studentID, conversations.Count);
+
+            return View();
+        }
+
+        public async Task<IActionResult> Chat()
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            if (!Guid.TryParse(userId, out var studentID))
+                return NotFound();
+
+            ViewBag.StudentId = studentID;
+
+            var conversations = await _context.Conversations
+                .Include(c => c.Teacher)
+                .Where(c => c.StudentID == studentID && c.IsActive)
+                .OrderByDescending(c => c.LastMessageTime)
+                .ToListAsync();
+
+            ViewBag.Conversations = conversations;
+
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetMessages(Guid conversationId)
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+            Guid.TryParse(userId, out var studentID);
+
+            var conversation = await _context.Conversations
+                .FirstOrDefaultAsync(c => c.Id == conversationId && c.StudentID == studentID && c.IsActive);
+
+            if (conversation == null)
+                return NotFound();
+
+            var messages = await _context.Messages
+                .Include(m => m.Attachments)
+                .Where(m => m.ConversationId == conversationId)
+                .OrderBy(m => m.TimeSent)
+                .ToListAsync();
+
+            var latestMessage = messages.OrderByDescending(m => m.TimeSent).FirstOrDefault();
+
+            if (latestMessage != null)
+            {
+                conversation.LastMessageSeenByStudentId = latestMessage.Id;
+                await _context.SaveChangesAsync();
+            }
+
+            return Json(messages.Select(m => new
+            {
+                id = m.Id,
+                senderName = m.SenderId == studentID ? "You" : m.SenderId.ToString(),
+                senderId = m.SenderId,
+                text = m.Text,
+                timeSent = m.TimeSent.ToString("g"),
+
+                attachments = m.Attachments.Select(a => new
+                {
+                    id = a.Id,
+                    originalFileName = a.OriginalFileName,
+                    contentType = a.ContentType,
+                    sizeBytes = a.SizeBytes,
+                    downloadUrl = Url.Action(
+                        "DownloadAttachment",
+                        "Students",
+                        new { attachmentId = a.Id })
+                })
+            }));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendMessage(
+            [FromForm] Guid conversationId,
+            [FromForm] Guid senderId,
+            [FromForm] string? message,
+            [FromForm] IFormFile? file)
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+
+            if (!Guid.TryParse(userId, out var studentID))
+                return Unauthorized();
+
+            if (senderId != studentID)
+                return Forbid();
+
+            var conversationExists = await _context.Conversations
+                .AnyAsync(c =>
+                    c.Id == conversationId &&
+                    c.StudentID == studentID &&
+                    c.IsActive);
+
+            if (!conversationExists)
+                return Forbid();
+
+            var savedMessage = await _conversationService.SendMessageAsync(
+                conversationId,
+                senderId,
+                message,
+                file);
+
+            if (savedMessage == null)
+                return NotFound();
+
+            return Ok(new
+            {
+                messageId = savedMessage.Id
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadAttachment(Guid attachmentId)
+        {
+            var userId = User.FindFirst("UserID")?.Value;
+
+            if (!Guid.TryParse(userId, out var studentID))
+                return Unauthorized();
+
+            var attachment = await _context.MessageAttachment
+                .Include(a => a.Message)
+                    .ThenInclude(m => m!.Conversation)
+                .FirstOrDefaultAsync(a => a.Id == attachmentId);
+
+            if (attachment == null || attachment.Message?.Conversation == null)
+                return NotFound();
+
+            var conversation = attachment.Message.Conversation;
+
+            if (conversation.StudentID != studentID)
+                return Forbid();
+
+            var downloadResult = await _blobService.DownloadAttachmentAsync(attachment.BlobName);
+
+            var contentType = string.IsNullOrWhiteSpace(attachment.ContentType)
+                ? "application/octet-stream"
+                : attachment.ContentType;
+
+            return File(
+                downloadResult.Content.ToStream(),
+                contentType,
+                attachment.OriginalFileName);
+        }
+
+        public class SendMessageRequest
+        {
+            public Guid ConversationId { get; set; }
+            public Guid SenderId { get; set; }
+            public string Message { get; set; } = "";
         }
 
 

@@ -1,9 +1,8 @@
-// /Controllers/DataConversionController.cs
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using DotNetCoreSqlDb.Data;      // your DbContext namespace
-using DotNetCoreSqlDb.Services;  // <-- so IDataConversionService resolves
+using DotNetCoreSqlDb.Data;      
+using DotNetCoreSqlDb.Services;  
 using DotNetCoreSqlDb.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Memory;

@@ -106,7 +106,26 @@ namespace DotNetCoreSqlDb.Controllers
                         Balance = 0
                     });
 
-                    _logger.LogInformation("Created a studentBalance entry with Id: {a} for AssignmentId: {a} for StudentId: {b}", studentBalanceId, assignment.Id, studentId);
+                    //_logger.LogInformation("Created a studentBalance entry with Id: {a} for AssignmentId: {a} for StudentId: {b}", studentBalanceId, assignment.Id, studentId);
+                }
+            }
+
+            //Creating new conversation for teacher and student only if it's a private class
+
+            if (group != null)
+            {
+                bool privateLesson = group.StudentGroupCompositions.Count == 1;
+
+                if (privateLesson)
+                {
+                    _context.Conversations.Add(new Conversations
+                    {
+                        Id = Guid.NewGuid(),
+                        TeacherId = assignment.TeacherId,
+                        StudentID = group.StudentGroupCompositions.First().StudentId,
+                        IsActive = true,
+                        LastMessageTime = null
+                    });
                 }
             }
 

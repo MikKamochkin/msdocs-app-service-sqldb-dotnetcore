@@ -27,7 +27,7 @@
 		  // Default connection settings for the SQL Server (mssql) extension
 		  "mssql.connections": [
 			{
-			  "server": "localhost,1433",
+			  "server": "db,1433",
 			  "database": "",
 			  "authenticationType": "SqlLogin",
 			  "user": "sa",
@@ -41,7 +41,8 @@
 		},
 		"extensions": [
 		  "ms-mssql.mssql",
-		  "GitHub.copilot"
+		  "GitHub.copilot",
+    	"ms-azuretools.vscode-azurestorage"
 		]
 	  }
 	},

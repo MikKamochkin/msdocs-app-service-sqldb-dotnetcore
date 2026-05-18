@@ -1,0 +1,628 @@
+@* Views/Assignments/Index.cshtml *@
+@model IEnumerable<DotNetCoreSqlDb.Models.Conversations>
+
+@{
+    ViewData["Title"] = "Conversations";
+    var conversations = ViewBag.Conversations as List<DotNetCoreSqlDb.Models.Conversations>;
+    var StudentId = ViewBag.StudentId;
+}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@ViewData["Title"]</title>
+
+	<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: Helvetica, sans-serif;
+        background: #e8ecfc;
+        min-height: 100vh;
+    }
+
+    header {
+        background-color: #6981ec;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        z-index: 1000;
+    }
+
+    .header-container {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+        height: 100%;
+        position: relative;
+    }
+
+    #logo {
+        position: absolute;
+        left: 12%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5rem;
+        color: #fff;
+    }
+
+    nav {
+        position: absolute;
+        left: 20%;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .nav-links {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .nav-links li {
+        display: inline-block;
+        margin-left: 20px;
+    }
+
+    .nav-links li a {
+        color: #000;
+        text-decoration: none;
+        padding: 10px 15px;
+        display: inline-block;
+        transition: background-color .3s, transform .3s;
+    }
+
+    .nav-links li a:hover {
+        background-color: #ced6ff;
+        transform: scale(1.1);
+        border-radius: 10%;
+    }
+
+    .nav-links li a.active-page,
+    .nav-links li a.inactive-page {
+        background-color: #fff;
+        border-radius: 10%;
+    }
+
+    .burger {
+        display: none;
+        cursor: pointer;
+    }
+
+    .chat-layout {
+        max-width: 1100px;
+        margin: 90px auto 20px;
+        padding: 0 20px;
+        display: flex;
+        gap: 20px;
+        height: 520px;
+    }
+
+    .conversation-list {
+        width: 270px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        overflow-y: auto;
+    }
+
+    .conversation-btn {
+        padding: 12px 14px;
+        border: 1px solid #6981ec;
+        border-radius: 6px;
+        background: #fff;
+        color: #6981ec;
+        text-align: left;
+        cursor: pointer;
+        font-size: .95rem;
+        transition: all .25s;
+    }
+
+    .conversation-btn.active {
+        background: #6981ec;
+        color: #fff;
+        border: 2px solid #4a5fd1;
+        font-weight: 600;
+    }
+
+    .conversation-btn.active:hover {
+        background: #6981ec;
+        color: #fff;
+    }
+
+    .conversation-btn:hover {
+        background: #6981ec;
+        color: #fff;
+    }
+
+    .chat-panel {
+        flex: 1;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
+        padding: 1.25rem;
+        min-width: 0;
+    }
+
+    .messages-box {
+        height: 100%;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-right: 6px;
+    }
+
+    .message {
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #fafbff;
+        border: 1px solid #e1e6ff;
+        color: #333;
+        max-width: 75%;
+        word-wrap: break-word;
+    }
+
+    .message strong {
+        color: #6981ec;
+    }
+
+    .message-time {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .empty-chat-text {
+        color: #777;
+        text-align: center;
+        margin-top: 2rem;
+    }
+
+    .container {
+        max-width: 1100px;
+        margin: 0 auto 40px;
+        padding: 1rem 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
+    }
+
+    .container input {
+        padding: .45rem .6rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    .container .conversation-btn {
+        text-align: center;
+        background: #6981ec;
+        color: #fff;
+    }
+
+    .container .conversation-btn:hover {
+        background: #5369d8;
+    }
+
+    .drop-zone {
+        border: 2px dashed #6981ec;
+        border-radius: 8px;
+        padding: 18px;
+        background: #fafbff;
+        color: #6981ec;
+        cursor: pointer;
+        text-align: center;
+        transition: all .2s;
+    }
+
+    .drop-zone.dragover {
+        background: #e8ecfc;
+        border-color: #4a5fd1;
+    }
+
+    .attachment-link {
+        display: inline-block;
+        margin-top: 8px;
+        color: #4a5fd1;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .attachment-link:hover {
+        text-decoration: underline;
+    }
+
+    @@media (max-width: 768px) {
+        #logo {
+            left: 20px;
+            transform: translateY(-50%);
+            position: static;
+        }
+
+        nav {
+            left: 0;
+            right: 0;
+            padding-right: 20px;
+        }
+
+        .nav-links {
+            display: none;
+        }
+
+        .burger {
+            display: block;
+        }
+
+        .burger div {
+            width: 25px;
+            height: 3px;
+            background-color: #fff;
+            margin: 5px;
+        }
+
+        .chat-layout {
+            flex-direction: column;
+            height: auto;
+        }
+
+        .conversation-list {
+            width: 100%;
+            max-height: 180px;
+        }
+
+        .chat-panel {
+            height: 420px;
+        }
+    }
+</style>
+</head>
+<body>
+    <header>
+	<div class="header-container">
+		<div id="logo">@ViewData["Title"]</div>
+
+		<nav>
+            <ul class="nav-links">
+                <li>
+                    <a asp-controller="Students" asp-action="Schedule" title="Schedule">
+                        <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Students" asp-action="Index" title="Account">
+                        <i class="fas fa-user-graduate"></i>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Students" asp-action="LessonAndTransactionHistory" title="History">
+                        <i class="fa-solid fa-dollar-sign"></i>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Students" asp-action="Conversations" title="Conversations" class="active-page">
+                        <i class="fa-solid fa-message"></i>
+                    </a>
+                </li>
+
+            </ul>
+
+            <div class="burger">
+                <div class="line line1"></div>
+                <div class="line line2"></div>
+                <div class="line line3"></div>
+            </div>
+
+        </nav>
+	</div>
+</header>
+</body>
+<div class="chat-layout">
+
+    <div class="conversation-list">
+        @foreach (var convo in conversations)
+        {
+            <button class="conversation-btn"
+                    onclick="loadMessages('@convo.Id', '@convo.Teacher.Name', this)">
+                @convo.Teacher.Name 
+            </button>
+        }
+    </div>
+
+    <div class="chat-panel">
+        <div id="messagesBox" class="messages-box">
+            <p class="empty-chat-text">Select a conversation to view messages.</p>
+        </div>
+    </div>
+
+</div>
+
+<div class="container">
+    <form id="messageForm" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+
+        <div class="row p-1">
+            <div class="col-1">Message</div>
+            <div class="col-5">
+                <input type="text" class="w-100" id="messageInput" name="message" />
+            </div>
+        </div>
+
+        <div class="row p-1">
+            <div class="col-1">File</div>
+            <div class="col-5">
+                <div id="dropZone" class="drop-zone">
+                    <span id="dropZoneText">Drag a file here or click to choose</span>
+                    <input type="file" id="fileInput" name="file" hidden />
+                </div>
+            </div>
+        </div>
+
+        <div class="row p-1">
+            <div class="col-6 text-end">
+                <button type="button"
+                        class="conversation-btn"
+                        onclick="sendMessage()">
+                    Send
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+
+<script>
+    "use strict";
+
+    let currentConversationId = null;
+    let currentTeacherName = null;
+    let connection = null;
+    let studentId = "@StudentId";
+
+    const senderId = "@User.FindFirst("UserID")?.Value";
+
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const dropZoneText = document.getElementById("dropZoneText");
+
+    if (dropZone && fileInput) {
+        dropZone.addEventListener("click", function () {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener("change", function () {
+            if (fileInput.files.length > 0) {
+                dropZoneText.textContent = "Selected: " + fileInput.files[0].name;
+            } else {
+                dropZoneText.textContent = "Drag a file here or click to choose";
+            }
+        });
+
+        dropZone.addEventListener("dragover", function (e) {
+            e.preventDefault();
+            dropZone.classList.add("dragover");
+        });
+
+        dropZone.addEventListener("dragleave", function () {
+            dropZone.classList.remove("dragover");
+        });
+
+        dropZone.addEventListener("drop", function (e) {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                dropZoneText.textContent = "Selected: " + e.dataTransfer.files[0].name;
+            }
+        });
+    }
+
+    async function startSignalR() {
+        connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/conversationHub")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("MessageCreated", async function (conversationId) {
+            if (conversationId === currentConversationId) {
+                await loadMessages(currentConversationId, currentTeacherName, null, false);
+            }
+        });
+
+        await connection.start();
+        console.log("Connected to ConversationHub");
+    }
+
+    async function loadMessages(conversationId, teacherName, clickedBtn, shouldJoinGroup = true) {
+        const previousConversationId = currentConversationId;
+
+        if (
+            shouldJoinGroup &&
+            previousConversationId &&
+            previousConversationId !== conversationId &&
+            connection &&
+            connection.state === signalR.HubConnectionState.Connected
+        ) {
+            await connection.invoke("LeaveConversationGroup", previousConversationId);
+        }
+
+        currentConversationId = conversationId;
+        currentTeacherName = teacherName;
+
+        document.querySelectorAll(".conversation-btn").forEach(btn => {
+            btn.classList.remove("active");
+        });
+
+        if (clickedBtn) {
+            clickedBtn.classList.add("active");
+        }
+
+        if (
+            shouldJoinGroup &&
+            connection &&
+            connection.state === signalR.HubConnectionState.Connected
+        ) {
+            await connection.invoke("JoinConversationGroup", currentConversationId);
+        }
+
+        const messagesBox = document.getElementById("messagesBox");
+        messagesBox.innerHTML = "<p>Loading messages...</p>";
+
+        const response = await fetch(`/Students/GetMessages?conversationId=${conversationId}`);
+
+        if (!response.ok) {
+            messagesBox.innerHTML = "<p class='empty-chat-text'>Could not load messages.</p>";
+            return;
+        }
+
+        const messages = await response.json();
+
+        messagesBox.innerHTML = "";
+
+        if (messages.length === 0) {
+            messagesBox.innerHTML = "<p class='empty-chat-text'>No messages yet.</p>";
+            return;
+        }
+
+        messages.forEach(message => {
+            addMessageToBox(
+                message.senderName === "You" ? "You" : teacherName,
+                message.text,
+                message.timeSent,
+                message.attachments
+            );
+        });
+
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+
+    async function sendMessage() {
+        if (!currentConversationId) {
+            alert("Select a conversation first.");
+            return;
+        }
+
+        const messageInput = document.getElementById("messageInput");
+        const message = messageInput.value.trim();
+        const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
+
+        if (!message && !file) {
+            alert("Enter a message, attach a file, or both.");
+            return;
+        }
+
+        try {
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+
+            const formData = new FormData();
+            formData.append("conversationId", currentConversationId);
+            formData.append("senderId", senderId);
+            formData.append("message", message);
+
+            if (file) {
+                formData.append("file", file);
+            }
+
+            const response = await fetch('/Students/SendMessage', {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': tokenInput.value
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to save message.");
+            }
+
+            messageInput.value = "";
+            fileInput.value = "";
+            dropZoneText.textContent = "Drag a file here or click to choose";
+
+            if (connection && connection.state === signalR.HubConnectionState.Connected) {
+                await connection.invoke("NotifyMessageCreated", currentConversationId);
+            }
+
+            await loadMessages(currentConversationId, currentTeacherName, null, false);
+
+        } catch (err) {
+            console.error(err.toString());
+            alert("Message failed to send.");
+        }
+    }
+
+    function addMessageToBox(user, message, timeSent, attachments = []) {
+        const messagesBox = document.getElementById("messagesBox");
+
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "message";
+
+        let content = "";
+
+        if (user) {
+            content += `<strong>${escapeHtml(user)}</strong><br />`;
+        }
+
+        if (message) {
+            content += `<div>${escapeHtml(message)}</div>`;
+        }
+
+        if (attachments && attachments.length > 0) {
+            attachments.forEach(file => {
+                content += `
+                    <div>
+                        <a class="attachment-link" href="${file.downloadUrl}">
+                            📎 ${escapeHtml(file.originalFileName)}
+                        </a>
+                        <div class="message-time">
+                            ${formatFileSize(file.sizeBytes)}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        content += `<div class="message-time">${escapeHtml(timeSent)}</div>`;
+
+        messageDiv.innerHTML = content;
+        messagesBox.appendChild(messageDiv);
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+
+    function formatFileSize(bytes) {
+        if (!bytes || bytes <= 0) return "0 bytes";
+
+        if (bytes < 1024) return bytes + " bytes";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return "";
+
+        return value
+            .toString()
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    startSignalR();
+</script>

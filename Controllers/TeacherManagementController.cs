@@ -224,7 +224,7 @@ namespace DotNetCoreSqlDb.Controllers
                      //from: "Toronto French",
                      subject:  "Your credentials at Toronto French",
                      htmlBody: html);*/
-                    string to = "kamochkin@gmail.com";
+                    string to = "michael.kamochkin@gmail.com";
                     string subject = "Your credentials at Toronto French";
                     await _mailer.SendAsync(
                     to: to,
