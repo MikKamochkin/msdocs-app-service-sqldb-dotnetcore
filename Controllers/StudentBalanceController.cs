@@ -164,7 +164,8 @@ namespace DotNetCoreSqlDb.Controllers
                     .ThenInclude(a => a.Teacher)
                 .Where(s =>
                     //s.Assignment.IsActive == true &&
-                    s.Assignment.Group.StudentGroupCompositions.Any(sgc => sgc.StudentId == id)
+                    s.Assignment.Group.StudentGroupCompositions.Any(sgc => sgc.StudentId == id) &&
+                    ((s.Status == "Taken" && s.DateTime <= DateTime.UtcNow) || (s.Status == "Scheduled" && s.DateTime >= DateTime.UtcNow))
                 )
                 .OrderByDescending(s => s.DateTime)
                 .Take(30)
