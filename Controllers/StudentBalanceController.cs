@@ -156,6 +156,22 @@ namespace DotNetCoreSqlDb.Controllers
 
             ViewBag.Transactions = transactions;
 
+            var recentLessons = await _context.Schedule
+                .Include(s => s.Assignment)
+                    .ThenInclude(a => a.Group)
+                        .ThenInclude(g => g.StudentGroupCompositions)
+                .Include(s => s.Assignment)
+                    .ThenInclude(a => a.Teacher)
+                .Where(s =>
+                    s.Assignment.IsActive == true &&
+                    s.Assignment.Group.StudentGroupCompositions.Any(sgc => sgc.StudentId == id)
+                )
+                .OrderByDescending(s => s.DateTime)
+                .Take(30)
+                .ToListAsync();
+
+            ViewBag.RecentLessons = recentLessons;
+
             var items = DropdownOptions.PayUnitTypes?.Select(x => new SelectListItem
             {
                 Value = x.Value,
