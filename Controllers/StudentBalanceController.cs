@@ -163,7 +163,7 @@ namespace DotNetCoreSqlDb.Controllers
                 .Include(s => s.Assignment)
                     .ThenInclude(a => a.Teacher)
                 .Where(s =>
-                    s.Assignment.IsActive == true &&
+                    //s.Assignment.IsActive == true &&
                     s.Assignment.Group.StudentGroupCompositions.Any(sgc => sgc.StudentId == id)
                 )
                 .OrderByDescending(s => s.DateTime)
