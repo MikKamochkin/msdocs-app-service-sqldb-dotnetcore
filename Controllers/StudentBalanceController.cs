@@ -171,6 +171,15 @@ namespace DotNetCoreSqlDb.Controllers
                 .Take(30)
                 .ToListAsync();
 
+            if (recentLessons.Count > 0)
+            {
+                var tz = TZConvert.GetTimeZoneInfo("America/New_York");
+                foreach (var lesson in recentLessons)
+                {
+                    lesson.DateTime = TimeZoneInfo.ConvertTimeFromUtc(lesson.DateTime, tz);
+                }
+            }
+
             ViewBag.RecentLessons = recentLessons;
 
             var items = DropdownOptions.PayUnitTypes?.Select(x => new SelectListItem
