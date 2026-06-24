@@ -20,14 +20,14 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly ILogger<StudentManagementController> _logger;
         private readonly IEmailSender _mailer;
         private readonly LogHelper _logHelper;
-        private readonly ImapEmailReader _imapEmailReader;
+        private readonly IEmailInboxReader _imapEmailReader;
 
         public StudentManagementController(
             MyDatabaseContext context,
             ILogger<StudentManagementController> logger,
             IEmailSender mailer,
             LogHelper logHelper,
-            ImapEmailReader imapEmailReader)
+            IEmailInboxReader imapEmailReader)
         {
             _context = context;
             _logger = logger;

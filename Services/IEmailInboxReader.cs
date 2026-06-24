@@ -9,5 +9,6 @@ namespace DotNetCoreSqlDb.Services
         Task ProcessEmailsInQueue();
         Task HandleEtransferEmail(Guid queueItemId, string body, string subject);
         Task HandleEtransferEmailWithSelectedBalance(Guid paymentId, string body, string subject, Guid balanceId);
+        Task GetQueuedPaymentsByPayerName(string payerName);
     }
 }

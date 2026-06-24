@@ -32,7 +32,7 @@ builder.Services.AddScoped<IDataConversionService, DataConversionService>();
 builder.Services.Configure<EmailInboxSettings>(
     builder.Configuration.GetSection("EmailInboxPay"));
 
-builder.Services.AddScoped<IEmailInboxReader, ImapEmailReader>();
+//builder.Services.AddScoped<IEmailInboxReader, ImapEmailReader>();
 
 builder.Services.AddMemoryCache();
 
@@ -104,6 +104,7 @@ builder.Services.AddScoped<IUpdateBalanceService, UpdateBalanceService>();
 builder.Services.AddScoped<ITwilioService, TwilioService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IBlobService, BlobService>();
+builder.Services.AddScoped<IEmailInboxReader, ImapEmailReader>();
 
 builder.Services.AddHostedService<TimedHostedService>();
 

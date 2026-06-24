@@ -135,10 +135,11 @@ namespace DotNetCoreSqlDb.Services
         public async Task GetQueuedPaymentsByPayerName(string payerName)
         {
             var monthAgo = DateTime.UtcNow.AddMonths(-1);
-
+            var searchText = "from " + payerName + " and it has been";
+            
             var emailsInQueue = await _context.InteracPaymentsQueue
                 .Where(email => email.AddedToQueueTime > monthAgo &&
-                email.Subject!.Contains("from " + payerName + " and it has been", StringComparison.OrdinalIgnoreCase))
+                EF.Functions.Like(email.Subject, "%" + searchText + "%"))
                 .ToListAsync();
 
             foreach (var email in emailsInQueue)
