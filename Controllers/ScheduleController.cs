@@ -26,14 +26,16 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly ILogger<TeachersController> _logger;
         private readonly IUpdateBalanceService _balanceSvc;
         private readonly IEmailSender _mailer;
+        private readonly IZoomMeetingService _zoomSvc;
 
-        public ScheduleController(MyDatabaseContext context, IHubContext<ScheduleHub> hub, ILogger<TeachersController> logger, IUpdateBalanceService balanceSvc, IEmailSender mailer)
+        public ScheduleController(MyDatabaseContext context, IHubContext<ScheduleHub> hub, ILogger<TeachersController> logger, IUpdateBalanceService balanceSvc, IEmailSender mailer, IZoomMeetingService zoomSvc)
         {
             _context = context;
             _hub = hub;
             _logger = logger;
             _balanceSvc = balanceSvc;
             _mailer = mailer;
+            _zoomSvc = zoomSvc;
         }
 
         // GET: Schedule/Manage
@@ -738,6 +740,10 @@ namespace DotNetCoreSqlDb.Controllers
 
                 if (entity.Status == "Ongoing")
                 {
+                    if (entity != null && entity.Id != Guid.Empty)
+                    {
+                        await _zoomSvc.EndMeetingsAsync(entity.Id);
+                    }
                     return BadRequest("Cannot delete an ongoing class.");
                 }
 

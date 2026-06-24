@@ -20,17 +20,20 @@ namespace DotNetCoreSqlDb.Controllers
         private readonly ILogger<StudentManagementController> _logger;
         private readonly IEmailSender _mailer;
         private readonly LogHelper _logHelper;
+        private readonly ImapEmailReader _imapEmailReader;
 
         public StudentManagementController(
             MyDatabaseContext context,
             ILogger<StudentManagementController> logger,
             IEmailSender mailer,
-            LogHelper logHelper)
+            LogHelper logHelper,
+            ImapEmailReader imapEmailReader)
         {
             _context = context;
             _logger = logger;
             _mailer = mailer;
             _logHelper = logHelper;
+            _imapEmailReader = imapEmailReader;
         }
 
 
@@ -284,20 +287,31 @@ namespace DotNetCoreSqlDb.Controllers
             if (updatedStudent.Payers != null && updatedStudent.Payers.Any())
             {
                 // add or update
+
+                //rerun queued payments where the payer is the new/updated payer name
                 foreach (var payer in updatedStudent.Payers)
                 {
+                    //new payer; create and rerun payment queue entries where name matches
                     if (payer.Id == Guid.Empty)
                     {
                         payer.Id = Guid.NewGuid();
                         payer.StudentId = existingStudent.ID;
                         _context.Entry(payer).State = EntityState.Added;
                         existingStudent.Payers.Add(payer);
+                        _logger.LogInformation("Calling GetQueuedPaymentsByPayerName for new payer: " + payer.Name);
+                        await _imapEmailReader.GetQueuedPaymentsByPayerName(payer.Name);
                     }
+                    //existing payer; update name and rerun payment queue entries where name matches
                     else
                     {
                         var existingPayer = existingStudent.Payers.FirstOrDefault(p => p.Id == payer.Id);
                         if (existingPayer != null)
+                        {
                             existingPayer.Name = payer.Name;
+                            _logger.LogInformation("Calling GetQueuedPaymentsByPayerName for updated payer: " + payer.Name);
+                            await _imapEmailReader.GetQueuedPaymentsByPayerName(payer.Name);
+                        }
+                            
                     }
                 }
 

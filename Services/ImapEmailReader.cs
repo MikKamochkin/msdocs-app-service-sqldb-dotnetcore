@@ -132,6 +132,26 @@ namespace DotNetCoreSqlDb.Services
             }
         }
 
+        public async Task GetQueuedPaymentsByPayerName(string payerName)
+        {
+            var monthAgo = DateTime.UtcNow.AddMonths(-1);
+
+            var emailsInQueue = await _context.InteracPaymentsQueue
+                .Where(email => email.AddedToQueueTime > monthAgo &&
+                email.Subject!.Contains("from " + payerName + " and it has been", StringComparison.OrdinalIgnoreCase))
+                .ToListAsync();
+
+            foreach (var email in emailsInQueue)
+            {
+                var queueItemId = email.Id;
+                var from = email.From;
+                var subject = email.Subject;
+                var body = email.Body;
+                _logger.LogInformation("Processing because payer was added/edited; Processing queued email from {From} with subject {Subject}", from, subject);
+                await ProcessEmailAsync(queueItemId, from!, subject!, body!);
+            }
+        }
+
         private async Task ProcessEmailAsync(Guid queueItemId, string from, string subject, string textBody)
         {
             bool isEtransfer = IsEtransfer(from);
