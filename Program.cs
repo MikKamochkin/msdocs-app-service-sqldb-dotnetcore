@@ -105,6 +105,7 @@ builder.Services.AddScoped<ITwilioService, TwilioService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IBlobService, BlobService>();
 builder.Services.AddScoped<IEmailInboxReader, ImapEmailReader>();
+builder.Services.AddScoped<INotesService, NotesService>();
 
 builder.Services.AddHostedService<TimedHostedService>();
 

@@ -2,125 +2,525 @@
 
 @{
     ViewData["Title"] = "Student Details";
-    
-    string studentNumber = ViewBag.StudentNumber; 
+    string studentNumber = ViewBag.StudentNumber;
     var passwordSetDate = ViewBag.passwordSetDate;
 }
 
-<div class="row no-gutters">
+<style>
+    .student-details-page {
+        min-height: 100vh;
+        background: #e8ecfc;
+    }
+
+    .student-details-content {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    .details-page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: .75rem;
+    }
+
+    .details-page-header h2 {
+        margin: 0;
+        color: #333;
+        font-size: 1.8rem;
+        font-weight: 700;
+    }
+
+    .details-actions {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .details-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: .45rem .8rem;
+        border: 1px solid #6981ec;
+        border-radius: 6px;
+        background: #fff;
+        color: #6981ec;
+        font-size: .95rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all .2s ease;
+    }
+
+    .details-action.icon-only {
+        width: 38px;
+        padding: 0;
+    }
+
+    .details-action:hover {
+        background: #6981ec;
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .details-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(440px, .85fr);
+        gap: .75rem;
+        align-items: start;
+    }
+
+    .details-side-column {
+        display: grid;
+        gap: .75rem;
+    }
+
+    .details-card {
+        min-width: 0;
+        padding: .85rem 1rem;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
+    }
+
+    .details-card h4 {
+        margin: 0 0 .65rem;
+        color: #333;
+        font-size: 1.2rem;
+        font-weight: 700;
+    }
+
+    .student-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .55rem .75rem;
+        margin: 0;
+    }
+
+    .student-info-item {
+        min-width: 0;
+        padding: .55rem .65rem;
+        border: 1px solid #c6c9da;
+        border-radius: 6px;
+        background: #fafbff;
+    }
+
+    .student-info-item.wide {
+        grid-column: span 2;
+    }
+
+    .student-info-item dt {
+        margin: 0 0 .15rem;
+        color: #68708a;
+        font-size: .8rem;
+        font-weight: 700;
+        line-height: 1.15;
+        text-transform: uppercase;
+        letter-spacing: .035em;
+    }
+
+    .student-info-item dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+        color: #333;
+        font-size: 1rem;
+        line-height: 1.3;
+    }
+
+    .details-table-wrap {
+        max-width: 100%;
+        overflow-x: auto;
+        border: 1px solid #e1e5f9;
+        border-radius: 6px;
+    }
+
+    .details-table {
+        width: 100%;
+        margin: 0;
+        border-collapse: collapse;
+        font-size: .95rem;
+    }
+
+    .details-table thead th {
+        padding: .5rem .6rem;
+        border-bottom: 1px solid #e2e5f2;
+        background: #f0f2fa;
+        color: #333;
+        font-weight: 600;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .details-table tbody td {
+        padding: .48rem .6rem;
+        border-bottom: 1px solid #f0f1f6;
+        color: #444;
+        line-height: 1.3;
+    }
+
+    .details-table tbody tr:nth-child(odd) {
+        background: #fff;
+    }
+
+    .details-table tbody tr:nth-child(even) {
+        background: #f6f7fb;
+    }
+
+    .details-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .boolean-column {
+        width: 1%;
+        text-align: center;
+    }
+
+    .empty-state {
+        margin: 0;
+        color: #68708a;
+        font-size: .96rem;
+    }
+
+    .notes-card {
+        grid-column: 1 / -1;
+    }
+
+    .notes-container {
+        position: relative;
+        transition: max-height .3s ease;
+    }
+
+    .notes-container.notes-collapsed {
+        max-height: 118px;
+        overflow: hidden;
+    }
+
+    .notes-container.notes-collapsed::after {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 36px;
+        background: linear-gradient(to bottom, transparent, #fff);
+        content: "";
+        pointer-events: none;
+    }
+
+    .notes-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .45rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .notes-list li {
+        min-width: 0;
+        padding: .5rem .65rem;
+        border: 1px solid #e1e5f9;
+        border-radius: 6px;
+        background: #fcfcfe;
+        color: #333;
+        font-size: .96rem;
+        line-height: 1.3;
+    }
+
+    .notes-list small {
+        display: block;
+        margin-top: .2rem;
+        color: #68708a;
+        font-size: .82rem;
+    }
+
+    .toggle-notes-button {
+        margin-top: .55rem;
+        padding: .35rem .7rem;
+        border: 1px solid #6981ec;
+        border-radius: 6px;
+        background: #fff;
+        color: #6981ec;
+        font-size: .9rem;
+        transition: all .2s ease;
+    }
+
+    .toggle-notes-button:hover {
+        background: #6981ec;
+        color: #fff;
+    }
+
+    @@media (max-width: 1200px) {
+        .details-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .notes-card {
+            grid-column: auto;
+        }
+    }
+
+    @@media (max-width: 767px) {
+        .student-details-content {
+            padding: .75rem;
+        }
+
+        .details-page-header {
+            align-items: flex-start;
+        }
+
+        .details-page-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .details-action.balance-action {
+            font-size: 0;
+        }
+
+        .details-action.balance-action::after {
+            content: "Balance";
+            font-size: .82rem;
+        }
+
+        .student-info-grid,
+        .notes-list {
+            grid-template-columns: 1fr;
+        }
+
+        .student-info-item.wide {
+            grid-column: auto;
+        }
+    }
+</style>
+
+<div class="row no-gutters student-details-page">
     @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
     {
         <partial name="_AdminSidebar" />
     }
-    <div class="col">
-        <h2>Student Details</h2>
 
-        <div>
-            <h4>Student</h4>
-            <hr />
-            <dl class="dl-horizontal">
-                <dt>Name</dt>
-                <dd>@Html.DisplayFor(model => model.Name)</dd>
-                <dt>Student Number</dt>
-                <dd>@studentNumber</dd>
-                <dt>Parent/Employer</dt>
-                <dd>@Html.DisplayFor(model => model.ParentOrEmployer)</dd>
-                <dt>Main Notes</dt>
-                <dd>@Html.DisplayFor(model => model.MainNotes)</dd>
-                <dt>Created Date</dt>
-                <dd>@Html.DisplayFor(model => model.CreatedDate)</dd>
-                <dt>Source</dt>
-                <dd>@Html.DisplayFor(model => model.Source)</dd>
-                <dt>Time Zone</dt>
-                <dd>@Html.DisplayFor(model => model.TimeZoneId)</dd>
-                @if(User.IsInRole("admin") || User.IsInRole("support"))
-                {
-                    <dt>Accounting Group</dt>
-                    <dd>@Html.DisplayFor(model => model.AccountingGroup)</dd>
-                }
-                <dt>Password Set Date</dt>
-                <dd>@passwordSetDate</dd>
-            </dl>
+    <main class="col student-details-content">
+        <div class="details-page-header">
+            <h2>Student Details</h2>
+
+            <div class="details-actions">
+                <a asp-controller="StudentBalance"
+                   asp-action="UpdateBalance"
+                   asp-route-id="@Model.ID"
+                   class="details-action balance-action">
+                    Go To Balance Info
+                </a>
+                <a href='@Url.Action("Edit", new { id = Model.ID })'
+                   class="details-action icon-only"
+                   title="Edit Student"
+                   aria-label="Edit Student">
+                    <i class="fa-solid fa-pencil"></i>
+                </a>
+                <a href='@Url.Action("Index")'
+                   class="details-action icon-only"
+                   title="Back to List"
+                   aria-label="Back to List">
+                    <i class="hgi hgi-stroke hgi-arrow-turn-backward"></i>
+                </a>
+            </div>
         </div>
 
-        <h4>Contact Information</h4>
-        @if(Model.Contacts != null && Model.Contacts.Any())
-        {
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Value</th>
-                        <th>Invitation</th>
-                        <th>Emergency</th>
-                        <th>Money</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach(var contact in Model.Contacts)
+        <div class="details-grid">
+            <section class="details-card" aria-labelledby="student-information-heading">
+                <h4 id="student-information-heading">Student Information</h4>
+
+                <dl class="student-info-grid">
+                    <div class="student-info-item wide">
+                        <dt>Name</dt>
+                        <dd>@Html.DisplayFor(model => model.Name)</dd>
+                    </div>
+                    <div class="student-info-item">
+                        <dt>Student Number</dt>
+                        <dd>@studentNumber</dd>
+                    </div>
+                    <div class="student-info-item wide">
+                        <dt>Parent/Employer</dt>
+                        <dd>@Html.DisplayFor(model => model.ParentOrEmployer)</dd>
+                    </div>
+                    <div class="student-info-item">
+                        <dt>Created Date</dt>
+                        <dd>@Html.DisplayFor(model => model.CreatedDate)</dd>
+                    </div>
+                    @*<div class="student-info-item wide">
+                        <dt>Main Notes</dt>
+                        <dd>@Html.DisplayFor(model => model.MainNotes)</dd>
+                    </div>*@
+                    <div class="student-info-item">
+                        <dt>Source</dt>
+                        <dd>@Html.DisplayFor(model => model.Source)</dd>
+                    </div>
+                    <div class="student-info-item">
+                        <dt>Time Zone</dt>
+                        <dd>@Html.DisplayFor(model => model.TimeZoneId)</dd>
+                    </div>
+                    @if (User.IsInRole("admin") || User.IsInRole("support"))
                     {
-                        <tr>
-                            <td>@Html.DisplayFor(m => contact.Type)</td>
-                            <td>@Html.DisplayFor(m => contact.Value)</td>
-                            <td>@(contact.Invitation ? "✔" : "")</td>
-                            <td>@(contact.Emergency ? "✔" : "")</td>
-                            <td>@(contact.Money ? "✔" : "")</td>
-                        </tr>
+                        <div class="student-info-item">
+                            <dt>Accounting Group</dt>
+                            <dd>@Html.DisplayFor(model => model.AccountingGroup)</dd>
+                        </div>
                     }
-                </tbody>
-            </table>
-        }
-        else
-        {
-            <p>No contact information available.</p>
-        }
+                    <div class="student-info-item">
+                        <dt>Password Set Date</dt>
+                        <dd>@passwordSetDate</dd>
+                    </div>
+                </dl>
+            </section>
 
-        <h4>Payer Information</h4>
-        @if(Model.Payers != null && Model.Payers.Any())
-        {
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach(var payer in Model.Payers)
+            <div class="details-side-column">
+                <section class="details-card" aria-labelledby="contact-information-heading">
+                    <h4 id="contact-information-heading">Contact Information</h4>
+
+                    @if (Model.Contacts != null && Model.Contacts.Any())
                     {
-                        <tr>
-                            <td>@Html.DisplayFor(m => payer.Name)</td>
-                        </tr>
+                        <div class="details-table-wrap">
+                            <table class="details-table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Value</th>
+                                        <th class="boolean-column">Invitation</th>
+                                        <th class="boolean-column">Emergency</th>
+                                        <th class="boolean-column">Money</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var contact in Model.Contacts)
+                                    {
+                                        <tr>
+                                            <td>@Html.DisplayFor(m => contact.Type)</td>
+                                            <td>@Html.DisplayFor(m => contact.Value)</td>
+                                            <td class="boolean-column">@(contact.Invitation ? "✔" : "")</td>
+                                            <td class="boolean-column">@(contact.Emergency ? "✔" : "")</td>
+                                            <td class="boolean-column">@(contact.Money ? "✔" : "")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     }
-                </tbody>
-            </table>
-        }
-        else
-        {
-            <p>No Payers</p>
-        }
+                    else
+                    {
+                        <p class="empty-state">No contact information available.</p>
+                    }
+                </section>
 
-        <h4><a asp-controller="StudentBalance"
-            asp-action="UpdateBalance"
-            asp-route-id="@Model.ID"
-            class="btn btn-dark">
-                Go To Balance Info
-            </a>
-        </h4>
+                <section class="details-card" aria-labelledby="payer-information-heading">
+                    <h4 id="payer-information-heading">Payer Information</h4>
 
-        <div class="details-buttons">
-            <a  
-                href='@Url.Action("Edit", new { id = Model.ID })'
-                class="btn btn-dark icon-btn"
-                title="Edit Student">
-                <i class="fa-solid fa-pencil"></i>
-            </a>
-            <a 
-                href='@Url.Action("Index")'
-                class="btn btn-dark icon-btn"
-                title="Back to List">
-                <i class="hgi hgi-stroke hgi-arrow-turn-backward"></i>
-            </a>
+                    @if (Model.Payers != null && Model.Payers.Any())
+                    {
+                        <div class="details-table-wrap">
+                            <table class="details-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var payer in Model.Payers)
+                                    {
+                                        <tr>
+                                            <td>@Html.DisplayFor(m => payer.Name)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="empty-state">No Payers</p>
+                    }
+                </section>
             </div>
 
-    </div>
+            <section class="details-card notes-card" aria-labelledby="notes-heading">
+                <h4 id="notes-heading">Notes | @Html.DisplayFor(model => model.MainNotes)</h4>
+
+                @if (Model.Notes != null && Model.Notes.Any())
+                {
+                    const int notesCharacterLimit = 300;
+                    var notesCharacterCount = Model.Notes.Sum(note => note.Value?.Length ?? 0);
+                    var notesAreLong = notesCharacterCount > notesCharacterLimit;
+
+                    <div id="student-notes"
+                         class="notes-container @(notesAreLong ? "notes-collapsed" : "")">
+                        <ul class="notes-list">
+                            @foreach (var note in Model.Notes)
+                            {
+                                int? daysUntilExpiration = note.ExpirationDate.HasValue
+                                    ? (note.ExpirationDate.Value.Date - DateTime.Today).Days
+                                    : null;
+
+                                <li>
+                                    <div>@Html.DisplayFor(m => note.Value)</div>
+                                    @if (daysUntilExpiration.HasValue)
+                                    {
+                                        if (daysUntilExpiration.Value > 0)
+                                        {
+                                            <small>Expires in @daysUntilExpiration.Value day(s)</small>
+                                        }
+                                        else if (daysUntilExpiration.Value == 0)
+                                        {
+                                            <small>Expires today</small>
+                                        }
+                                        else
+                                        {
+                                            <small>Expired @Math.Abs(daysUntilExpiration.Value) day(s) ago</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <small>No expiration date</small>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </div>
+
+                    @if (notesAreLong)
+                    {
+                        <button type="button"
+                                id="toggle-notes"
+                                class="toggle-notes-button"
+                                aria-expanded="false"
+                                aria-controls="student-notes">
+                            Show more
+                        </button>
+                    }
+                }
+                else
+                {
+                    <p class="empty-state">No notes for @Model.Name</p>
+                }
+            </section>
+        </div>
+    </main>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const notesContainer = document.getElementById("student-notes");
+        const toggleButton = document.getElementById("toggle-notes");
+
+        if (!notesContainer || !toggleButton) {
+            return;
+        }
+
+        toggleButton.addEventListener("click", function () {
+            const isCollapsed = notesContainer.classList.toggle("notes-collapsed");
+
+            toggleButton.textContent = isCollapsed ? "Show more" : "Show less";
+            toggleButton.setAttribute("aria-expanded", (!isCollapsed).toString());
+        });
+    });
+</script>

@@ -171,23 +171,65 @@ namespace DotNetCoreSqlDb.Controllers
                     .ToListAsync();
             }
 
-            var flat = existing.Select(r => new ScheduleRowDto
-            {
-                Id = r.Id,
-                AssignmentId = r.AssignmentId,
-                DateTime = r.DateTime.ToUniversalTime().ToString("o"),
-                Status = r.Status,
-                Duration = r.Duration,
-                Accounted = r.Accounted,
-                LessonAccountingType = r.LessonAccountingType,
-                GroupName = r.Assignment?.Group?.Name ?? string.Empty,
+            var studentIds = existing
+                .Where(r => r.Assignment?.Group?.StudentGroupCompositions != null)
+                .SelectMany(r => r.Assignment!.Group!.StudentGroupCompositions)
+                .Select(sgc => sgc.StudentId)
+                .Distinct()
+                .ToList();
 
-                // Sum of all notes of all students in the group for THIS schedule row
-                MainNotes = string.Join(" ",
-                    r.Assignment?.Group?.StudentGroupCompositions?
-                        .Select(sgc => sgc.Student?.MainNotes)
-                        .Where(n => !string.IsNullOrWhiteSpace(n))
-                    ?? Enumerable.Empty<string>())
+            var activeNotes = await _context.Set<Notes>()
+                .Where(n =>
+                    studentIds.Contains(n.StudentID) &&
+                    (!n.ExpirationDate.HasValue || n.ExpirationDate.Value >= selectedDate))
+                .Select(n => new
+                {
+                    n.StudentID,
+                    n.Value,
+                    n.PriorityLevel,
+                    n.CreatedDate
+                })
+                .ToListAsync();
+
+            //_logger.LogInformation("notes: " + activeNotes.Count + " for students: " + studentIds.Count);
+
+            var flat = existing.Select(r =>
+            {
+                var rowStudentIds = r.Assignment?.Group?.StudentGroupCompositions?
+                    .Select(sgc => sgc.StudentId)
+                    .ToHashSet()
+                    ?? new HashSet<Guid>();
+
+                var rowNotes = activeNotes
+                    .Where(n => rowStudentIds.Contains(n.StudentID))
+                    .OrderByDescending(n => n.PriorityLevel ?? 0)
+                    .ThenByDescending(n => n.CreatedDate)
+                    .ToList();
+
+                return new ScheduleRowDto
+                {
+                    Id = r.Id,
+                    AssignmentId = r.AssignmentId,
+                    StudentId = rowStudentIds.Count == 1
+                        ? rowStudentIds.Single()
+                        : null,
+                    DateTime = r.DateTime.ToUniversalTime().ToString("o"),
+                    Status = r.Status,
+                    Duration = r.Duration,
+                    Accounted = r.Accounted,
+                    LessonAccountingType = r.LessonAccountingType,
+                    GroupName = r.Assignment?.Group?.Name ?? string.Empty,
+
+                    MainNotes = string.Join(" | ",
+                        r.Assignment?.Group?.StudentGroupCompositions?
+                            .Select(sgc => sgc.Student?.MainNotes)
+                            .Where(n => !string.IsNullOrWhiteSpace(n))
+                        ?? Enumerable.Empty<string>()),
+
+                    NotesPriority = rowNotes.Count == 0
+                        ? null
+                        : rowNotes.Max(n => n.PriorityLevel ?? 0)
+                };
             }).ToList();
 
             ViewBag.ExistingJson = JsonSerializer.Serialize(flat, new JsonSerializerOptions
@@ -202,11 +244,13 @@ namespace DotNetCoreSqlDb.Controllers
         {
             public Guid Id { get; set; }
             public Guid AssignmentId { get; set; }
+            public Guid? StudentId { get; set; }
             public string DateTime { get; set; } = "";
             public string Status { get; set; } = "";
             public int Duration { get; set; }
             public string LessonAccountingType { get; set; } = "";
             public string MainNotes { get; set;} = "";
+            public int? NotesPriority { get; set; }
             public bool Accounted { get; set; }
             public string GroupName { get; set; } = "";
         }

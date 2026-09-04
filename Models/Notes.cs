@@ -16,10 +16,20 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("Value")]
         public string? Value { get; set; }
 
+        [DisplayName("PriorityLevel")]
+        public int? PriorityLevel { get; set; }
+
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime CreatedDate { get; set; }
+
+        [DisplayName("Expiration Date")]
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime? ExpirationDate { get; set; }
+
+
         // Navigation property to the related Student
         public virtual Student? Student { get; set; }
     }

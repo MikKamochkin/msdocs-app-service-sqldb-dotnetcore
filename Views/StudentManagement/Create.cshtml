@@ -4,7 +4,343 @@
     ViewData["Title"] = "Create Student";
 }
 
-<div class="row no-gutters">
+<style>
+    .create-student-page {
+        min-height: 100vh;
+        background: #e8ecfc;
+    }
+
+    .create-student-content {
+        min-width: 0;
+        padding: 22px 24px 28px;
+        color: #2f3445;
+        overflow-x: hidden;
+    }
+
+    .create-student-shell {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+    }
+
+    .create-student-content h2 {
+        margin: 0 0 16px;
+        color: #29314d;
+        font-size: 1.8rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .create-student-card {
+        min-width: 0;
+        padding: 16px;
+        overflow-x: auto;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .create-student-card h4 {
+        margin: 0 0 12px;
+        color: #39446c;
+        font-size: 1.2rem;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    .create-student-details-card {
+        margin-bottom: 16px;
+        overflow: visible;
+    }
+
+    .create-student-fields {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px 16px;
+    }
+
+    .create-student-fields .form-group {
+        min-width: 0;
+        margin: 0;
+    }
+
+    .create-student-fields .control-label,
+    .create-student-fields .col-md-10 {
+        display: block;
+        float: none;
+        width: 100%;
+        max-width: none;
+        padding: 0;
+        text-align: left;
+    }
+
+    .create-student-fields .control-label {
+        margin-bottom: 5px;
+        color: #424a66;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+
+    .create-student-content .form-control {
+        width: 100%;
+        min-height: 38px;
+        border: 1px solid #ccd2e8;
+        border-radius: 6px;
+        background: #fff;
+        color: #2f3445;
+        font-size: 0.95rem;
+        box-shadow: none;
+    }
+
+    .create-student-content .form-control:focus {
+        border-color: #6981ec;
+        box-shadow: 0 0 0 3px rgba(105, 129, 236, 0.16);
+    }
+
+    .create-student-management-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        align-items: start;
+    }
+
+    .create-student-notes-card {
+        grid-column: 1 / -1;
+    }
+
+    .create-student-table-anchor:empty {
+        display: none;
+    }
+
+    .create-student-card #contactsSummary,
+    .create-student-card #payersSummary,
+    .create-student-card #notesSummary {
+        width: 100%;
+        margin: 0 0 12px !important;
+        border: 1px solid #e0e3ef;
+        border-collapse: collapse;
+        color: #34394b;
+        font-size: 0.95rem;
+    }
+
+    .create-student-card #contactsSummary th,
+    .create-student-card #contactsSummary td,
+    .create-student-card #payersSummary th,
+    .create-student-card #payersSummary td,
+    .create-student-card #notesSummary th,
+    .create-student-card #notesSummary td {
+        padding: 9px 10px;
+        border: 1px solid #e0e3ef;
+        vertical-align: middle;
+    }
+
+    .create-student-card #contactsSummary thead th,
+    .create-student-card #payersSummary thead th,
+    .create-student-card #notesSummary thead th {
+        background: #f0f2fa;
+        color: #3a425e;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .create-student-card #contactsSummary tbody tr:nth-child(odd),
+    .create-student-card #payersSummary tbody tr:nth-child(odd),
+    .create-student-card #notesSummary tbody tr:nth-child(odd) {
+        background: #fff;
+    }
+
+    .create-student-card #contactsSummary tbody tr:nth-child(even),
+    .create-student-card #payersSummary tbody tr:nth-child(even),
+    .create-student-card #notesSummary tbody tr:nth-child(even) {
+        background: #f6f7fb;
+    }
+
+    .create-student-card #contactsSummary tbody tr,
+    .create-student-card #payersSummary tbody tr,
+    .create-student-card #notesSummary tbody tr {
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+    .create-student-card #contactsSummary tbody tr:hover,
+    .create-student-card #payersSummary tbody tr:hover,
+    .create-student-card #notesSummary tbody tr:hover {
+        background: #eef1ff;
+    }
+
+    .create-student-contacts-card #contactsSummary {
+        table-layout: fixed;
+    }
+
+    .create-student-contacts-card #contactsSummary th:nth-child(1),
+    .create-student-contacts-card #contactsSummary td:nth-child(1) {
+        width: 22%;
+    }
+
+    .create-student-contacts-card #contactsSummary th:nth-child(2),
+    .create-student-contacts-card #contactsSummary td:nth-child(2) {
+        width: auto;
+        overflow-wrap: anywhere;
+    }
+
+    .create-student-contacts-card #contactsSummary th:nth-child(n+3),
+    .create-student-contacts-card #contactsSummary td:nth-child(n+3) {
+        width: 82px;
+        padding-right: 4px;
+        padding-left: 4px;
+        text-align: center;
+    }
+
+    .create-student-content .btn {
+        padding: 7px 13px;
+        border: 1px solid #6981ec;
+        border-radius: 6px;
+        background: #fff;
+        color: #5d73d8;
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.35;
+        box-shadow: none;
+        transition: color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .create-student-content .btn:hover,
+    .create-student-content .btn:focus {
+        border-color: #6981ec;
+        background: #6981ec;
+        color: #fff;
+    }
+
+    .create-student-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin: 16px 0 0;
+        padding: 0;
+        background: transparent;
+    }
+
+    .create-student-actions .col-md-offset-2,
+    .create-student-actions .col-md-10 {
+        display: flex;
+        float: none;
+        width: auto;
+        margin: 0;
+        padding: 0;
+    }
+
+    .create-student-actions .btn-primary {
+        min-width: 110px;
+        border-color: #6981ec;
+        background: #6981ec;
+        color: #fff;
+    }
+
+    .create-student-actions .btn-primary:hover,
+    .create-student-actions .btn-primary:focus {
+        border-color: #536bd7;
+        background: #536bd7;
+    }
+
+    .create-student-content .text-danger {
+        font-size: 0.9rem;
+    }
+
+    .create-student-content .validation-summary-errors {
+        margin-bottom: 14px;
+        padding: 12px 16px;
+        border: 1px solid #e3b8c2;
+        border-radius: 8px;
+        background: #fff7f8;
+    }
+
+    .create-student-content .alert {
+        margin: 14px 0 0;
+        border-radius: 8px;
+    }
+
+    .create-student-content .modal-content {
+        overflow: hidden;
+        border: 0;
+        border-radius: 8px;
+        box-shadow: 0 8px 28px rgba(30, 38, 70, 0.2);
+    }
+
+    .create-student-content .modal-header,
+    .create-student-content .modal-footer {
+        border-color: #e3e6f1;
+        background: #f6f7fb;
+    }
+
+    .create-student-content .modal-title {
+        color: #39446c;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+
+    .create-student-content .modal-body .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .create-student-content .modal-body .control-label {
+        color: #424a66;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+
+    .create-student-content #noteModal .create-student-note-dialog {
+        width: calc(100% - 32px);
+        max-width: 900px;
+        margin-right: auto;
+        margin-left: auto;
+    }
+
+    .create-student-content #modalNoteValue {
+        min-height: 300px;
+        max-height: 55vh;
+        line-height: 1.5;
+        resize: vertical;
+    }
+
+    @@media (max-width: 1100px) {
+        .create-student-fields {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .create-student-management-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .create-student-notes-card {
+            grid-column: auto;
+        }
+    }
+
+    @@media (max-width: 767px) {
+        .create-student-content {
+            padding: 16px 12px 22px;
+        }
+
+        .create-student-fields {
+            grid-template-columns: 1fr;
+        }
+
+        .create-student-card {
+            padding: 14px;
+        }
+
+        .create-student-actions {
+            justify-content: stretch;
+        }
+
+        .create-student-actions .col-md-offset-2,
+        .create-student-actions .col-md-10,
+        .create-student-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="row no-gutters create-student-page">
     @* ——————— Sidebar Column ——————— *@
     @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
     {
@@ -12,7 +348,8 @@
     }
 
     @* ——————— Main Content Column ——————— *@
-    <div class="col-md-9">
+    <main class="col create-student-content">
+        <div class="create-student-shell">
         <h2>Create Student</h2>
 
         @Html.ValidationSummary(true, "", new { @class = "text-danger" })
@@ -25,9 +362,11 @@
             <input type="hidden" id="SkipDuplicateCheck" name="SkipDuplicateCheck" value="false" />
 
 
-            <div class="form-horizontal">
-                <h4>Student</h4>
-                <hr />
+            <div class="form-horizontal create-student-form">
+    <section class="create-student-card create-student-details-card">
+        <h4>Student Information</h4>
+
+        <div class="create-student-fields">
                 <div class="form-group">
                     @Html.LabelFor(m => m.Name, new { @class = "control-label col-md-2" })
                     <div class="col-md-10">
@@ -79,18 +418,48 @@
                         </div>
                     </div>
                 }
+                        </div>
+    </section>
 
-                <h4>Contact Information</h4>
-                <div id="contacts"></div>
-                <button type="button" id="addContact" class="btn btn-secondary">Add Contact Information</button>
-                <br /><br />
+                <div class="create-student-management-grid">
+                    <section class="create-student-card create-student-contacts-card">
+                        <h4>Contact Information</h4>
 
-                <h4>Payers</h4>
-                <div id="payers"></div>
-                <button type="button" id="addPayer" class="btn btn-secondary">Add Payer</button>
-                <br /><br />
+                        <div id="contacts" class="create-student-table-anchor"></div>
 
-                <div class="form-group">
+                        <button type="button"
+                                id="addContact"
+                                class="btn btn-secondary">
+                            Add Contact Information
+                        </button>
+                    </section>
+
+                    <section class="create-student-card create-student-payers-card">
+                        <h4>Payers</h4>
+
+                        <div id="payers" class="create-student-table-anchor"></div>
+
+                        <button type="button"
+                                id="addPayer"
+                                class="btn btn-secondary">
+                            Add Payer
+                        </button>
+                    </section>
+
+                    <section class="create-student-card create-student-notes-card">
+                        <h4>Notes</h4>
+
+                        <div id="notes" class="create-student-table-anchor"></div>
+
+                        <button type="button"
+                                id="addNote"
+                                class="btn btn-secondary">
+                            Add Note
+                        </button>
+                    </section>
+                </div>
+
+                <div class="form-group create-student-actions">
                     <div class="col-md-offset-2 col-md-10">
                         <input id="submitButton" type="submit" value="Create" class="btn btn-primary" />
                     </div>
@@ -103,6 +472,7 @@
                 }
             </div>
         }
+        </div>
 
         <!-- Modal for adding a new contact -->
         <div id="contactModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
@@ -166,7 +536,75 @@
                 </div>
             </div>
         </div>
-    </div>
+
+        <div id="noteModal"
+            class="modal fade"
+            tabindex="-1"
+            role="dialog"
+            data-backdrop="static"
+            data-keyboard="false">
+
+            <div class="modal-dialog create-student-note-dialog">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="noteModalLabel">
+                            Add Note
+                        </h5>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="control-label">Text</label>
+
+                            <textarea id="modalNoteValue"
+                                    class="form-control"
+                                    rows="4"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label">Priority Level</label>
+
+                            <select id="modalNotePriorityLevel" class="form-control">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label">Expiration Date</label>
+
+                            <input type="date"
+                                id="modalNoteExpirationDate"
+                                class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                id="noteModalDelete"
+                                class="btn btn-danger">
+                            Delete
+                        </button>
+
+                        <button type="button"
+                                id="noteModalCancel"
+                                class="btn btn-secondary">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                id="noteModalSave"
+                                class="btn btn-primary">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
 </div>
 
 @section Scripts {
@@ -180,6 +618,8 @@
         var editingContactIndex = null;
         var payerCount = 0;
         var editingPayerIndex = null;
+        var noteCount = 0;
+        var editingNoteIndex = null;
 
         function addContactSummary(index, contactType, typeText, value, invitationBool, emergencyBool, moneyBool) {
             if ($("#contactsSummary").length === 0) {
@@ -242,11 +682,111 @@
             $("#payersSummary tbody").append(summaryRow);
         }
 
+        function addNoteSummary(index, value, priorityLevel, expirationDate) {
+            if ($("#notesSummary").length === 0) {
+                var $table = $('<table>')
+                    .attr('id', 'notesSummary')
+                    .addClass('table table-bordered')
+                    .css('margin-top', '20px');
+
+                var $headerRow = $('<tr>');
+
+                $('<th>').text('Text').appendTo($headerRow);
+                $('<th>').text('Priority Level').appendTo($headerRow);
+                $('<th>').text('Expiration Date').appendTo($headerRow);
+
+                $('<thead>')
+                    .append($headerRow)
+                    .appendTo($table);
+
+                $('<tbody>').appendTo($table);
+
+                $("#notes").after($table);
+            }
+
+            var preview = value.length > 50
+                ? value.substring(0, 50) + "..."
+                : value;
+
+            var $row = $('<tr>')
+                .addClass('note-summary')
+                .attr('data-index', index)
+                .data('notevalue', value)
+                .data('prioritylevel', priorityLevel)
+                .data('expirationdate', expirationDate);
+
+            $('<td>')
+                .addClass('note-value')
+                .text(preview)
+                .appendTo($row);
+
+            $('<td>')
+                .addClass('note-priority-level')
+                .text(priorityLevel)
+                .appendTo($row);
+
+            $('<td>')
+                .addClass('note-expiration')
+                .text(expirationDate || 'No expiration')
+                .appendTo($row);
+
+            var $hiddenCell = $('<td>').css('display', 'none');
+
+            $('<input>')
+                .attr({
+                    type: 'hidden',
+                    name: 'Notes.Index'
+                })
+                .val(index)
+                .appendTo($hiddenCell);
+
+            $('<input>')
+                .attr({
+                    type: 'hidden',
+                    name: 'Notes[' + index + '].ID'
+                })
+                .val('00000000-0000-0000-0000-000000000000')
+                .appendTo($hiddenCell);
+
+            $('<input>')
+                .attr({
+                    type: 'hidden',
+                    name: 'Notes[' + index + '].Value'
+                })
+                .val(value)
+                .appendTo($hiddenCell);
+
+            $('<input>')
+                .attr({
+                    type: 'hidden',
+                    name: 'Notes[' + index + '].PriorityLevel'
+                })
+                .val(priorityLevel)
+                .appendTo($hiddenCell);
+
+            $('<input>')
+                .attr({
+                    type: 'hidden',
+                    name: 'Notes[' + index + '].ExpirationDate'
+                })
+                .val(expirationDate)
+                .appendTo($hiddenCell);
+
+            $row.append($hiddenCell);
+
+            $("#notesSummary tbody").append($row);
+        }
+
 
 
         $(document).ready(function() {
             $("#contactModal").modal({ backdrop: 'static', keyboard: false, show: false });
             $("#payerModal").modal({ backdrop: 'static', keyboard: false, show: false });
+            $("#noteModal").modal({
+                backdrop: 'static',
+                keyboard: false,
+                show: false
+            });
 
             $("#addContact").click(function() {
                 editingContactIndex = null;
@@ -372,6 +912,130 @@
             $("#payerModalCancel").click(function() {
                 editingContactIndex = null;
                 $("#payerModal").modal('hide');
+            });
+
+            $("#addNote").click(function () {
+                editingNoteIndex = null;
+
+                $("#noteModalLabel").text("Add Note");
+                $("#modalNoteValue").val("");
+                $("#modalNotePriorityLevel").val("1");
+                $("#modalNoteExpirationDate").val("");
+
+                $("#noteModalDelete").hide();
+                $("#noteModal").modal("show");
+            });
+
+            $(document).on(
+                "click",
+                "#notesSummary tbody tr.note-summary",
+                function () {
+                    var $row = $(this);
+
+                    editingNoteIndex = $row.data("index");
+
+                    $("#noteModalLabel").text("Edit Note");
+                    $("#modalNoteValue").val($row.data("notevalue"));
+                    $("#modalNotePriorityLevel").val(
+                        String($row.data("prioritylevel"))
+                    );
+                    $("#modalNoteExpirationDate").val(
+                        $row.data("expirationdate")
+                    );
+
+                    $("#noteModalDelete").show();
+                    $("#noteModal").modal("show");
+                }
+            );
+
+            $("#noteModalSave").click(function () {
+                var value = $("#modalNoteValue").val().trim();
+                var priorityLevel = $("#modalNotePriorityLevel").val();
+                var expirationDate = $("#modalNoteExpirationDate").val();
+
+                if (!value) {
+                    alert("Please enter note text.");
+                    return;
+                }
+
+                if (editingNoteIndex === null) {
+                    addNoteSummary(
+                        noteCount,
+                        value,
+                        priorityLevel,
+                        expirationDate
+                    );
+
+                    noteCount++;
+                } else {
+                    var $row = $(
+                        "#notesSummary tbody tr.note-summary[data-index='" +
+                        editingNoteIndex +
+                        "']"
+                    );
+
+                    var preview = value.length > 50
+                        ? value.substring(0, 50) + "..."
+                        : value;
+
+                    $row.data("notevalue", value);
+                    $row.data("prioritylevel", priorityLevel);
+                    $row.data("expirationdate", expirationDate);
+
+                    $row.find(".note-value").text(preview);
+                    $row.find(".note-priority-level").text(priorityLevel);
+                    $row.find(".note-expiration")
+                        .text(expirationDate || "No expiration");
+
+                    $row.find(
+                        "input[name='Notes[" +
+                        editingNoteIndex +
+                        "].Value']"
+                    ).val(value);
+
+                    $row.find(
+                        "input[name='Notes[" +
+                        editingNoteIndex +
+                        "].PriorityLevel']"
+                    ).val(priorityLevel);
+
+                    $row.find(
+                        "input[name='Notes[" +
+                        editingNoteIndex +
+                        "].ExpirationDate']"
+                    ).val(expirationDate);
+                }
+
+                editingNoteIndex = null;
+                $("#noteModal").modal("hide");
+            });
+
+            $("#noteModalDelete").click(function () {
+                if (editingNoteIndex === null) {
+                    return;
+                }
+
+                if (!confirm("Delete this note?")) {
+                    return;
+                }
+
+                $(
+                    "#notesSummary tbody tr.note-summary[data-index='" +
+                    editingNoteIndex +
+                    "']"
+                ).remove();
+
+                if ($("#notesSummary tbody tr").length === 0) {
+                    $("#notesSummary").remove();
+                }
+
+                editingNoteIndex = null;
+                $("#noteModal").modal("hide");
+            });
+
+            $("#noteModalCancel").click(function () {
+                editingNoteIndex = null;
+                $("#noteModal").modal("hide");
             });
 
         });

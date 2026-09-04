@@ -535,10 +535,10 @@ span.ms-2.small {
     }
 }
 
-.notes-cell {
-    max-width: 260px;      /* tweak as you like */
+/*.notes-cell {
+    max-width: 260px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     color: red;
-}
+}*/

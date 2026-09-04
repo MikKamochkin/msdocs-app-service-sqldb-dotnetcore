@@ -146,6 +146,7 @@ namespace DotNetCoreSqlDb.Controllers
             var student = await _context.Student
                 .Include(s => s.Contacts)
                 .Include(s => s.Payers)
+                .Include(s => s.Notes)
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
                 return NotFound();
@@ -174,6 +175,7 @@ namespace DotNetCoreSqlDb.Controllers
             var student = await _context.Student
                 .Include(s => s.Contacts)
                 .Include(s => s.Payers)
+                .Include(s => s.Notes)
                 .FirstOrDefaultAsync(s => s.ID == id);
             if (student == null)
                 return NotFound();
@@ -209,6 +211,7 @@ namespace DotNetCoreSqlDb.Controllers
             var existingStudent = await _context.Student
                 .Include(s => s.Contacts)
                 .Include(s => s.Payers)
+                .Include(s => s.Notes)
                 .FirstOrDefaultAsync(s => s.ID == id);
 
             if (existingStudent == null)
@@ -329,6 +332,34 @@ namespace DotNetCoreSqlDb.Controllers
                     _context.Entry(p).State = EntityState.Deleted;
             }
 
+            if (updatedStudent.Notes != null && updatedStudent.Notes.Any())
+            {
+                foreach (var note in updatedStudent.Notes)
+                {
+                    if (note.ID == Guid.Empty)
+                    {
+                        note.ID = Guid.NewGuid();
+                        note.StudentID = existingStudent.ID;
+                        note.CreatedDate = DateTime.Now;
+                        note.Value = note.Value?.Trim();
+
+                        _context.Set<Notes>().Add(note);
+                    }
+                    else
+                    {
+                        var existingNote = existingStudent.Notes
+                            .FirstOrDefault(n => n.ID == note.ID);
+
+                        if (existingNote != null)
+                        {
+                            existingNote.Value = note.Value?.Trim();
+                            existingNote.PriorityLevel = note.PriorityLevel;
+                            existingNote.ExpirationDate = note.ExpirationDate;
+                        }
+                    }
+                }
+            }
+
             // --- NEW: create user if missing ---
             bool userExists = await _context.User.AnyAsync(u => u.ID == existingStudent.ID);
             if (!userExists)
@@ -430,7 +461,7 @@ namespace DotNetCoreSqlDb.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
-            [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts,Payers")]
+            [Bind("ID,Name,ParentOrEmployer,MainNotes,Source,TimeZoneId,AccountingGroup,Contacts,Payers,Notes")]
             Student student)
         {
             // 1) Validate your one-time token
@@ -471,6 +502,16 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 // 1) Save the new Student (and its Contacts)
                 student.ID = Guid.NewGuid();
+                if (student.Notes != null)
+                {
+                    foreach (var note in student.Notes)
+                    {
+                        note.ID = Guid.NewGuid();
+                        note.StudentID = student.ID;
+                        note.CreatedDate = DateTime.Now;
+                        note.Value = note.Value?.Trim();
+                    }
+                }
                 _context.Add(student);
                 //await _context.SaveChangesAsync();
 
@@ -704,6 +745,39 @@ namespace DotNetCoreSqlDb.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [IgnoreAntiforgeryToken]
+        public async Task<IActionResult> DeleteNote(Guid noteId)
+        {
+            var note = await _context.Set<Notes>().FindAsync(noteId);
+
+            if (note == null)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "Note not found."
+                });
+            }
+
+            _context.Set<Notes>().Remove(note);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 

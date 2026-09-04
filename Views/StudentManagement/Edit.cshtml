@@ -1,535 +1,1875 @@
 @model DotNetCoreSqlDb.Models.Student
 
 @{
+
     ViewData["Title"] = "Edit Student";
+
 }
 
-<div class="row no-gutters">
-    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
-    {
-        <partial name="_AdminSidebar" />
+<style>
+    .student-edit-page {
+        min-height: 100vh;
+        background: #e8ecfc;
     }
-    <div class="col">
+
+    .student-edit-content {
+        min-width: 0;
+        padding: 22px 24px 28px;
+        color: #2f3445;
+        overflow-x: hidden;
+    }
+
+    .student-edit-shell {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+    }
+
+    .student-edit-content h2 {
+        margin: 0 0 16px;
+        color: #29314d;
+        font-size: 1.8rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .student-edit-card {
+        min-width: 0;
+        padding: 16px;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .student-edit-card h4 {
+        margin: 0 0 12px;
+        color: #39446c;
+        font-size: 1.2rem;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    .student-edit-details-card {
+        margin-bottom: 16px;
+    }
+
+    .student-edit-fields {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px 16px;
+    }
+
+    .student-edit-fields .form-group {
+        min-width: 0;
+        margin: 0;
+    }
+
+    .student-edit-fields .control-label,
+    .student-edit-fields .col-md-10 {
+        display: block;
+        float: none;
+        width: 100%;
+        max-width: none;
+        padding: 0;
+        text-align: left;
+    }
+
+    .student-edit-fields .control-label {
+        margin-bottom: 5px;
+        color: #424a66;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+
+    .student-edit-content .form-control {
+        width: 100%;
+        min-height: 38px;
+        border: 1px solid #ccd2e8;
+        border-radius: 6px;
+        background: #fff;
+        color: #2f3445;
+        font-size: 0.95rem;
+        box-shadow: none;
+    }
+
+    .student-edit-content .form-control:focus {
+        border-color: #6981ec;
+        box-shadow: 0 0 0 3px rgba(105, 129, 236, 0.16);
+    }
+
+    .student-edit-management-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        align-items: start;
+    }
+
+    .student-edit-notes-card {
+        grid-column: 1 / -1;
+    }
+
+    .student-edit-table-wrap {
+        width: 100%;
+        margin-bottom: 12px;
+        overflow-x: auto;
+        border: 1px solid #e0e3ef;
+        border-radius: 7px;
+    }
+
+    .student-edit-card table {
+        width: 100%;
+        margin: 0;
+        border: 0;
+        border-collapse: collapse;
+        color: #34394b;
+        font-size: 0.95rem;
+    }
+
+    .student-edit-card table th,
+    .student-edit-card table td {
+        padding: 9px 10px;
+        border: 1px solid #e0e3ef;
+        vertical-align: middle;
+    }
+
+    .student-edit-card table thead th {
+        background: #f0f2fa;
+        color: #3a425e;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .student-edit-contacts-card #contactsTable {
+        table-layout: fixed;
+    }
+
+    .student-edit-contacts-card #contactsTable th:nth-child(1),
+    .student-edit-contacts-card #contactsTable td:nth-child(1) {
+        width: 22%;
+    }
+
+    .student-edit-contacts-card #contactsTable th:nth-child(2),
+    .student-edit-contacts-card #contactsTable td:nth-child(2) {
+        width: auto;
+        overflow-wrap: anywhere;
+    }
+
+    .student-edit-contacts-card #contactsTable th:nth-child(n+3),
+    .student-edit-contacts-card #contactsTable td:nth-child(n+3) {
+        width: 82px;
+        padding-right: 4px;
+        padding-left: 4px;
+        text-align: center;
+    }
+
+    .student-edit-card table tbody tr:nth-child(odd) {
+        background: #fff;
+    }
+
+    .student-edit-card table tbody tr:nth-child(even) {
+        background: #f6f7fb;
+    }
+
+    .student-edit-card table tbody tr.contact-summary,
+    .student-edit-card table tbody tr.payer-summary,
+    .student-edit-card table tbody tr.note-summary {
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+    .student-edit-card table tbody tr.contact-summary:hover,
+    .student-edit-card table tbody tr.payer-summary:hover,
+    .student-edit-card table tbody tr.note-summary:hover {
+        background: #eef1ff;
+    }
+
+    .student-edit-content .btn {
+        padding: 7px 13px;
+        border: 1px solid #6981ec;
+        border-radius: 6px;
+        background: #fff;
+        color: #5d73d8;
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.35;
+        box-shadow: none;
+        transition: color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .student-edit-content .btn:hover,
+    .student-edit-content .btn:focus {
+        border-color: #6981ec;
+        background: #6981ec;
+        color: #fff;
+    }
+
+    .student-edit-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin: 16px 0 0;
+        padding: 0;
+        background: transparent;
+    }
+
+    .student-edit-actions .col-md-offset-2,
+    .student-edit-actions .col-md-10 {
+        display: flex;
+        width: auto;
+        gap: 8px;
+        float: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .student-edit-actions .btn-primary {
+        border-color: #6981ec;
+        background: #6981ec;
+        color: #fff;
+    }
+
+    .student-edit-actions .btn-primary:hover,
+    .student-edit-actions .btn-primary:focus {
+        border-color: #536bd7;
+        background: #536bd7;
+    }
+
+    .student-edit-content form.d-inline {
+        display: inline-block;
+        margin-top: 12px;
+    }
+
+    .student-edit-content .text-danger {
+        font-size: 0.9rem;
+    }
+
+    .student-edit-content .validation-summary-errors {
+        margin-bottom: 14px;
+        padding: 12px 16px;
+        border: 1px solid #e3b8c2;
+        border-radius: 8px;
+        background: #fff7f8;
+    }
+
+    .student-edit-content .modal-content {
+        border: 0;
+        border-radius: 8px;
+        box-shadow: 0 8px 28px rgba(30, 38, 70, 0.2);
+        overflow: hidden;
+    }
+
+    .student-edit-content .modal-header,
+    .student-edit-content .modal-footer {
+        border-color: #e3e6f1;
+        background: #f6f7fb;
+    }
+
+    .student-edit-content .modal-title {
+        color: #39446c;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+
+    .student-edit-content .modal-body .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .student-edit-content .modal-body .control-label {
+        color: #424a66;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+
+    .student-edit-content #noteModal .student-edit-note-dialog {
+        width: calc(100% - 32px);
+        max-width: 900px;
+        margin-right: auto;
+        margin-left: auto;
+    }
+
+    .student-edit-content #modalNoteValue {
+        min-height: 300px;
+        max-height: 55vh;
+        line-height: 1.5;
+        resize: vertical;
+    }
+
+    @@media (max-width: 1100px) {
+        .student-edit-fields {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .student-edit-management-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .student-edit-notes-card {
+            grid-column: auto;
+        }
+    }
+
+    @@media (max-width: 767px) {
+        .student-edit-content {
+            padding: 16px 12px 22px;
+        }
+
+        .student-edit-fields {
+            grid-template-columns: 1fr;
+        }
+
+        .student-edit-card {
+            padding: 14px;
+        }
+
+        .student-edit-actions {
+            justify-content: stretch;
+        }
+
+        .student-edit-actions .col-md-offset-2,
+        .student-edit-actions .col-md-10 {
+            width: 100%;
+        }
+
+        .student-edit-actions .btn {
+            flex: 1;
+        }
+
+        .student-edit-actions .btn {
+            margin-bottom: 4px;
+        }
+    }
+</style>
+
+<div class="row no-gutters student-edit-page">
+
+    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
+
+    {
+
+        <partial name="_AdminSidebar" />
+
+    }
+
+    <main class="col student-edit-content">
+
+        <div class="student-edit-shell">
+
         <h2>Edit Student</h2>
 
         @Html.ValidationSummary(true, "", new { @class = "text-danger" })
 
         @using (Html.BeginForm("Edit", "StudentManagement", FormMethod.Post, new {id = "editForm"}))
+
         {
+
             @Html.AntiForgeryToken()
+
             @Html.HiddenFor(m => m.ID)
 
-            <div class="form-horizontal">
-                <h4>Student</h4>
-                <hr />
+            <div class="form-horizontal student-edit-form">
+
+                <section class="student-edit-card student-edit-details-card">
+
+                <h4>Student Information</h4>
+
+                <div class="student-edit-fields">
+
                 <div class="form-group">
+
                     @Html.LabelFor(m => m.Name, new { @class = "control-label col-md-2" })
+
                     <div class="col-md-10">
+
                         @Html.EditorFor(m => m.Name, new { htmlAttributes = new { @class = "form-control" } })
+
                         @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+
                     </div>
+
                 </div>
+
                 <div class="form-group">
+
                     @Html.LabelFor(m => m.ParentOrEmployer, new { @class = "control-label col-md-2" })
+
                     <div class="col-md-10">
+
                         @Html.EditorFor(m => m.ParentOrEmployer, new { htmlAttributes = new { @class = "form-control" } })
+
                         @Html.ValidationMessageFor(m => m.ParentOrEmployer, "", new { @class = "text-danger" })
+
                     </div>
+
                 </div>
+
                 <div class="form-group">
+
                     @Html.LabelFor(m => m.MainNotes, new { @class = "control-label col-md-2" })
+
                     <div class="col-md-10">
+
                         @Html.EditorFor(m => m.MainNotes, new { htmlAttributes = new { @class = "form-control" } })
+
                         @Html.ValidationMessageFor(m => m.MainNotes, "", new { @class = "text-danger" })
+
                     </div>
+
                 </div>
 
                 <!-- Source dropdown -->
+
                 <div class="form-group">
+
                     @Html.LabelFor(m => m.Source, new { @class = "control-label col-md-2" })
+
                     <div class="col-md-10">
+
                         @Html.DropDownListFor(m => m.Source, (IEnumerable<SelectListItem>)ViewBag.SourceTypes, "Select Source", new { @class = "form-control" })
+
                         @Html.ValidationMessageFor(m => m.Source, "", new { @class = "text-danger" })
+
                     </div>
+
                 </div>
 
                 <!-- Timezone dropdown -->
+
                 <div class="form-group">
+
                     @Html.LabelFor(m => m.TimeZoneId, new { @class = "control-label col-md-2" })
+
                     <div class="col-md-10">
+
                         @Html.DropDownListFor(m => m.TimeZoneId, (IEnumerable<SelectListItem>)ViewBag.Timezones, "Select Time Zone", new { @class = "form-control" })
+
                         @Html.ValidationMessageFor(m => m.TimeZoneId, "", new { @class = "text-danger" })
+
                     </div>
+
                 </div>
 
                 <!-- Accounting Group (admin only) -->
+
                 @if (User.IsInRole("admin") || User.IsInRole("support"))
+
                 {
+
                     <div class="form-group">
+
                         @Html.LabelFor(m => m.AccountingGroup, new { @class = "control-label col-md-2" })
+
                         <div class="col-md-10">
+
                             @Html.DropDownListFor(m => m.AccountingGroup, (IEnumerable<SelectListItem>)ViewBag.AccountingGroupTypes, "Select Accounting Group", new { @class = "form-control" })
+
                             @Html.ValidationMessageFor(m => m.AccountingGroup, "", new { @class = "text-danger" })
+
                         </div>
+
                     </div>
+
                 }
 
+                </div>
+
+                </section>
+
+                <div class="student-edit-management-grid">
+
+                <section class="student-edit-card student-edit-contacts-card">
+
                 <h4>Contact Information</h4>
+
+                <div class="student-edit-table-wrap">
+
                 <table class="table table-bordered" id="contactsTable">
+
                     <thead>
+
                         <tr>
+
                             <th>Type</th>
+
                             <th>Contact</th>
+
                             <th>Invitation</th>
+
                             <th>Emergency</th>
+
                             <th>Money</th>
+
                         </tr>
+
                     </thead>
+
                     <tbody>
+
                         @if (Model.Contacts != null && Model.Contacts.Any())
+
                         {
+
                             for (int i = 0; i < Model.Contacts.Count; i++)
+
                             {
+
                                 var c = Model.Contacts.ElementAt(i);
+
                                 <tr class="contact-summary" data-index="@i">
+
                                     <td>
+
                                         <span class="contact-type">
+
                                             @(DropdownOptions.ContactTypes.FirstOrDefault(x => x.Value == c.Type)?.Text)
+
                                         </span>
+
                                         @Html.Hidden($"Contacts[{i}].Type", c.Type)
+
                                     </td>
+
                                     <td>
+
                                         <span class="contact-value">@c.Value</span>
+
                                         @Html.Hidden($"Contacts[{i}].Value", c.Value)
+
                                     </td>
+
                                     <td>
+
                                         <span class="contact-invitation">@(c.Invitation ? "✔" : "")</span>
+
                                         @Html.Hidden($"Contacts[{i}].Invitation", c.Invitation.ToString().ToLower())
+
                                     </td>
+
                                     <td>
+
                                         <span class="contact-emergency">@(c.Emergency ? "✔" : "")</span>
+
                                         @Html.Hidden($"Contacts[{i}].Emergency", c.Emergency.ToString().ToLower())
+
                                     </td>
+
                                     <td>
+
                                         <span class="contact-money">@(c.Money ? "✔" : "")</span>
+
                                         @Html.Hidden($"Contacts[{i}].Money", c.Money.ToString().ToLower())
+
                                     </td>
+
                                     @* contact ID so we know which ones to update *@
+
                                     @Html.Hidden($"Contacts[{i}].ID", c.ID)
+
                                     @* tell the model‐binder this index exists *@
+
                                     <input type="hidden" name="Contacts.Index" value="@i" />
+
                                 </tr>
+
                             }
+
                         }
+
                     </tbody>
 
                 </table>
+
+                </div>
+
                 <button type="button" id="addContactBtn" class="btn btn-info">Add Contact</button>
-                <br />
+
+                </section>
+
+                <section class="student-edit-card student-edit-payers-card">
 
                 <h4>Payers</h4>
+
+                <div class="student-edit-table-wrap">
+
                 <table class="table table-bordered" id="payersTable">
+
                     <thead>
+
                         <tr>
+
                             <th>Payer Name</th>
+
                         </tr>
+
                     </thead>
+
                     <tbody>
+
                         @if (Model.Payers != null && Model.Payers.Any())
+
                         {
+
                             for (int i = 0; i < Model.Payers.Count; i++)
+
                             {
+
                                 var p = Model.Payers.ElementAt(i);
+
                                 <tr class="payer-summary" data-index="@i">
+
                                     <td>
+
                                         <span class="payer-name">@p.Name</span>
+
                                         @Html.Hidden($"Payers[{i}].Name", p.Name)
+
                                     </td>
+
                                     @* keep the ID for sync *@
+
                                     @Html.Hidden($"Payers[{i}].Id", p.Id)
+
                                     @* tell the model‐binder this index exists *@
+
                                     <input type="hidden" name="Payers.Index" value="@i" />
+
                                 </tr>
+
                             }
+
                         }
+
                     </tbody>
+
                 </table>
-                <button type="button" id="addPayerBtn" class="btn btn-info">Add Payer</button>
-                <br>
-                <br>
-                <div class="form-group">
-                    <div class="col-md-offset-2 col-md-10">
-                        <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-danger">Cancel</a>
-                        <input type="submit" value="Save Student" class="btn btn-primary" />
-                    </div>
+
                 </div>
+
+                <button type="button" id="addPayerBtn" class="btn btn-info">Add Payer</button>
+
+                </section>
+
+                <section class="student-edit-card student-edit-notes-card">
+
+                <h4>Notes</h4>
+
+                <div class="student-edit-table-wrap">
+
+                <table class="table table-bordered" id="notesTable">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Text</th>
+
+                            <th>Priority Level</th>
+
+                            <th>Expiration Date</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        @if (Model.Notes != null && Model.Notes.Any())
+
+                        {
+
+                            Model.Notes = Model.Notes.OrderBy(n => n.ExpirationDate).ThenBy(n => n.CreatedDate).ToList();
+
+                            for (int i = 0; i < Model.Notes.Count; i++)
+
+                            {
+
+                                var note = Model.Notes.ElementAt(i);
+
+                                <tr class="note-summary" data-index="@i">
+
+                                    <td>
+
+                                        <span class="note-value">@note.Value?.Substring(0, Math.Min(50, note.Value.Length))@(note.Value?.Length > 50 ? "..." : "")</span>
+
+                                        @Html.Hidden($"Notes[{i}].Value", note.Value)
+
+                                        @Html.Hidden($"Notes[{i}].ID", note.ID)
+
+                                        <input type="hidden"
+
+                                            name="Notes.Index"
+
+                                            value="@i" />
+
+                                    </td>
+
+                                    <td>
+                                        <span class="note-priority-level">@note.PriorityLevel</span>
+
+                                        <input type="hidden"
+                                            name="Notes[@i].PriorityLevel"
+                                            value="@note.PriorityLevel" />
+                                    </td>
+
+                                    <td>
+
+                                        <span class="note-expiration">
+
+                                            @(note.ExpirationDate?.ToString("yyyy-MM-dd") ?? "No expiration")
+
+                                        </span>
+
+                                        <input type="hidden"
+
+                                            name="Notes[@i].ExpirationDate"
+
+                                            value="@(note.ExpirationDate?.ToString("yyyy-MM-dd"))" />
+
+                                    </td>
+
+                                </tr>
+
+                            }
+
+                        }
+
+                    </tbody>
+
+                </table>
+
+                </div>
+
+                <button type="button" id="addNoteBtn" class="btn btn-info">
+
+                    Add Note
+
+                </button>
+
+                </section>
+
+                </div>
+
+                <div class="form-group student-edit-actions">
+
+                    <div class="col-md-offset-2 col-md-10">
+
+                        <a href="@Url.Action("Index", "StudentManagement")" class="btn btn-danger">Cancel</a>
+
+                        <input type="submit" value="Save Student" class="btn btn-primary" />
+
+                    </div>
+
+                </div>
+
             </div>
+
         }
+
         @using (Html.BeginForm("ResetPassword", "StudentManagement", FormMethod.Post, new { @class = "d-inline" }))
+
         {
+
             @Html.AntiForgeryToken()
+
             <input type="hidden" name="studentId" value="@Model.ID" />
+
             <br />
+
             <button type="submit" class="btn btn-dark">Reset Password</button>
+
         }
+
+        </div>
 
         <!-- Modal for Adding/Editing a Contact -->
+
         <div id="contactModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+
           <div class="modal-dialog">
+
             <div class="modal-content">
+
                <div class="modal-header">
+
                    <h5 class="modal-title">Add Contact Information</h5>
+
                </div>
+
                <div class="modal-body">
+
                  <div class="form-group">
+
                     <label class="control-label">Contact Type</label>
+
                     @Html.DropDownList("modalContactType", new SelectList(ViewBag.ContactTypes, "Value", "Text"), "Select Contact Type", new { @class = "form-control", id="modalContactType" })
+
                  </div>
+
                  <div class="form-group">
+
                     <label class="control-label">Value</label>
+
                     <input type="text" id="modalContactValue" class="form-control" />
+
                  </div>
+
                  <div class="form-group">
+
                     <label class="control-label">Invitation</label>
+
                     <div>
+
                         <input type="checkbox" id="modalContactInvitation" />
+
                     </div>
+
                  </div>
+
                  <div class="form-group">
+
                     <label class="control-label">Emergency</label>
+
                     <div>
+
                         <input type="checkbox" id="modalContactEmergency" />
+
                     </div>
+
                  </div>
+
                  <div class="form-group">
+
                     <label class="control-label">Money</label>
+
                     <div>
+
                         <input type="checkbox" id="modalContactMoney" />
+
                     </div>
+
                  </div>
+
                </div>
+
                <div class="modal-footer">
+
                  <button type="button" id="modalDelete" class="btn btn-danger">Delete</button>
+
                  <button type="button" id="modalCancel" class="btn btn-secondary">Cancel</button>
+
                  <button type="button" id="modalSave" class="btn btn-primary">Save</button>
+
                </div>
-            </div>
-          </div>
-        </div>
-        
-        <div id="payerModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
-            <div class="modal-dialog"><div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="payerModalLabel">Add Payer</h5>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label class="control-label">Name</label>
-                        <input type="text" id="modalPayerName" class="form-control" />
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" id="modalPayerDelete" class="btn btn-danger">Delete</button>
-                    <button type="button" id="modalPayerCancel" class="btn btn-secondary">Cancel</button>
-                    <button type="button" id="modalPayerSave" class="btn btn-primary">Save</button>
-                </div>
-            </div></div>
+
             </div>
 
+          </div>
+
+        </div>
+
+        <div id="payerModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+
+            <div class="modal-dialog"><div class="modal-content">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title" id="payerModalLabel">Add Payer</h5>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="form-group">
+
+                        <label class="control-label">Name</label>
+
+                        <input type="text" id="modalPayerName" class="form-control" />
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button" id="modalPayerDelete" class="btn btn-danger">Delete</button>
+
+                    <button type="button" id="modalPayerCancel" class="btn btn-secondary">Cancel</button>
+
+                    <button type="button" id="modalPayerSave" class="btn btn-primary">Save</button>
+
+                </div>
+
+            </div></div>
+
+        </div>
+
+        <div id="noteModal"
+
+            class="modal fade"
+
+            tabindex="-1"
+
+            role="dialog"
+
+            data-backdrop="static"
+
+            data-keyboard="false">
+
+            <div class="modal-dialog student-edit-note-dialog">
+
+                <div class="modal-content">
+
+                    <div class="modal-header">
+
+                        <h5 class="modal-title" id="noteModalLabel">Add Note</h5>
+
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="form-group">
+
+                            <label class="control-label">Text</label>
+
+                            <textarea id="modalNoteValue"
+
+                                    class="form-control"
+
+                                    rows="4"></textarea>
+
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label">Priority Level</label>
+
+                            <select id="modalNotePriorityLevel" class="form-control">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+
+                            <label class="control-label">Expiration Date</label>
+
+                            <input type="date"
+
+                                id="modalNoteExpirationDate"
+
+                                class="form-control" />
+
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+
+                                id="modalNoteDelete"
+
+                                class="btn btn-danger">
+
+                            Delete
+
+                        </button>
+
+                        <button type="button"
+
+                                id="modalNoteCancel"
+
+                                class="btn btn-secondary">
+
+                            Cancel
+
+                        </button>
+
+                        <button type="button"
+
+                                id="modalNoteSave"
+
+                                class="btn btn-primary">
+
+                            Save
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
         @section Scripts {
+
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
             <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
             <script type="text/javascript">
+
                 // Initialize contactCount to the number of existing contacts.
+
                 var contactCount = @((Model.Contacts != null && Model.Contacts.Any()) ? Model.Contacts.Count() : 0);
+
                 var editingContactIndex = -1; // -1 indicates adding a new contact
 
                 // Open modal for adding a new contact.
+
                 $('#addContactBtn').click(function () {
+
                     editingContactIndex = -1;
+
                     $('#contactModalLabel').text('Add Contact');
+
                     $('#modalContactType').val('');
+
                     $('#modalContactValue').val('');
+
                     $('#modalContactInvitation').prop('checked', false);
+
                     $('#modalContactEmergency').prop('checked', false);
+
                     $('#modalContactMoney').prop('checked', false);
+
                     $('#contactModal').modal('show');
+
                 });
 
                 // Open modal for editing an existing contact.
+
                 $(document).on('click', '.editContactBtn', function (e) {
+
                     e.stopPropagation(); // Prevent double-trigger if row is clickable
+
                     editingContactIndex = parseInt($(this).attr('data-index'));
+
                     $('#contactModalLabel').text('Edit Contact');
+
                     var $row = $('tr[data-index="' + editingContactIndex + '"]');
+
                     var currentType = $row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val();
+
                     var currentValue = $row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val();
+
                     var currentInvitation = $row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val() === 'true';
+
                     var currentEmergency = $row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val() === 'true';
+
                     var currentMoney = $row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val() === 'true';
+
                     $('#modalContactType').val(currentType);
+
                     $('#modalContactValue').val(currentValue);
+
                     $('#modalContactInvitation').prop('checked', currentInvitation);
+
                     $('#modalContactEmergency').prop('checked', currentEmergency);
+
                     $('#modalContactMoney').prop('checked', currentMoney);
+
                     $('#contactModal').modal('show');
+
                 });
-                
+
+
 
                 // Allow clicking on the entire row to edit if not clicking a button.
+
                 $(document).on('click', '.contact-summary', function (e) {
+
                     // Don't trigger if clicking the edit button
+
                     if ($(e.target).hasClass('editContactBtn')) {
+
                         return;
+
                     }
-                    
+
                     editingContactIndex = parseInt($(this).attr('data-index'));
+
                     $('#contactModalLabel').text('Edit Contact');
+
                     var $row = $(this);
+
                     var currentType = $row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val();
+
                     var currentValue = $row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val();
+
                     var currentInvitation = $row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val() === 'true';
+
                     var currentEmergency = $row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val() === 'true';
+
                     var currentMoney = $row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val() === 'true';
-                    
+
                     $('#modalContactType').val(currentType);
+
                     $('#modalContactValue').val(currentValue);
+
                     $('#modalContactInvitation').prop('checked', currentInvitation);
+
                     $('#modalContactEmergency').prop('checked', currentEmergency);
+
                     $('#modalContactMoney').prop('checked', currentMoney);
+
                     $('#contactModal').modal('show');
+
                 });
 
                 // Save contact from modal.
+
                 $('#modalSave').click(function () {
+
                     var contactType = $('#modalContactType').val();
+
                     var typeText = $('#modalContactType option:selected').text();
+
                     var value = $('#modalContactValue').val();
+
                     var invitation = $('#modalContactInvitation').is(':checked');
+
                     var emergency = $('#modalContactEmergency').is(':checked');
+
                     var money = $('#modalContactMoney').is(':checked');
 
                     if (!contactType && !value && !invitation && !emergency && !money) {
+
                         $('#contactModal').modal('hide');
+
                         return;
+
                     }
 
                     if (editingContactIndex === -1) {
+
                         // Add new contact row.
+
                         var newRow = '<tr class="contact-summary" data-index="' + contactCount + '" style="cursor:pointer;" ' +
+
                             'data-contacttype="' + contactType + '" ' +
+
                             'data-contactvalue="' + value + '" ' +
+
                             'data-invitation="' + (invitation ? "true" : "false") + '" ' +
+
                             'data-emergency="' + (emergency ? "true" : "false") + '" ' +
+
                             'data-money="' + (money ? "true" : "false") + '">' +
+
                             '<td><span class="contact-type">' + typeText + '</span>' +
+
                                 '<input type="hidden" name="Contacts[' + contactCount + '].Type" value="' + contactType + '" />' +
+
                             '</td>' +
+
                             '<td><span class="contact-value">' + value + '</span>' +
+
                                 '<input type="hidden" name="Contacts[' + contactCount + '].Value" value="' + value + '" />' +
+
                             '</td>' +
+
                             '<td><span class="contact-invitation">' + (invitation ? "✔" : "") + '</span>' +
+
                                 '<input type="hidden" name="Contacts[' + contactCount + '].Invitation" value="' + invitation + '" />' +
+
                             '</td>' +
+
                             '<td><span class="contact-emergency">' + (emergency ? "✔" : "") + '</span>' +
+
                                 '<input type="hidden" name="Contacts[' + contactCount + '].Emergency" value="' + emergency + '" />' +
+
                             '</td>' +
+
                             '<td><span class="contact-money">' + (money ? "✔" : "") + '</span>' +
+
                                 '<input type="hidden" name="Contacts[' + contactCount + '].Money" value="' + money + '" />' +
+
                             '</td>' +
+
                             // For new contacts, set the ID to Guid.Empty (all zeroes)
+
                             '<input type="hidden" name="Contacts[' + contactCount + '].ID" value="00000000-0000-0000-0000-000000000000" />' +
+
                             '<input type="hidden" name="Contacts.Index" value="' + contactCount + '" />' +
+
                             '</tr>';
+
                         if ($('#contactsTable tbody').length > 0) {
+
                             $('#contactsTable tbody').append(newRow);
+
                         }
+
                         else {
+
                             var tableHtml =
+
                                 '<table class="table table-bordered" id="contactsTable">' +
+
                                     '<thead><tr>' +
+
                                         '<th>Type</th>' +
+
                                         '<th>Contact</th>' +
+
                                         '<th>Invitation</th>' +
+
                                         '<th>Emergency</th>' +
+
                                         '<th>Money</th>' +
+
                                     '</tr></thead>' +
+
                                     '<tbody>' + newRow + '</tbody>' +
+
                                 '</table>';
+
                             $('#contacts').html(tableHtml);
+
                         }
+
                         contactCount++;
+
                     }
+
                     else {
+
                         // Editing an existing contact.
+
                         var row = $('tr[data-index="' + editingContactIndex + '"]');
+
                         row.find('span.contact-type').text(typeText);
+
                         row.find('span.contact-value').text(value);
+
                         row.find('span.contact-invitation').text(invitation ? "✔" : "");
+
                         row.find('span.contact-emergency').text(emergency ? "✔" : "");
+
                         row.find('span.contact-money').text(money ? "✔" : "");
+
                         row.find('input[name="Contacts[' + editingContactIndex + '].Type"]').val(contactType);
+
                         row.find('input[name="Contacts[' + editingContactIndex + '].Value"]').val(value);
+
                         row.find('input[name="Contacts[' + editingContactIndex + '].Invitation"]').val(invitation);
+
                         row.find('input[name="Contacts[' + editingContactIndex + '].Emergency"]').val(emergency);
+
                         row.find('input[name="Contacts[' + editingContactIndex + '].Money"]').val(money);
+
                         // Update row's data attributes.
+
                         row.attr("data-contacttype", contactType);
+
                         row.attr("data-contactvalue", value);
+
                         row.attr("data-invitation", invitation ? "true" : "false");
+
                         row.attr("data-emergency", emergency ? "true" : "false");
+
                         row.attr("data-money", money ? "true" : "false");
+
                     }
+
                     $('#contactModal').modal('hide');
+
                 });
 
                 // Delete button click handler in the modal.
+
                 $('#modalDelete').click(function () {
+
                     if (editingContactIndex === -1) {
+
                         alert("This contact hasn't been saved yet.");
+
                         return;
+
                     }
+
                     if (!confirm("Are you sure you want to delete this contact?")) {
+
                         return;
+
                     }
+
                     var $row = $('tr.contact-summary[data-index="' + editingContactIndex + '"]');
+
                     var contactId = $row.find('input[name="Contacts[' + editingContactIndex + '].ID"]').val();
+
                     if (contactId === "00000000-0000-0000-0000-000000000000") {
+
                         // New unsaved contact: simply remove the row.
+
                         $row.remove();
+
                         editingContactIndex = -1;
+
                         $('#contactModal').modal('hide');
+
                     }
+
                     else {
+
                         // Existing contact: call AJAX to delete from the database.
+
                         $.ajax({
+
                             url: '@Url.Action("DeleteContact", "StudentManagement")',
+
                             type: 'POST',
+
                             data: { contactId: contactId },
+
                             success: function (result) {
+
                                 if (result.success) {
+
                                     $row.remove();
+
                                     editingContactIndex = -1;
+
                                     $('#contactModal').modal('hide');
+
                                 }
+
                                 else {
+
                                     alert("Failed to delete contact: " + result.message);
+
                                 }
+
                             },
+
                             error: function () {
+
                                 alert("Error deleting contact.");
+
                             }
+
                         });
+
                     }
+
                 });
 
                 $('#modalCancel').click(function () {
+
                     editingContactIndex = -1;
+
                     $('#contactModal').modal('hide');
+
                 });
+
 
 
                 var payerCount = @((Model.Payers != null) ? Model.Payers.Count() : 0);
+
                 var editingPayerIndex = -1;
 
                 // show Add‐Payer modal
+
                 $('#addPayerBtn').click(function() {
+
                     editingPayerIndex = -1;
+
                     $('#modalPayerName').val('');
+
                     $('#payerModalLabel').text('Add Payer');
+
                     $('#payerModal').modal('show');
+
                 });
 
                 // click a row to edit
+
                 $(document).on('click', '.payer-summary', function() {
+
                     editingPayerIndex = $(this).data('index');
+
                     $('#payerModalLabel').text('Edit Payer');
+
                     var $row = $(this);
+
                     $('#modalPayerName').val($row.find('input[name="Payers['+editingPayerIndex+'].Name"]').val());
+
                     $('#payerModal').modal('show');
+
                 });
 
                 // save new or edited
+
                 $('#modalPayerSave').click(function() {
+
                     var name = $('#modalPayerName').val().trim();
+
                     if (!name) { $('#payerModal').modal('hide'); return; }
 
                     if (editingPayerIndex === -1) {
+
                     // add
+
                     var idx = payerCount++;
+
                     var newRow = '<tr class="payer-summary" data-index="'+idx+'">'
+
                         + '<td><span class="payer-name">'+name+'</span>'
+
                         + '<input type="hidden" name="Payers['+idx+'].Name" value="'+name+'"/>'
+
                         + '</td>'
+
                         + '<input type="hidden" name="Payers['+idx+'].Id" value="00000000-0000-0000-0000-000000000000"/>'
+
                         + '<input type="hidden" name="Payers.Index" value="'+idx+'"/>'
+
                         + '</tr>';
+
                     $('#payersTable tbody').append(newRow);
+
                     } else {
+
                     // update
+
                     var $row = $('tr[data-index="'+editingPayerIndex+'"]');
+
                     $row.find('.payer-name').text(name);
+
                     $row.find('input[name="Payers['+editingPayerIndex+'].Name"]').val(name);
+
                     }
 
                     $('#payerModal').modal('hide');
+
                 });
 
                 // delete
+
                 $('#modalPayerDelete').click(function() {
+
                     if (editingPayerIndex === -1) {
+
                     alert('This payer is not yet saved.'); return;
+
                     }
+
                     if (!confirm('Delete this payer?')) return;
+
                     var $row = $('tr.payer-summary[data-index="'+editingPayerIndex+'"]');
+
                     var payerId = $row.find('input[name="Payers['+editingPayerIndex+'].Id"]').val();
+
                     if (payerId === '00000000-0000-0000-0000-000000000000') {
+
                     $row.remove();
+
                     editingPayerIndex = -1;
+
                     } else {
+
                     $.post('@Url.Action("DeletePayer","StudentManagement")', { payerId: payerId })
+
                         .done(function(res) {
+
                         if (res.success) $row.remove();
+
                         else alert('Failed to delete payer: ' + res.message);
+
                         editingPayerIndex = -1;
+
                         })
+
                         .fail(function() { alert('Error deleting payer.'); });
+
                     }
+
                     $('#payerModal').modal('hide');
+
                 });
 
                 // cancel
+
                 $('#modalPayerCancel').click(function() {
+
                     editingPayerIndex = -1;
+
                     $('#payerModal').modal('hide');
+
                 });
 
                 $('#editForm').submit(function (e) {
+
                     $("input[name='Payers.Index']").remove();
+
                     $('#payersTable tbody tr.payer-summary').each(function() {
+
                     var idx = $(this).data('index');
+
                     $('<input>').attr({type:'hidden', name:'Payers.Index', value:idx}).appendTo('form');
+
                     });
+
                 });
 
                 // Before form submission, ensure each row's index is included.
+
                 $('#editForm').submit(function (e) {
+
                     $("input[name='Contacts.Index']").remove();
+
                     $('#contactsTable tbody tr.contact-summary').each(function () {
+
                         var idx = $(this).data('index');
+
                         $('<input>').attr({
+
                             type: 'hidden',
+
                             name: 'Contacts.Index',
+
                             value: idx
+
                         }).appendTo('form');
+
                     });
+
                     if ($('#contactsTable tbody tr').length === 0) {
+
                         alert("Please add at least one contact.");
+
                         e.preventDefault();
+
                         return false;
+
                     }
+
+                });
+
+                var noteCount = @((Model.Notes != null) ? Model.Notes.Count : 0);
+
+                var editingNoteIndex = -1;
+
+                $('#addNoteBtn').click(function () {
+
+                    editingNoteIndex = -1;
+
+                    $('#noteModalLabel').text('Add Note');
+
+                    $('#modalNoteValue').val('');
+
+                    $('#modalNotePriorityLevel').val('1');
+
+                    $('#modalNoteExpirationDate').val('');
+
+                    $('#noteModal').modal('show');
+                    
+
+                });
+
+                $(document).on('click', '.note-summary', function () {
+
+                    editingNoteIndex = $(this).data('index');
+
+                    var $row = $(this);
+
+                    var value = $row
+                        .find('input[name="Notes[' + editingNoteIndex + '].Value"]')
+                        .val();
+
+                    var priorityLevel = $row
+                        .find('input[name="Notes[' + editingNoteIndex + '].PriorityLevel"]')
+                        .val();
+
+                    var expirationDate = $row
+                        .find('input[name="Notes[' + editingNoteIndex + '].ExpirationDate"]')
+                        .val();
+
+                    $('#noteModalLabel').text('Edit Note');
+
+                    $('#modalNoteValue').val(value);
+
+                    $('#modalNotePriorityLevel').val(priorityLevel);
+
+                    $('#modalNoteExpirationDate').val(expirationDate);
+
+                    $('#noteModal').modal('show');
+
+                });
+
+                $('#modalNoteSave').click(function () {
+
+                    var value = $('#modalNoteValue').val().trim();
+
+                    var priorityLevel = $('#modalNotePriorityLevel').val();
+
+                    var expirationDate = $('#modalNoteExpirationDate').val();
+
+                    if (!value) {
+
+                        alert('Please enter note text.');
+
+                        return;
+
+                    }
+
+                    if (editingNoteIndex === -1) {
+
+                        var index = noteCount++;
+
+                        var $row = $('<tr>')
+
+                            .addClass('note-summary')
+
+                            .attr('data-index', index);
+
+                        var $valueCell = $('<td>');
+
+                        $('<span>')
+
+                            .addClass('note-value')
+
+                            .text(value)
+
+                            .appendTo($valueCell);
+
+                        $('<input>')
+
+                            .attr({
+
+                                type: 'hidden',
+
+                                name: 'Notes[' + index + '].Value'
+
+                            })
+
+                            .val(value)
+
+                            .appendTo($valueCell);
+
+                        $('<input>')
+
+                            .attr({
+
+                                type: 'hidden',
+
+                                name: 'Notes[' + index + '].ID'
+
+                            })
+
+                            .val('00000000-0000-0000-0000-000000000000')
+
+                            .appendTo($valueCell);
+
+                        $('<input>')
+
+                            .attr({
+
+                                type: 'hidden',
+
+                                name: 'Notes.Index'
+
+                            })
+
+                            .val(index)
+
+                            .appendTo($valueCell);
+
+                        var $priorityCell = $('<td>');
+
+                        $('<span>')
+                            .addClass('note-priority-level')
+                            .text(priorityLevel)
+                            .appendTo($priorityCell);
+
+                        $('<input>')
+                            .attr({
+                                type: 'hidden',
+                                name: 'Notes[' + index + '].PriorityLevel'
+                            })
+                            .val(priorityLevel)
+                            .appendTo($priorityCell);
+
+                        var $expirationCell = $('<td>');
+
+                        $('<span>')
+
+                            .addClass('note-expiration')
+
+                            .text(expirationDate || 'No expiration')
+
+                            .appendTo($expirationCell);
+
+                        $('<input>')
+
+                            .attr({
+
+                                type: 'hidden',
+
+                                name: 'Notes[' + index + '].ExpirationDate'
+
+                            })
+
+                            .val(expirationDate)
+
+                            .appendTo($expirationCell);
+
+                        $row.append($valueCell);
+
+                        $row.append($priorityCell);
+
+                        $row.append($expirationCell);
+
+                        $('#notesTable tbody').append($row);
+
+                    } else {
+
+                        var $row = $(
+
+                            'tr.note-summary[data-index="' + editingNoteIndex + '"]'
+
+                        );
+
+                        $row.find('.note-value').text(value);
+
+                        $row.find('.note-priority-level').text(priorityLevel);
+
+                        $row.find('.note-expiration')
+
+                            .text(expirationDate || 'No expiration');
+
+                        $row.find(
+
+                            'input[name="Notes[' + editingNoteIndex + '].Value"]'
+
+                        ).val(value);
+
+                        $row.find(
+
+                            'input[name="Notes[' + editingNoteIndex + '].PriorityLevel"]'
+
+                        ).val(priorityLevel);
+
+                        $row.find(
+
+                            'input[name="Notes[' + editingNoteIndex + '].ExpirationDate"]'
+
+                        ).val(expirationDate);
+
+                    }
+
+                    editingNoteIndex = -1;
+
+                    $('#noteModal').modal('hide');
+
+                });
+
+                $('#modalNoteDelete').click(function () {
+
+                    if (editingNoteIndex === -1) {
+
+                        alert('This note has not been added yet.');
+
+                        return;
+
+                    }
+
+                    if (!confirm('Delete this note?')) {
+
+                        return;
+
+                    }
+
+                    var $row = $(
+
+                        'tr.note-summary[data-index="' + editingNoteIndex + '"]'
+
+                    );
+
+                    var noteId = $row
+
+                        .find('input[name="Notes[' + editingNoteIndex + '].ID"]')
+
+                        .val();
+
+                    if (noteId === '00000000-0000-0000-0000-000000000000') {
+
+                        $row.remove();
+
+                        editingNoteIndex = -1;
+
+                        $('#noteModal').modal('hide');
+
+                        return;
+
+                    }
+
+                    $.post(
+
+                        '@Url.Action("DeleteNote", "StudentManagement")',
+
+                        { noteId: noteId }
+
+                    )
+
+                    .done(function (result) {
+
+                        if (result.success) {
+
+                            $row.remove();
+
+                        } else {
+
+                            alert('Failed to delete note: ' + result.message);
+
+                        }
+
+                    })
+
+                    .fail(function () {
+
+                        alert('Error deleting note.');
+
+                    })
+
+                    .always(function () {
+
+                        editingNoteIndex = -1;
+
+                        $('#noteModal').modal('hide');
+
+                    });
+
+                });
+
+                $('#modalNoteCancel').click(function () {
+
+                    editingNoteIndex = -1;
+
+                    $('#noteModal').modal('hide');
+
+                });
+
+                $('#editForm').submit(function () {
+
+                    $("input[name='Notes.Index']").remove();
+
+                    $('#notesTable tbody tr.note-summary').each(function () {
+
+                        var index = $(this).data('index');
+
+                        $('<input>')
+                            .attr({
+                                type: 'hidden',
+                                name: 'Notes.Index'
+                            })
+                            .val(index)
+                            .appendTo('#editForm');
+                    });
                 });
             </script>
         }
-    </div>
+    </main>
+
 </div>

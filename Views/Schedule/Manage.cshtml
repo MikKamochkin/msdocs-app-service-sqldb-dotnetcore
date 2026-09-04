@@ -13,6 +13,18 @@
         background-color: #8b0000;
         color: #fff;
     }
+
+    td.notes-priority-green {
+        background-color: #d4edda !important;
+    }
+
+    td.notes-priority-yellow {
+        background-color: #fff3cd !important;
+    }
+
+    td.notes-priority-red {
+        background-color: #f8d7da !important;
+    }
 </style>
 <div class="row no-gutters">
     @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
@@ -123,7 +135,8 @@
                     <th style="width: 5%;">Status</th>
                     <th style="width: 5%;">Duration</th>
                     <th style="width: 7%;">Accounting Type</th>
-                    <th style="width: 40%;">Notes</th>
+                    <th style="width: 35%;">Notes</th>
+                    <th style="width: 5%;">Details</th>
                     <th class="text-center" style="width: 5%;">🗑️</th>
                 </tr>
             </thead>
@@ -232,6 +245,18 @@
                 const shortNotes = truncateForDisplay(fullNotes, 60);
                 const notesTitle = htmlEscape(fullNotes);
 
+                const priority = r.NotesPriority ?? 0;
+
+                let notesPriorityClass = 'notes-priority-red';
+
+                if (priority > 2) {
+                    notesPriorityClass = 'notes-priority-green';
+                } else if (priority > 1) {
+                    notesPriorityClass = 'notes-priority-yellow';
+                }
+
+
+
                 tbody.append(`
                         <tr class="${cls}" data-id="${r.Id}">
                             <td onclick="editRow(${i})">${dt}</td>
@@ -239,8 +264,20 @@
                             <td onclick="editRow(${i})">${r.Status}</td>
                             <td onclick="editRow(${i})">${r.Duration}</td>
                             <td onclick="editRow(${i})">${r.LessonAccountingType}</td>
-                            <td onclick="editRow(${i})" class="notes-cell" title="${notesTitle}">
+                            <td onclick="editRow(${i})" class="notes-cell ${notesPriorityClass}" title="${notesTitle}">
                                 ${shortNotes}
+                            </td>
+                            <td>
+                                ${r.StudentId
+                                    ? `
+                                        <a href="/StudentManagement/Details/${encodeURIComponent(r.StudentId)}"
+                                        target="_blank"
+                                        class="btn btn-sm">
+                                            <i class="fa-solid fa-circle-info btn-lg text-dark"></i>
+                                        </a>
+                                    `
+                                    : ""
+                                }
                             </td>
                             <td class="text-center">
                             <button class="btn btn-sm btn-danger" onclick="deleteRow(${i})">×</button>

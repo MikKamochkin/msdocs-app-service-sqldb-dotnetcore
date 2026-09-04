@@ -60,9 +60,11 @@ public sealed class TimedHostedService : BackgroundService
             var zoomSvc = scope.ServiceProvider.GetRequiredService<IZoomMeetingService>();
             var twilioSvc = scope.ServiceProvider.GetRequiredService<ITwilioService>();
             var emailReader  = scope.ServiceProvider.GetRequiredService<IEmailInboxReader>();
+            var notesService = scope.ServiceProvider.GetRequiredService<INotesService>();
            
             await zoomSvc.CleanupMeetingsAsync();
             await emailReader.CheckInboxAsync();
+            await notesService.CleanupNotesAsync();
             
             
 
