@@ -220,15 +220,20 @@ namespace DotNetCoreSqlDb.Controllers
                     LessonAccountingType = r.LessonAccountingType,
                     GroupName = r.Assignment?.Group?.Name ?? string.Empty,
 
-                    MainNotes = string.Join(" | ",
+                    /*MainNotes = string.Join(" | ",
                         r.Assignment?.Group?.StudentGroupCompositions?
                             .Select(sgc => sgc.Student?.MainNotes)
                             .Where(n => !string.IsNullOrWhiteSpace(n))
-                        ?? Enumerable.Empty<string>()),
+                        ?? Enumerable.Empty<string>()),*/
+
+                    MainNotes = string.Join(", ",
+                        rowNotes
+                            .Where(n => !string.IsNullOrWhiteSpace(n.Value))
+                            .Select(n => n.Value)),
 
                     NotesPriority = rowNotes.Count == 0
                         ? null
-                        : rowNotes.Max(n => n.PriorityLevel ?? 0)
+                        : rowNotes.Min(n => n.PriorityLevel ?? 0)
                 };
             }).ToList();
 
@@ -661,6 +666,7 @@ namespace DotNetCoreSqlDb.Controllers
         {
             public Guid Id { get; set; }
             public Guid AssignmentId { get; set; }
+            public DateTime SelectedDate { get; set; }
             public DateTime DateTime { get; set; }
             public string Status { get; set; } = "";
             public int Duration { get; set; }
@@ -750,13 +756,45 @@ namespace DotNetCoreSqlDb.Controllers
 
             //_logger.LogInformation("----------------------------------------------------");
 
-            return Json(new {
-                entity.Id,
-                entity.AssignmentId,
-                DateTime = entity.DateTime.ToUniversalTime().ToString("o"),
-                entity.Status,
-                entity.Duration,
-                entity.LessonAccountingType
+            var notesDate = dto.SelectedDate.Date;
+
+            var rowNotes = await _context.Set<Notes>()
+                .Where(n =>
+                    studentIds.Contains(n.StudentID) &&
+                    (!n.ExpirationDate.HasValue ||
+                    n.ExpirationDate.Value >= notesDate))
+                .OrderBy(n => n.PriorityLevel ?? 0)
+                .ThenByDescending(n => n.CreatedDate)
+                .Select(n => new
+                {
+                    n.Value,
+                    n.PriorityLevel
+                })
+                .ToListAsync();
+
+            var rowStudentIds = studentIds.Distinct().ToList();
+
+            return Json(new
+            {
+                id = entity.Id,
+                assignmentId = entity.AssignmentId,
+                dateTime = entity.DateTime.ToUniversalTime().ToString("o"),
+                status = entity.Status,
+                duration = entity.Duration,
+                lessonAccountingType = entity.LessonAccountingType,
+
+                mainNotes = string.Join(", ",
+                    rowNotes
+                        .Where(n => !string.IsNullOrWhiteSpace(n.Value))
+                        .Select(n => n.Value)),
+
+                notesPriority = rowNotes.Count == 0
+                    ? (int?)null
+                    : rowNotes.Min(n => n.PriorityLevel ?? 0),
+
+                studentId = rowStudentIds.Count == 1
+                    ? (Guid?)rowStudentIds[0]
+                    : null
             });
         }
 

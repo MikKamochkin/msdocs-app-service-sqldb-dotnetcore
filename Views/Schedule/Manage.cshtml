@@ -14,6 +14,10 @@
         color: #fff;
     }
 
+    td.notes-priority-white {
+        background-color: #ffffff !important;
+    }
+
     td.notes-priority-green {
         background-color: #d4edda !important;
     }
@@ -246,16 +250,25 @@
                 const notesTitle = htmlEscape(fullNotes);
 
                 const priority = r.NotesPriority ?? 0;
+                let notesPriorityClass = 'notes-priority-white';
 
-                let notesPriorityClass = 'notes-priority-red';
-
-                if (priority > 2) {
-                    notesPriorityClass = 'notes-priority-green';
-                } else if (priority > 1) {
-                    notesPriorityClass = 'notes-priority-yellow';
-                }
-
-
+                switch(priority)
+                {
+                    case 0:
+                        notesPriorityClass = 'notes-priority-white';
+                        break;
+                    case 1:
+                        notesPriorityClass = 'notes-priority-red';
+                        break;
+                    case 2:
+                        notesPriorityClass = 'notes-priority-yellow'; 
+                        break;
+                    case 3:
+                        notesPriorityClass = 'notes-priority-green';
+                        break;
+                    default:
+                        notesPriorityClass = 'notes-priority-white';
+                } 
 
                 tbody.append(`
                         <tr class="${cls}" data-id="${r.Id}">
@@ -339,6 +352,7 @@
             // build the payload without an empty-string Id
             const dto = {
                 AssignmentId: g,
+                SelectedDate: d0,
                 DateTime: luxon.DateTime.fromISO(`${d0}T${t}`, { zone }).toUTC().toISO(),
                 Status: s,
                 Duration: dur,
@@ -364,7 +378,10 @@
                         Status: response.status,
                         Duration: response.duration,
                         LessonAccountingType: response.lessonAccountingType,
-                        GroupName: $('#groupSelect option:selected').text()
+                        GroupName: $('#groupSelect option:selected').text(),
+                        MainNotes: response.mainNotes ?? '',
+                        NotesPriority: Number(response.notesPriority ?? 0),
+                        StudentId: response.studentId
                     };
 
                     if (editingRow) {
