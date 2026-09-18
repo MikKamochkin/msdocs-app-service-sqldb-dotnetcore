@@ -49,6 +49,7 @@ namespace DotNetCoreSqlDb.Controllers
         }
         
         // GET: Assignments/Create
+        [HttpGet]
         public async Task<IActionResult> Create()
         {
             var assignment = new Assignments
@@ -64,72 +65,209 @@ namespace DotNetCoreSqlDb.Controllers
             return View(assignment);
         }
 
-        // POST: Assignments/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Assignments assignment)
+        public async Task<IActionResult> Create(
+            Assignments assignment,
+            string? existingAssignmentChoice = null,
+            Guid? reviewedGroupId = null,
+            Guid[]? reviewedAssignmentIds = null)
         {
             assignment.IsActive = true;
-            
+
             if (!ModelState.IsValid)
             {
-                // Log or inspect validation failures
                 var errors = ModelState.Values
-                                .SelectMany(v => v.Errors)
-                                .Select(e => e.ErrorMessage);
-                _logger.LogWarning("Create Assignment invalid: {Errors}", string.Join(" | ", errors));
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage);
+
+                _logger.LogWarning(
+                    "Create Assignment invalid: {Errors}",
+                    string.Join(" | ", errors));
 
                 await PopulateDropdowns(assignment);
                 return View(assignment);
             }
 
-            assignment.Id = Guid.NewGuid();
-            _context.Assignments.Add(assignment);
+            var duplicate = await _context.Assignments.FirstOrDefaultAsync(a =>
+                    a.GroupId == assignment.GroupId &&
+                    a.TeacherId == assignment.TeacherId &&
+                    //a.StudentUnitCost == assignment.StudentUnitCost &&
+                    //a.StudentUnitType == assignment.StudentUnitType &&
+                    a.StudentUnitDuration == assignment.StudentUnitDuration &&
+                    //a.TeacherPayForUnit == assignment.TeacherPayForUnit &&
+                    //a.TeacherPayUnitType == assignment.TeacherPayUnitType &&
+                    a.IsActive == assignment.IsActive);
 
-            //Create a studentBalance entry for this assignment for all students in the group
+            if (duplicate != null)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "An assignment with the same student, teacher, and duration already exists. " +
+                    "No duplicate was created. Please edit the existing assignment instead.");
+
+                if (duplicate != null)
+                {
+                    ViewBag.DuplicateAssignmentId = duplicate.Id;
+                }
+                
+
+                await PopulateDropdowns(assignment);
+                return View(assignment);
+            }
+
+            bool deactivatedAssignmentExists = await _context.Assignments.AnyAsync(a =>
+                a.GroupId == assignment.GroupId &&
+                a.TeacherId == assignment.TeacherId &&
+                a.StudentUnitCost == assignment.StudentUnitCost &&
+                a.StudentUnitType == assignment.StudentUnitType &&
+                a.StudentUnitDuration == assignment.StudentUnitDuration &&
+                a.TeacherPayForUnit == assignment.TeacherPayForUnit &&
+                a.TeacherPayUnitType == assignment.TeacherPayUnitType &&
+                a.IsActive == assignment.IsActive == false);
+
+            if (deactivatedAssignmentExists)
+            {
+                var deactivatedAssignment = await _context.Assignments.FirstOrDefaultAsync(a =>
+                    a.GroupId == assignment.GroupId &&
+                    a.TeacherId == assignment.TeacherId &&
+                    a.StudentUnitCost == assignment.StudentUnitCost &&
+                    a.StudentUnitType == assignment.StudentUnitType &&
+                    a.StudentUnitDuration == assignment.StudentUnitDuration &&
+                    a.TeacherPayForUnit == assignment.TeacherPayForUnit &&
+                    a.TeacherPayUnitType == assignment.TeacherPayUnitType &&
+                    a.IsActive == false);
+                
+                if (deactivatedAssignment != null)
+                {
+                    deactivatedAssignment.IsActive = true;
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+            }
 
             var group = await _context.Group
                 .Include(g => g.StudentGroupCompositions)
                 .FirstOrDefaultAsync(g => g.Id == assignment.GroupId);
 
-            if (group != null)
+            if (group == null)
             {
-                foreach (var sgc in group.StudentGroupCompositions)
-                {
-                    Guid studentId = sgc.StudentId;
-                    Guid studentBalanceId = Guid.NewGuid();
-                    _context.StudentBalance.Add(new StudentBalance
-                    {
-                        Id = studentBalanceId,
-                        StudentId = studentId,
-                        AssignmentId = assignment.Id,
-                        Balance = 0
-                    });
+                ModelState.AddModelError(
+                    nameof(Assignments.GroupId),
+                    "Please select a valid group.");
 
-                    //_logger.LogInformation("Created a studentBalance entry with Id: {a} for AssignmentId: {a} for StudentId: {b}", studentBalanceId, assignment.Id, studentId);
+                await PopulateDropdowns(assignment);
+                return View(assignment);
+            }
+
+            var studentIds = group.StudentGroupCompositions
+                .Select(sgc => sgc.StudentId)
+                .Distinct()
+                .ToList();
+
+            // Find active assignments sharing any student with the selected group.
+            var existingAssignments = await _context.Assignments
+                .Include(a => a.Group)
+                    .ThenInclude(g => g.StudentGroupCompositions)
+                .Include(a => a.Teacher)
+                .Where(a => a.IsActive &&
+                    a.Group.StudentGroupCompositions
+                        .Any(sgc => studentIds.Contains(sgc.StudentId)))
+                // Keep memberships in the group receiving the new assignment.
+                // Existing private assignments for that same student can still be replaced.
+                .Where(a => a.GroupId != assignment.GroupId ||
+                    (!a.Group.IsManualGroup &&
+                    a.Group.StudentGroupCompositions.Count == 1))
+                .OrderBy(a => a.Group.Name)
+                .ThenBy(a => a.Id)
+                .ToListAsync();
+
+            var currentIds = existingAssignments
+                .Select(a => a.Id)
+                .ToHashSet();
+
+            bool validChoice =
+                existingAssignmentChoice == "deactivate" ||
+                existingAssignmentChoice == "keep";
+
+            bool reviewedCurrentAssignments =
+                reviewedGroupId == assignment.GroupId &&
+                currentIds.SetEquals(reviewedAssignmentIds ?? Array.Empty<Guid>());
+
+            if (existingAssignments.Count > 0 &&
+                (!validChoice || !reviewedCurrentAssignments))
+            {
+                ViewBag.ExistingAssignments = existingAssignments;
+
+                await PopulateDropdowns(assignment);
+                return View(assignment);
+            }
+
+            if (existingAssignmentChoice == "deactivate" &&
+                reviewedCurrentAssignments)
+            {
+                // Process each group once, even if it has multiple active assignments.
+                foreach (var assignmentsByGroup in existingAssignments.GroupBy(a => a.GroupId))
+                {
+                    var oldGroup = assignmentsByGroup.First().Group;
+
+                    bool isGroupClass = oldGroup.IsManualGroup ||
+                        oldGroup.StudentGroupCompositions.Count > 1;
+
+                    //!!!!!!!!!!!!!!!!
+                    //also remove/deactivate their student balance records for the old assignments
+                    if (isGroupClass)
+                    {
+                        // Never remove students from the group receiving the new assignment.
+                        if (oldGroup.Id == assignment.GroupId)
+                            continue;
+
+                        // Remove only the matching students; keep the group and assignments active.
+                        var membershipsToRemove = oldGroup.StudentGroupCompositions
+                            .Where(sgc => studentIds.Contains(sgc.StudentId))
+                            .ToList();
+
+                        _context.StudentGroupComposition.RemoveRange(membershipsToRemove);
+                    }
+                    else
+                    {
+                        foreach (var oldAssignment in assignmentsByGroup)
+                        {
+                            oldAssignment.IsActive = false;
+                        }
+                    }
                 }
             }
 
-            //Creating new conversation for teacher and student only if it's a private class
+            assignment.Id = Guid.NewGuid();
+            _context.Assignments.Add(assignment);
 
-            if (group != null)
+            foreach (var studentId in studentIds)
             {
-                bool privateLesson = group.StudentGroupCompositions.Count == 1;
-
-                if (privateLesson)
+                _context.StudentBalance.Add(new StudentBalance
                 {
-                    _context.Conversations.Add(new Conversations
-                    {
-                        Id = Guid.NewGuid(),
-                        TeacherId = assignment.TeacherId,
-                        StudentID = group.StudentGroupCompositions.First().StudentId,
-                        IsActive = true,
-                        LastMessageTime = null
-                    });
-                }
+                    Id = Guid.NewGuid(),
+                    StudentId = studentId,
+                    AssignmentId = assignment.Id,
+                    Balance = 0
+                });
             }
 
+            if (group.StudentGroupCompositions.Count == 1)
+            {
+                _context.Conversations.Add(new Conversations
+                {
+                    Id = Guid.NewGuid(),
+                    TeacherId = assignment.TeacherId,
+                    StudentID = group.StudentGroupCompositions.First().StudentId,
+                    IsActive = true,
+                    LastMessageTime = null
+                });
+            }
+
+            // Save the new assignment and any deactivations together.
             await _context.SaveChangesAsync();
+
             return RedirectToAction(nameof(Index));
         }
 

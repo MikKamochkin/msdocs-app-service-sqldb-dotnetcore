@@ -135,12 +135,15 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             var balances = await _context.StudentBalance
-                .Where(b => b.StudentId == id)
-                .Include(a => a.Assignment)
-                    .ThenInclude(t => t.Teacher)
+                .Where(b => b.StudentId == id
+                    && b.Assignment.IsActive == true
+                    && _context.StudentGroupComposition.Any(sgc =>
+                        sgc.StudentId == b.StudentId
+                        && sgc.GroupId == b.Assignment.GroupId))
+                .Include(b => b.Assignment)
+                    .ThenInclude(a => a.Teacher)
                 .Include(b => b.Assignment)
                     .ThenInclude(a => a.Group)
-                .Where(a => a.Assignment.IsActive == true)
                 .ToListAsync();
 
             ViewBag.StudentName = student.Name;

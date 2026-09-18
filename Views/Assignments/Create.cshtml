@@ -2,6 +2,12 @@
 
 @{
     ViewData["Title"] = "Create Assignment";
+
+    var existingAssignments = ViewBag.ExistingAssignments
+        as System.Collections.Generic.List<DotNetCoreSqlDb.Models.Assignments>;
+
+    bool needsConfirmation =
+        existingAssignments != null && existingAssignments.Count > 0;
 }
 
 <div class="row no-gutters">
@@ -10,9 +16,18 @@
         <partial name="_AdminSidebar" />
         
     <div class="col">
-        <h2>Create Assignment</h2>
-        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
 
+        <h2>Create Assignment</h2>
+        
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        @if (ViewBag.DuplicateAssignmentId != null)
+        {
+            <a href="@Url.Action("Edit", "Assignments", new { id = ViewBag.DuplicateAssignmentId })"
+            rel="noopener noreferrer"
+            class="btn btn-md btn-primary">
+                Click here to edit the assignment
+            </a>
+        }
         @using (Html.BeginForm())
         {
             @Html.AntiForgeryToken()
@@ -64,7 +79,81 @@
                 @Html.LabelFor(m => m.IsActive, new { @class="form-check-label" })
             </div>*@
 
-            <button type="submit" class="btn btn-primary">Create</button>
+            @if (needsConfirmation)
+            {
+                <div class="alert alert-warning" role="alert">
+                    <h4>Active assignments already exist</h4>
+
+                    <p>
+                        The selected group's student(s) already have the following
+                        active assignments:
+                    </p>
+
+                    <ul>
+                        @foreach (var oldAssignment in existingAssignments!)
+                        {
+                            <li>
+                                <strong>@(oldAssignment.Group?.Name ?? "Unknown group")</strong>
+                                — @(oldAssignment.Teacher?.Name ?? "Unassigned teacher")
+                                — @oldAssignment.StudentUnitCost @oldAssignment.StudentUnitType
+                                (@oldAssignment.StudentUnitDuration minutes)
+
+                                @*<small class="d-block">
+                                    Assignment: @oldAssignment.Id
+                                </small>*@
+
+                                <input type="hidden"
+                                    name="reviewedAssignmentIds"
+                                    value="@oldAssignment.Id" />
+                            </li>
+                        }
+                    </ul>
+
+                    <input type="hidden"
+                        name="reviewedGroupId"
+                        value="@Model.GroupId" />
+
+                    <p>
+                        Replace the listed assignments when creating the new assignment?
+                    </p>
+
+                    <ul>
+                        <li>Private assignments will be deactivated.</li>
+                        <li>
+                            For group classes, only the selected student(s) will be removed
+                            from the old group. The group and its assignments will remain active.
+                            Removal applies to all assignments belonging to that old group.
+                        </li>
+                        <li>Memberships in the group receiving the new assignment will be kept.</li>
+                        <li>Existing balance records and scheduled lesson records will not be edited.</li>
+                    </ul>
+
+                    <button type="submit"
+                            name="existingAssignmentChoice"
+                            value="deactivate"
+                            class="btn btn-danger">
+                        Yes, replace old assignments
+                    </button>
+
+                    <button type="submit"
+                            name="existingAssignmentChoice"
+                            value="keep"
+                            class="btn btn-primary">
+                        No, keep all
+                    </button>
+                </div>
+            }
+            else
+            {
+                if (ViewBag.DuplicateAssignmentId == null)
+                {
+                    <button type="submit" class="btn btn-primary">Create</button>
+                }
+                else
+                {
+                    <button type="submit" class="btn btn-primary" disabled>Create</button>
+                }
+            }
             <a asp-action="Index" class="btn btn-secondary">Cancel</a>
         }
     </div>

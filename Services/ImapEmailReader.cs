@@ -155,6 +155,13 @@ namespace DotNetCoreSqlDb.Services
 
         private async Task ProcessEmailAsync(Guid queueItemId, string from, string subject, string textBody)
         {
+            var emailInQueue = await _context.InteracPaymentsQueue.FindAsync(queueItemId);
+            
+            if (emailInQueue == null)
+            {
+                return;
+            }
+
             bool isEtransfer = IsEtransfer(from);
             if (isEtransfer)
             {
@@ -162,12 +169,16 @@ namespace DotNetCoreSqlDb.Services
             }
             else
             {
-                await _mailer.SendAsync(
+                /*await _mailer.SendAsync(
                         to: "torontofrench02@gmail.com",
                         subject: "Non Etransfer email",
-                        htmlBody: "Subject: " + subject + "\nBody:\n" + textBody);
+                        htmlBody: "Subject: " + subject + "\nBody:\n" + textBody);*/
                 
                 await _logHelper.LogEmailPaymentsAsync(false, "Not an Etransfer", subject);
+                
+                _context.InteracPaymentsQueue.Remove(emailInQueue);
+                await _context.SaveChangesAsync();
+
                 return;
             }
             return;
@@ -247,10 +258,13 @@ namespace DotNetCoreSqlDb.Services
             var student = payer!.Student;
 
             var balances = await _context.StudentBalance
-                    .Include(sb => sb.Assignment)
-                        .Where(a => a.Assignment.IsActive)
-                    .Where(sb => sb.StudentId == student!.ID)
-                    .ToListAsync();
+                .Include(sb => sb.Assignment)
+                .Where(sb => sb.StudentId == student!.ID
+                    && sb.Assignment.IsActive
+                    && _context.StudentGroupComposition.Any(sgc =>
+                        sgc.StudentId == sb.StudentId
+                        && sgc.GroupId == sb.Assignment.GroupId))
+                .ToListAsync();
 
             if (balances == null || balances.Count() == 0)
             {
