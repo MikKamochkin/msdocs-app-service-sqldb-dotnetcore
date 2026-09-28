@@ -63,7 +63,11 @@ namespace DotNetCoreSqlDb.Data
         public DbSet<DotNetCoreSqlDb.Models.Conversations> Conversations { get; set; } = default!;
         
         public DbSet<DotNetCoreSqlDb.Models.Messages> Messages { get; set; } = default!;
+        
         public DbSet<DotNetCoreSqlDb.Models.MessageAttachment> MessageAttachment { get; set; } = default!;
+
+        //public DbSet<DotNetCoreSqlDb.Models.Balances> Balances { get; set; } = default!;
+
 
 
 
@@ -81,12 +85,23 @@ namespace DotNetCoreSqlDb.Data
             .HasIndex(sb => new { sb.StudentId, sb.AssignmentId })
             .IsUnique();
 
+            modelBuilder.Entity<Schedule>()
+                .HasOne(s => s.Assignment)
+                .WithMany()
+                .HasForeignKey(s => s.AssignmentId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Schedule>()
+                .HasOne(s => s.Group)
+                .WithMany()
+                .HasForeignKey(s => s.GroupId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Schedule>()
+                .HasOne(s => s.Teacher)
+                .WithMany()
+                .HasForeignKey(s => s.TeacherId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
-        
-
-        /*[DbFunction("DIFFERENCE", IsBuiltIn = true)]
-        public static int Difference(string s1, string s2) => throw new NotSupportedException();   // never executed*/
-        
-
     }
 }

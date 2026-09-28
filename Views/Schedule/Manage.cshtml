@@ -117,6 +117,28 @@
                 <option value="" selected>— select duration —</option>
             </select>
 
+            <label class="mr-2">Student Charge</label>
+            <input id="studentChargeAmount"
+                type="number"
+                class="form-control mr-2"
+                step="1" />
+
+            <label class="mr-2">Student Currency</label>
+            <input id="studentChargeCurrency"
+                type="text"
+                class="form-control mr-3" />
+
+            <label class="mr-2">Teacher Pay</label>
+            <input id="teacherPayAmount"
+                type="number"
+                class="form-control mr-2"
+                step="1" />
+
+            <label class="mr-2">Teacher Currency</label>
+            <input id="teacherPayCurrency"
+                type="text"
+                class="form-control mr-3" />
+
             <label class="mr-2">Accounting Type</label>
             <select id="lessonAccountingType" class="form-control mr-3"
                 asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonAccountingType">
@@ -182,7 +204,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         // parse the assignment→default-duration map
-        const durationMap = @Html.Raw(ViewBag.DurationMapJson);
+        const scheduleDefaults = @Html.Raw(ViewBag.ScheduleDefaultsJson);
         const DateTime = luxon.DateTime;
         const existing = @Html.Raw(existingJson);
         let rows = existing.slice();
@@ -190,17 +212,37 @@
 
         $(function () {
             renderTable();
+
             if (!editingRow) {
-                const sel = $('#groupSelect').val();
-                if (sel) $('#durationSelect').val(durationMap[sel]);
+                applyScheduleDefaults($('#groupSelect').val());
             }
         });
 
+        function applyScheduleDefaults(groupId) {
+            if (!groupId || !scheduleDefaults[groupId]) {
+                $('#durationSelect').val('');
+                $('#studentChargeAmount').val('');
+                $('#studentChargeCurrency').val('');
+                $('#teacherPayAmount').val('');
+                $('#teacherPayCurrency').val('');
+                return;
+            }
 
-        $('#groupSelect').on('change', () => {
+            const defaults = scheduleDefaults[groupId];
+
+            $('#durationSelect').val(defaults.Duration);
+
+            $('#studentChargeAmount').val(defaults.StudentChargeAmount);
+            $('#studentChargeCurrency').val(defaults.StudentChargeCurrency);
+
+            $('#teacherPayAmount').val(defaults.TeacherPayAmount);
+            $('#teacherPayCurrency').val(defaults.TeacherPayCurrency);
+        }
+
+        $('#groupSelect').on('change', function () {
+            // Assignment defaults only apply while creating a new row.
             if (!editingRow) {
-                const aid = $('#groupSelect').val();
-                $('#durationSelect').val(aid ? durationMap[aid] : '');
+                applyScheduleDefaults($(this).val());
             }
         });
 
@@ -308,7 +350,11 @@
             const r = editingRow;
             const zone = $('#timeZoneSelect').val();
             $('#timeSelect').val(DateTime.fromISO(r.DateTime).setZone(zone).toFormat('HH:mm'));
-            $('#groupSelect').val(r.AssignmentId);
+            $('#groupSelect').val(r.GroupId);
+            $('#studentChargeAmount').val(r.StudentChargeAmount);
+            $('#studentChargeCurrency').val(r.StudentChargeCurrency);
+            $('#teacherPayAmount').val(r.TeacherPayAmount);
+            $('#teacherPayCurrency').val(r.TeacherPayCurrency);
             $('#statusSelect').val(r.Status);
             $('#durationSelect').val(r.Duration);
             $('#lessonAccountingType').val(r.LessonAccountingType);
@@ -324,6 +370,10 @@
             editingRow = null;
             $('#timeSelect').val('');
             $('#groupSelect').val('');
+            $('#studentChargeAmount').val('');
+            $('#studentChargeCurrency').val('');
+            $('#teacherPayAmount').val('');
+            $('#teacherPayCurrency').val('');
             $('#statusSelect').val('');
             $('#durationSelect').val('');
             $('#lessonAccountingType').val('');
@@ -338,6 +388,15 @@
         function saveEntryAjax() {
             const t = $('#timeSelect').val();
             const g = $('#groupSelect').val();
+            const teacherId = $('#teacherSelect').val();
+            const studentChargeAmount =
+                +$('#studentChargeAmount').val();
+            const studentChargeCurrency =
+                $('#studentChargeCurrency').val();
+            const teacherPayAmount =
+                +$('#teacherPayAmount').val();
+            const teacherPayCurrency =
+                $('#teacherPayCurrency').val();
             const s = $('#statusSelect').val();
             const d0 = $('#selectedDate').val();
             const dur = +$('#durationSelect').val();
@@ -345,15 +404,37 @@
             const zone = $('#timeZoneSelect').val();
             const token = $('#__RequestVerificationToken').val();
 
-            if (!t || !g || !s || !dur || !lt) {
+            if (
+                !t ||
+                !g ||
+                !teacherId ||
+                !s ||
+                !dur ||
+                !lt ||
+                !studentChargeCurrency ||
+                !teacherPayCurrency
+            ) {
                 return alert('All fields are required.');
             }
 
             // build the payload without an empty-string Id
             const dto = {
-                AssignmentId: g,
+                GroupId: g,
+                TeacherId: teacherId,
+
+                StudentChargeAmount: studentChargeAmount,
+                StudentChargeCurrency: studentChargeCurrency,
+
+                TeacherPayAmount: teacherPayAmount,
+                TeacherPayCurrency: teacherPayCurrency,
+
                 SelectedDate: d0,
-                DateTime: luxon.DateTime.fromISO(`${d0}T${t}`, { zone }).toUTC().toISO(),
+
+                DateTime: luxon.DateTime
+                    .fromISO(`${d0}T${t}`, { zone })
+                    .toUTC()
+                    .toISO(),
+
                 Status: s,
                 Duration: dur,
                 LessonAccountingType: lt
@@ -362,6 +443,19 @@
             // if we're editing an existing row, add its Id
             if (editingRow) {
                 dto.Id = editingRow.Id;
+            }
+
+            else {
+                // New schedule:
+                // AssignmentId comes from the assignment used to populate
+                // the selected group's defaults.
+                const defaults = scheduleDefaults[g];
+
+                if (!defaults || !defaults.AssignmentId) {
+                    return alert('Could not determine the assignment for this student/group.');
+                }
+
+                dto.AssignmentId = defaults.AssignmentId;
             }
 
             $.ajax({
@@ -373,14 +467,27 @@
                 success(response) {
                     const updated = {
                         Id: response.id,
-                        AssignmentId: response.assignmentId,
+
+                        GroupId: response.groupId,
+                        TeacherId: response.teacherId,
+
+                        StudentChargeAmount: response.studentChargeAmount,
+                        StudentChargeCurrency: response.studentChargeCurrency,
+
+                        TeacherPayAmount: response.teacherPayAmount,
+                        TeacherPayCurrency: response.teacherPayCurrency,
+
                         DateTime: response.dateTime,
+
                         Status: response.status,
                         Duration: response.duration,
                         LessonAccountingType: response.lessonAccountingType,
+
                         GroupName: $('#groupSelect option:selected').text(),
+
                         MainNotes: response.mainNotes ?? '',
                         NotesPriority: Number(response.notesPriority ?? 0),
+
                         StudentId: response.studentId
                     };
 

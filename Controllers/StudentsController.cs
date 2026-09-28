@@ -166,9 +166,8 @@ namespace DotNetCoreSqlDb.Controllers
 
             // 3) Pull every schedule entry for those groups
             var scheduleEntries = await _context.Schedule
-                .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Teacher)
-                .Where(s => groupIds.Contains(s.Assignment!.GroupId))
+                .Include(s => s.Teacher)
+                .Where(s => groupIds.Contains(s.GroupId))
                 .Where(s => s.DateTime > sixHoursAgo)
                 .OrderBy(s => s.DateTime)
                 .Take(15)
@@ -301,26 +300,19 @@ namespace DotNetCoreSqlDb.Controllers
                 .Distinct()
                 .ToListAsync();
 
-            // 2) Assignments in those groups
-            var assignmentIds = await _context.Assignments
-                .Where(a => groupIds.Contains(a.GroupId))
-                .Select(a => a.Id)
-                .ToListAsync();
-
-            // 3) Lessons in the last 6 months (past only)
             var lessons = await _context.Schedule
                 .AsNoTracking()
-                .Where(s => assignmentIds.Contains(s.AssignmentId)
-                         && s.DateTime >= sixMonthsAgo
-                         && s.DateTime < now)
+                .Where(s => groupIds.Contains(s.GroupId)
+                        && s.DateTime >= sixMonthsAgo
+                        && s.DateTime < now)
                 .Select(s => new
                 {
                     s.Id,
-                    s.AssignmentId,
+                    s.GroupId,
                     s.DateTime,
                     s.Status,
                     s.Duration,
-                    TeacherName = s.Assignment.Teacher != null ? s.Assignment.Teacher.Name : null
+                    TeacherName = s.Teacher != null ? s.Teacher.Name : null
                 })
                 .ToListAsync();
 
@@ -382,7 +374,6 @@ namespace DotNetCoreSqlDb.Controllers
                     Kind = "Lesson",                       // merged row
                     ScheduleId = l.Id,
                     TransactionId = tx?.Id,                // filled if auto-charged
-                    AssignmentId = l.AssignmentId,
                     Status = l.Status,
                     DurationMinutes = l.Duration,
                     Amount = tx?.TransactionAmount,
@@ -401,7 +392,6 @@ namespace DotNetCoreSqlDb.Controllers
                 Kind = "Payment",                  // distinguish if you like; or "Transaction"
                 ScheduleId = null,                 // standalone
                 TransactionId = t.Id,
-                AssignmentId = null,
                 Status = null,
                 DurationMinutes = null,
                 Amount = t.TransactionAmount,
@@ -441,9 +431,8 @@ namespace DotNetCoreSqlDb.Controllers
             var utcNow = DateTime.UtcNow;
 
             var entries = await _context.Schedule
-                .Include(s => s.Assignment)!
-                    .ThenInclude(a => a.Teacher)
-                .Where(s => groupIds.Contains(s.Assignment!.GroupId))
+                .Include(s => s.Teacher)
+                .Where(s => groupIds.Contains(s.GroupId))
                 .Where(s => s.DateTime > sixHoursAgo)
                 .OrderBy(s => s.DateTime)
                 .Take(15)
@@ -536,13 +525,12 @@ namespace DotNetCoreSqlDb.Controllers
             return new ScheduleRowDto
             {
                 Id = s.Id,
-                AssignmentId = s.AssignmentId,
-                // Preserve original field your JS expects:
-                DateTime = startUtc, // serialized as ISO string
+                GroupId = s.GroupId,
+                DateTime = startUtc,
                 Status = s.Status ?? "",
                 Duration = s.Duration,
-                TeacherName = s.Assignment?.Teacher?.Name ?? "",
-                TeacherId = s.Assignment?.Teacher?.Id ?? Guid.Empty,
+                TeacherName = s.Teacher?.Name ?? "",
+                TeacherId = s.Teacher?.Id ?? Guid.Empty,
 
                 // New server-side fields:
                 EnableAtUtc = enableAtUtc,
@@ -580,7 +568,7 @@ namespace DotNetCoreSqlDb.Controllers
         public sealed class ScheduleRowDto
         {
             public Guid Id { get; set; }
-            public Guid AssignmentId { get; set; }
+            public Guid GroupId { get; set; }
             public DateTime DateTime { get; set; }       // UTC start time (kept for backward compatibility)
             public string Status { get; set; } = "";
             public int Duration { get; set; }

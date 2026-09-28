@@ -35,5 +35,29 @@ namespace DotNetCoreSqlDb.Models
 
         [DisplayName("HasReachedMinimumDuration")]
         public bool? HasReachedMinimumDuration { get; set; } = false;
+
+        [DisplayName("StudentChargeAmount")]
+        [Required]
+        public required float StudentChargeAmount { get; set; }
+
+        [DisplayName("StudentChargeCurrency")]
+        [Required]
+        public required string StudentChargeCurrency { get; set; }
+
+        [DisplayName("TeacherPayAmount")]
+        [Required]
+        public required float TeacherPayAmount { get; set; }
+
+        [DisplayName("TeacherPayCurrency")]
+        [Required]
+        public required string TeacherPayCurrency { get; set; }
+
+        [ForeignKey("Group")]
+        public Guid GroupId { get; set; }
+        public Group? Group { get; set; }
+
+        [ForeignKey("Teacher")]
+        public Guid TeacherId { get; set; }
+        public Teacher? Teacher { get; set; }
     }
 }

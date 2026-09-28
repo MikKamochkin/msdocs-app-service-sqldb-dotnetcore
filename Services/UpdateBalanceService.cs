@@ -83,12 +83,11 @@ namespace DotNetCoreSqlDb.Services
                 }
 
                 var lesson = await _context.Schedule
-                    .Include(s => s.Assignment)
-                        .ThenInclude(a => a.Group)
-                            .ThenInclude(g => g.StudentGroupCompositions)
+                    .Include(s => s.Group)
+                        .ThenInclude(g => g.StudentGroupCompositions)
                     .SingleOrDefaultAsync(s => s.Id == scheduleId);
 
-                if (lesson != null)
+                /*if (lesson != null)
                 {
                     var a = lesson.Assignment;
                     if (a!.StudentUnitDuration > 0)
@@ -133,7 +132,7 @@ namespace DotNetCoreSqlDb.Services
                         }
                         lesson.Accounted = true;
                     }
-                }
+                }*/
 
                 // 3) Persist and release lock
                 await _context.SaveChangesAsync(cancellationToken);
@@ -198,12 +197,11 @@ namespace DotNetCoreSqlDb.Services
                 }
 
                 var lesson = await _context.Schedule
-                    .Include(s => s.Assignment)
-                        .ThenInclude(a => a.Group)
-                            .ThenInclude(g => g.StudentGroupCompositions)
+                    .Include(a => a.Group)
+                        .ThenInclude(g => g.StudentGroupCompositions)
                     .SingleOrDefaultAsync(s => s.Id == scheduleId);
 
-                if (lesson != null)
+                /*if (lesson != null)
                 {
 
                     if (lesson.Accounted == true)
@@ -249,7 +247,7 @@ namespace DotNetCoreSqlDb.Services
                             lesson.Accounted = true;
                         }
                     }
-                }
+                }*/
 
                 // 6) Persist and release lock
                 await _context.SaveChangesAsync(cancellationToken);

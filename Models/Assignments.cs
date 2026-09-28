@@ -42,8 +42,5 @@ namespace DotNetCoreSqlDb.Models
         [DisplayName("IsActive")]
         [Required]
         public required bool IsActive { get; set; }
-
-        // Navigation property for one-to-many relationship with Schedule
-        public virtual ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
     }
 }

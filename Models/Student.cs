@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Collections.Generic;
 
 namespace DotNetCoreSqlDb.Models
@@ -38,6 +39,11 @@ namespace DotNetCoreSqlDb.Models
 
         [DisplayName("Status")]
         public string? Status { get; set; }
+
+        /*public Guid? BalanceId { get; set; }
+        
+        [ForeignKey(nameof(BalanceId))]
+        public virtual Balances? Balance { get; set; }*/
 
         // Navigation property for one-to-many relationship with Contact
         public virtual ICollection<Contact> Contacts { get; set; } = new List<Contact>();

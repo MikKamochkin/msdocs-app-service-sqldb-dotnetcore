@@ -685,8 +685,10 @@
             });
 
             $('#groupSelect').on('change', () => {
-                const aid = $('#groupSelect').val();
-                $('#durationSelect').val(aid ? durationMap[aid] : '');
+                const groupId = $('#groupSelect').val();
+                $('#durationSelect').val(
+                    groupId ? durationMap[groupId] : ''
+                );
             });
 
             function shiftDay(delta) {
@@ -753,8 +755,13 @@
                 }
 
                 const dto = {
-                    AssignmentId: g,
-                    DateTime: luxon.DateTime.fromISO(`${d0}T${t}`, { zone }).toUTC().toISO(),
+                    GroupId: g,
+
+                    DateTime: luxon.DateTime
+                        .fromISO(`${d0}T${t}`, { zone })
+                        .toUTC()
+                        .toISO(),
+
                     Duration: dur
                 };
 
@@ -767,11 +774,13 @@
                     success(resp) {
                         const added = {
                             Id: resp.id,
-                            AssignmentId: resp.assignmentId,
+                            GroupId: resp.groupId,
                             DateTime: resp.dateTime,
                             Duration: resp.duration,
                             GroupName: resp.groupName,
-                            IsExisting: true
+                            IsExisting: true,
+                            CanDelete: true,
+                            Status: resp.status
                         };
                         rows.push(added);
                         renderTable();

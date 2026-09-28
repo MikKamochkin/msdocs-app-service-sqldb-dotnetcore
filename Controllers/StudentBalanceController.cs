@@ -160,14 +160,11 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.Transactions = transactions;
 
             var recentLessons = await _context.Schedule
-                .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Group)
-                        .ThenInclude(g => g.StudentGroupCompositions)
-                .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Teacher)
+                .Include(s => s.Group)
+                    .ThenInclude(g => g.StudentGroupCompositions)
+                .Include(s => s.Teacher)
                 .Where(s =>
-                    //s.Assignment.IsActive == true &&
-                    s.Assignment.Group.StudentGroupCompositions.Any(sgc => sgc.StudentId == id) &&
+                    s.Group.StudentGroupCompositions.Any(sgc => sgc.StudentId == id) &&
                     ((s.Status == "Taken" && s.DateTime <= DateTime.UtcNow) || (s.Status == "Scheduled" && s.DateTime >= DateTime.UtcNow))
                 )
                 .OrderByDescending(s => s.DateTime)

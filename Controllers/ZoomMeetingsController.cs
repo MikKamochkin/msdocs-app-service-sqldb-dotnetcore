@@ -31,8 +31,7 @@ namespace DotNetCoreSqlDb.Controllers
         {
             var rows = await _context.ZoomMeetings
                 .Include(z => z.Schedule)
-                    .ThenInclude(s => s!.Assignment!)
-                        .ThenInclude(a => a.Group)
+                    .ThenInclude(a => a.Group)
                 .Select(z => new
                 {
                     z.Id,
@@ -45,8 +44,8 @@ namespace DotNetCoreSqlDb.Controllers
                     z.Duration,
                     z.ScheduleId,
                     z.UUid,
-                    GroupName = z.Schedule!.Assignment!.Group!.Name,
-                    TeacherName = z.Schedule!.Assignment!.Teacher!.Name
+                    GroupName = z.Schedule!.Group!.Name,
+                    TeacherName = z.Schedule!.Teacher!.Name
                 })
                 .OrderBy(z => z.IsBusy)
                 .ToListAsync();

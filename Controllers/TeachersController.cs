@@ -118,9 +118,8 @@ namespace DotNetCoreSqlDb.Controllers
             var utcNow = DateTime.UtcNow;
 
             var scheduleEntries = await _context.Schedule
-                .Include(s => s.Assignment)          // load the Assignment nav
-                    .ThenInclude(a => a.Group)      // then load its Group nav
-                .Where(s => s.Assignment!.TeacherId == teacherId)
+                .Include(s => s.Group)
+                .Where(s => s.TeacherId == teacherId)
                 .Where(s => s.DateTime > sixHoursAgo)
                 .Where(s => s.Status != "Deleted")
                 .OrderBy(s => s.DateTime)
@@ -147,18 +146,6 @@ namespace DotNetCoreSqlDb.Controllers
             var timeUntilSoonest = Math.Min((soonestLessonTime - DateTime.UtcNow).TotalMilliseconds, (upcomingLessonEndTime - DateTime.UtcNow).TotalMilliseconds) ;
 
             var flatDtos = scheduleEntries.Select(s => ToDto(s, utcNow)).ToList();
-
-            // 4) Serialize for the view’s JS (ISO timestamps + teacher names)
-            /*var flat = scheduleEntries.Select(s => new
-            {
-                s.Id,
-                s.AssignmentId,
-                DateTime = s.DateTime.ToString("o"),
-                s.Status,
-                s.Duration,
-                StudentName = s.Assignment?.Group?.Name
-                //JoinUrl = zoomLinks.TryGetValue(s.Id, out var url) ? url : null
-            });*/
 
             ViewBag.ExistingJson = JsonSerializer.Serialize(
                 flatDtos,
@@ -272,25 +259,25 @@ namespace DotNetCoreSqlDb.Controllers
             // 1) get the teacherId for this schedule
             var teacherId = await _context.Schedule
                 .Where(s => s.Id == id)
-                .Select(s => s.Assignment!.TeacherId)
+                .Select(s => s.TeacherId)
                 .FirstOrDefaultAsync();
 
-            if (teacherId == default)
+            if (teacherId == Guid.Empty)
             {
-                _logger.LogWarning("Schedule {ScheduleId} has no Assignment/Teacher", id);
+                _logger.LogWarning("Schedule {ScheduleId} has no Teacher", id);
                 return NotFound();
             }
 
             // 2) grab the first ZoomMeeting on any *other* schedule for that same teacher
             var previousLesson = await _context.ZoomMeetings
-                .Include(zm => zm.Schedule!)
-                    .ThenInclude(s => s.Assignment)
+                .Include(zm => zm.Schedule)
                 .Where(zm =>
-                    zm.Schedule!.Assignment!.TeacherId == teacherId &&  // same teacher
-                    zm.ScheduleId != id &&          // different schedule
-                    zm.IsBusy                                     // still busy
+                    zm.Schedule != null &&
+                    zm.Schedule.TeacherId == teacherId &&
+                    zm.ScheduleId != id &&
+                    zm.IsBusy
                 )
-                .OrderByDescending(zm => zm.Schedule!.DateTime)       // most recent first
+                .OrderByDescending(zm => zm.Schedule!.DateTime)
                 .FirstOrDefaultAsync();
 
             if (previousLesson != null)
@@ -359,9 +346,8 @@ namespace DotNetCoreSqlDb.Controllers
             await _logHelper.LogZoomMeetingEndAsync(id);
 
             var schedule = await _context.Schedule
-                .Include(s => s.Assignment!)
-                    .ThenInclude(a => a.Group)
-                        .ThenInclude(g => g.StudentGroupCompositions)
+                .Include(s => s.Group)
+                    .ThenInclude(g => g.StudentGroupCompositions)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             
@@ -370,7 +356,7 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
             }
             
-            var affectedStudentIds = schedule.Assignment?.Group?.StudentGroupCompositions?
+            var affectedStudentIds = schedule.Group?.StudentGroupCompositions?
                 .Select(sgc => sgc.StudentId)
                 .Distinct()
                 .ToList() ?? new List<Guid>();
@@ -398,9 +384,8 @@ namespace DotNetCoreSqlDb.Controllers
             var utcNow = DateTime.UtcNow;
 
             var scheduleEntries = await _context.Schedule
-                .Include(s => s.Assignment)          // load the Assignment nav
-                    .ThenInclude(a => a.Group)      // then load its Group nav
-                .Where(s => s.Assignment!.TeacherId == teacherId)
+                .Include(s => s.Group)
+                .Where(s => s.TeacherId == teacherId)
                 .Where(s => s.DateTime > sixHoursAgo)
                 .Where(s => s.Status != "Deleted")
                 .OrderBy(s => s.DateTime)
@@ -527,24 +512,42 @@ namespace DotNetCoreSqlDb.Controllers
 
             // Groups visible to this teacher only (value = AssignmentId, text = Group.Name)
             var assignments = await _context.Assignments
-                .Where(a => a.TeacherId == teacherId && a.Group!.IsActive)
-                .Select(a => new { a.Id, a.GroupId, GroupName = a.Group!.Name })
+                .Where(a =>
+                    a.TeacherId == teacherId &&
+                    a.Group!.IsActive &&
+                    a.IsActive)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.GroupId,
+                    GroupName = a.Group!.Name,
+                    a.StudentUnitDuration
+                })
                 .OrderBy(x => x.GroupName)
                 .ToListAsync();
 
-            var groupItems = assignments
+            var assignmentsByGroup = assignments
                 .GroupBy(x => x.GroupId)
                 .Select(g => g.First())
-                .Select(a => new SelectListItem { Value = a.Id.ToString(), Text = a.GroupName })
+                .ToList();
+
+            var groupItems = assignmentsByGroup
+                .Select(a => new SelectListItem
+                {
+                    Value = a.GroupId.ToString(),
+                    Text = a.GroupName
+                })
                 .OrderBy(x => x.Text)
                 .ToList();
 
             ViewBag.Groups = groupItems;
 
-            // AssignmentId -> default StudentUnitDuration map
-            var durationMap = await _context.Assignments
-                .Where(a => a.TeacherId == teacherId)
-                .ToDictionaryAsync(a => a.Id.ToString(), a => a.StudentUnitDuration);
+            // GroupId -> default duration
+            var durationMap = assignmentsByGroup
+                .ToDictionary(
+                    a => a.GroupId.ToString(),
+                    a => a.StudentUnitDuration);
+
             ViewBag.DurationMapJson = JsonSerializer.Serialize(durationMap);
 
             // Load existing entries for *that date* (read-only in the view)
@@ -562,9 +565,12 @@ namespace DotNetCoreSqlDb.Controllers
             var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, tzInfo);
 
             var existing = await _context.Schedule
-                .Include(s => s.Assignment!).ThenInclude(a => a.Group!)
-                .Where(s => s.Assignment!.TeacherId == teacherId &&
-                            s.DateTime >= startUtc && s.DateTime < endUtc && s.Status != "Deleted")
+                .Include(s => s.Group)
+                .Where(s =>
+                    s.TeacherId == teacherId &&
+                    s.DateTime >= startUtc &&
+                    s.DateTime < endUtc &&
+                    s.Status != "Deleted")
                 .OrderBy(s => s.DateTime)
                 .ToListAsync();
 
@@ -574,7 +580,7 @@ namespace DotNetCoreSqlDb.Controllers
                 Id = r.Id,
                 DateTime = r.DateTime.ToUniversalTime(),   // Keep as DateTime, formatting happens in JS if needed
                 Duration = r.Duration,
-                GroupName = r.Assignment!.Group!.Name,
+                GroupName = r.Group?.Name ?? "(unknown)",
                 IsExisting = true,                         // same as before
                 CanDelete = !r.HasReachedMinimumDuration ?? false,                         // explicit field in DTO
                 Status = r.Status
@@ -589,14 +595,11 @@ namespace DotNetCoreSqlDb.Controllers
             return View("EditSchedule", existing);
         }
 
-
-        
-
         // keep this DTO local to TeachersController so you don't depend on ScheduleController
         public class ScheduleDto
         {
             public Guid Id { get; set; }
-            public Guid AssignmentId { get; set; }
+            public Guid GroupId { get; set; }
             public DateTime DateTime { get; set; }
             public int Duration { get; set; }
         }
@@ -629,8 +632,10 @@ namespace DotNetCoreSqlDb.Controllers
             // Ensure the assignment belongs to this teacher
             var assignment = await _context.Assignments
                 .Include(a => a.Group)
-                    .ThenInclude(a => a.StudentGroupCompositions)
-                .FirstOrDefaultAsync(a => a.Id == dto.AssignmentId && a.TeacherId == teacherId);
+                    .ThenInclude(g => g.StudentGroupCompositions)
+                .FirstOrDefaultAsync(a =>
+                    a.GroupId == dto.GroupId &&
+                    a.TeacherId == teacherId);
 
             if (assignment == null)
                 return BadRequest("Invalid assignment for this teacher.");
@@ -638,10 +643,23 @@ namespace DotNetCoreSqlDb.Controllers
             var entity = new Schedule
             {
                 Id = Guid.NewGuid(),
-                AssignmentId = dto.AssignmentId,
-                DateTime = dto.DateTime.Kind == DateTimeKind.Local ? dto.DateTime.ToUniversalTime() : dto.DateTime,
+                AssignmentId = assignment.Id,
+                GroupId = assignment.GroupId,
+                TeacherId = teacherId,
+
+                StudentChargeAmount = (int)assignment.StudentUnitCost,
+                StudentChargeCurrency = assignment.StudentUnitType,
+
+                TeacherPayAmount = (int)assignment.TeacherPayForUnit,
+                TeacherPayCurrency = assignment.TeacherPayUnitType,
+
+                DateTime = dto.DateTime.Kind == DateTimeKind.Local
+                    ? dto.DateTime.ToUniversalTime()
+                    : dto.DateTime,
+
                 Status = "Scheduled",
                 Duration = dto.Duration,
+
                 LessonAccountingType = "S100T100",
                 Accounted = false,
                 HasReachedMinimumDuration = false
@@ -649,11 +667,10 @@ namespace DotNetCoreSqlDb.Controllers
 
             _context.Schedule.Add(entity);
 
-            var affectedStudentIds = entity.Assignment?.Group?.StudentGroupCompositions?
+            var affectedStudentIds = assignment.Group?.StudentGroupCompositions?
                 .Select(sgc => sgc.StudentId)
                 .Distinct()
                 .ToList() ?? new List<Guid>();
-
 
             await _context.SaveChangesAsync();
 
@@ -670,7 +687,7 @@ namespace DotNetCoreSqlDb.Controllers
             return Json(new
             {
                 id = entity.Id,
-                assignmentId = entity.AssignmentId,
+                groupId = entity.GroupId,
                 dateTime = entity.DateTime.ToUniversalTime().ToString("o"),
                 duration = entity.Duration,
                 groupName = assignment.Group?.Name ?? "(unknown)",
@@ -690,19 +707,15 @@ namespace DotNetCoreSqlDb.Controllers
 
             // Load + ensure ownership
             var entity = await _context.Schedule
-                .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Group)
-                        .ThenInclude(g => g.StudentGroupCompositions)
-                .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Teacher)
+                .Include(s => s.Group)
+                    .ThenInclude(g => g.StudentGroupCompositions)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (entity == null)
                 return NotFound();
 
-            if (entity.Assignment?.TeacherId != teacherId)
+            if (entity.TeacherId != teacherId)
                 return NotFound();
-
 
             if (entity.HasReachedMinimumDuration == true)
             {
@@ -715,7 +728,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             // Collect affected IDs before delete
-            var affectedStudentIds = entity.Assignment?.Group?.StudentGroupCompositions?
+            var affectedStudentIds = entity.Group?.StudentGroupCompositions?
                 .Select(sgc => sgc.StudentId)
                 .Distinct()
                 .ToList() ?? new List<Guid>();
@@ -742,19 +755,21 @@ namespace DotNetCoreSqlDb.Controllers
 
             // Send refreshed list to teacher (latest 15)
             var updatedSchedule = await _context.Schedule
-                .Include(s => s.Assignment!).ThenInclude(a => a.Teacher)
-                .Where(s => s.Assignment!.TeacherId == teacherId)
+                .Include(s => s.Teacher)
+                .Where(s => s.TeacherId == teacherId)
                 .OrderByDescending(s => s.DateTime)
                 .Take(15)
                 .Select(r => new
                 {
                     r.Id,
-                    r.AssignmentId,
+                    r.GroupId,
                     DateTime = r.DateTime.ToUniversalTime().ToString("o"),
                     r.Status,
                     r.Duration,
-                    TeacherId = r.Assignment!.Teacher!.Id,
-                    TeacherName = r.Assignment!.Teacher!.Name
+                    TeacherId = r.TeacherId,
+                    TeacherName = r.Teacher != null
+                        ? r.Teacher.Name
+                        : ""
                 })
                 .ToListAsync();
 
@@ -781,11 +796,11 @@ namespace DotNetCoreSqlDb.Controllers
             return new ScheduleRowDto
             {
                 Id = s.Id,
-                AssignmentId = s.AssignmentId,
+                GroupId = s.GroupId,
                 DateTime = startUtc,
                 Status = s.Status ?? "",
                 Duration = s.Duration,
-                StudentName = s.Assignment?.Group?.Name,
+                StudentName = s.Group?.Name ?? "",
                 EnableAtUtc = enableAtUtc,
                 DisableAtUtc = disableAtUtc,
                 CanJoinNow = canJoinNow,
@@ -808,9 +823,8 @@ namespace DotNetCoreSqlDb.Controllers
             _logger.LogInformation("monday: " + mondayWithWeekOffset);
 
             var scheduleEntries = await _context.Schedule
-                .Include(s => s.Assignment)          // load the Assignment nav
-                    .ThenInclude(a => a.Group)      // then load its Group nav
-                .Where(s => s.Assignment!.TeacherId == teacherId)
+                .Include(s => s.Group)
+                .Where(s => s.TeacherId == teacherId)
                 .Where(s => s.DateTime > mondayWithWeekOffset && s.DateTime < sundayWithWeekOffset)
                 .Where(s => s.Status == "Taken")
                 .OrderByDescending(s => s.DateTime)
@@ -869,9 +883,8 @@ namespace DotNetCoreSqlDb.Controllers
             var lastWeekEndUtc = TimeZoneInfo.ConvertTimeToUtc(lastWeekEndLocal, tzInfo);
 
             var lastWeekEntries = await _context.Schedule
-                .Include(s => s.Assignment!)
                 .Where(s =>
-                    s.Assignment!.TeacherId == teacherId &&
+                    s.TeacherId == teacherId &&
                     s.DateTime >= lastWeekStartUtc &&
                     s.DateTime < lastWeekEndUtc)
                 .ToListAsync();
@@ -883,7 +896,7 @@ namespace DotNetCoreSqlDb.Controllers
                 var newDate = entry.DateTime.AddDays(7);
 
                 var exists = await _context.Schedule.AnyAsync(s =>
-                    s.Assignment!.TeacherId == teacherId &&
+                    s.TeacherId == teacherId &&
                     s.DateTime == newDate);
 
                 if (exists)
@@ -892,12 +905,23 @@ namespace DotNetCoreSqlDb.Controllers
                 var copy = new Schedule
                 {
                     Id = Guid.NewGuid(),
-                    AssignmentId = entry.AssignmentId,
+
+                    GroupId = entry.GroupId,
+                    TeacherId = entry.TeacherId,
+
+                    StudentChargeAmount = entry.StudentChargeAmount,
+                    StudentChargeCurrency = entry.StudentChargeCurrency,
+
+                    TeacherPayAmount = entry.TeacherPayAmount,
+                    TeacherPayCurrency = entry.TeacherPayCurrency,
+
                     DateTime = newDate,
                     Status = "Scheduled",
-                    Duration = (int)entry.Assignment!.StudentUnitDuration,
+                    Duration = entry.Duration,
+
                     LessonAccountingType = "S100T100",
-                    Accounted = false
+                    Accounted = false,
+                    HasReachedMinimumDuration = false
                 };
 
                 newEntries.Add(copy);
@@ -908,13 +932,13 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 await _context.SaveChangesAsync();
 
-                var assignmentIds = newEntries.Select(e => e.AssignmentId).Distinct().ToList();
+                var groupIds = newEntries
+                    .Select(e => e.GroupId)
+                    .Distinct()
+                    .ToList();
 
-                var affectedStudentIds = await _context.Assignments
-                    .Where(a => assignmentIds.Contains(a.Id))
-                    .Include(a => a.Group)
-                        .ThenInclude(g => g.StudentGroupCompositions)
-                    .SelectMany(a => a.Group!.StudentGroupCompositions)
+                var affectedStudentIds = await _context.StudentGroupComposition
+                    .Where(sgc => groupIds.Contains(sgc.GroupId))
                     .Select(sgc => sgc.StudentId)
                     .Distinct()
                     .ToListAsync();
@@ -927,19 +951,19 @@ namespace DotNetCoreSqlDb.Controllers
                 }
 
                 var updatedSchedule = await _context.Schedule
-                    .Include(s => s.Assignment!).ThenInclude(a => a.Teacher)
-                    .Where(s => s.Assignment!.TeacherId == teacherId)
+                    .Include(s => s.Teacher)
+                    .Where(s => s.TeacherId == teacherId)
                     .OrderByDescending(s => s.DateTime)
                     .Take(15)
                     .Select(r => new
                     {
                         r.Id,
-                        r.AssignmentId,
+                        r.GroupId,
                         DateTime = r.DateTime.ToUniversalTime().ToString("o"),
                         r.Status,
                         r.Duration,
-                        TeacherId = r.Assignment!.Teacher!.Id,
-                        TeacherName = r.Assignment!.Teacher!.Name
+                        TeacherId = r.TeacherId,
+                        TeacherName = r.Teacher != null ? r.Teacher.Name : ""
                     })
                     .ToListAsync();
 
@@ -959,19 +983,19 @@ namespace DotNetCoreSqlDb.Controllers
             return new LessonHistoryDto
             {
                 Id = s.Id,
-                AssignmentId = s.AssignmentId,
+                GroupId = s.GroupId,
                 DateTime = s.DateTime,
                 Status = s.Status ?? "",
                 Duration = s.Duration,
-                StudentName = s.Assignment?.Group?.Name
+                StudentName = s.Group?.Name ?? ""
             };
         }
 
         public sealed class ScheduleRowDto
         {
             public Guid Id { get; set; }
-            public Guid AssignmentId { get; set; }
-            public DateTime DateTime { get; set; }       
+            public Guid GroupId { get; set; }
+            public DateTime DateTime { get; set; }
             public string Status { get; set; } = "";
             public int Duration { get; set; }
             public string StudentName { get; set; } = "";
@@ -989,12 +1013,11 @@ namespace DotNetCoreSqlDb.Controllers
         public sealed class LessonHistoryDto
         {
             public Guid Id { get; set; }
-            public Guid AssignmentId { get; set; }
-            public DateTime DateTime { get; set; }       
+            public Guid GroupId { get; set; }
+            public DateTime DateTime { get; set; }
             public string Status { get; set; } = "";
             public int Duration { get; set; }
             public string StudentName { get; set; } = "";
-
         }
 
 

@@ -4,6 +4,7 @@ using DotNetCoreSqlDb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DotNetCoreSqlDb.Migrations
 {
     [DbContext(typeof(MyDatabaseContext))]
-    partial class MyDatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260919213434_AddCurrencyConversionRatesTable")]
+    partial class AddCurrencyConversionRatesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -125,6 +128,32 @@ namespace DotNetCoreSqlDb.Migrations
                     b.HasIndex("TeacherId");
 
                     b.ToTable("Conversations");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.CurrencyConversionRate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("CAD")
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<decimal>("EUR")
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<decimal>("RUB")
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<decimal>("USD")
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CurrencyConversionRate");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.DefaultSchedule", b =>
@@ -407,9 +436,6 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Property<int>("Duration")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("GroupId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<bool?>("HasReachedMinimumDuration")
                         .HasColumnType("bit");
 
@@ -421,30 +447,9 @@ namespace DotNetCoreSqlDb.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<float>("StudentChargeAmount")
-                        .HasColumnType("real");
-
-                    b.Property<string>("StudentChargeCurrency")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("TeacherId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<float>("TeacherPayAmount")
-                        .HasColumnType("real");
-
-                    b.Property<string>("TeacherPayCurrency")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AssignmentId");
-
-                    b.HasIndex("GroupId");
-
-                    b.HasIndex("TeacherId");
 
                     b.ToTable("Schedule");
                 });
@@ -990,28 +995,12 @@ namespace DotNetCoreSqlDb.Migrations
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Schedule", b =>
                 {
                     b.HasOne("DotNetCoreSqlDb.Models.Assignments", "Assignment")
-                        .WithMany()
+                        .WithMany("Schedules")
                         .HasForeignKey("AssignmentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("DotNetCoreSqlDb.Models.Group", "Group")
-                        .WithMany()
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("DotNetCoreSqlDb.Models.Teacher", "Teacher")
-                        .WithMany()
-                        .HasForeignKey("TeacherId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Assignment");
-
-                    b.Navigation("Group");
-
-                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentBalance", b =>
@@ -1091,6 +1080,11 @@ namespace DotNetCoreSqlDb.Migrations
                         .HasForeignKey("ScheduleId");
 
                     b.Navigation("Schedule");
+                });
+
+            modelBuilder.Entity("DotNetCoreSqlDb.Models.Assignments", b =>
+                {
+                    b.Navigation("Schedules");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Group", b =>

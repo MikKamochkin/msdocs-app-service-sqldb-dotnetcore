@@ -517,7 +517,7 @@ namespace DotNetCoreSqlDb.Controllers
                             IsActive = true,
                             // NOTE: if Schedules must be cloned as new rows, don't assign the collection directly.
                             // This keeps your current behavior.
-                            Schedules = a.Schedules
+                            //Schedules = a.Schedules
                         });
                     }
 

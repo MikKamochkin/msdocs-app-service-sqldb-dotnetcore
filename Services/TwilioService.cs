@@ -77,7 +77,7 @@ namespace DotNetCoreSqlDb.Services
             var studentContacts = await _context.Schedule
                 .AsNoTracking()
                 .Where(s => s.Id == scheduleId)
-                .SelectMany(s => s.Assignment.Group.StudentGroupCompositions)
+                .SelectMany(s => s.Group.StudentGroupCompositions)
                 .Select(sgc => sgc.Student)
                 .Distinct()
                 .Select(student => new
@@ -94,8 +94,7 @@ namespace DotNetCoreSqlDb.Services
             
             var schedule = await _context.Schedule
                 .AsNoTracking()
-                .Include(s => s.Assignment)
-                    .ThenInclude(a => a.Teacher)
+                .Include(s => s.Teacher)
                 .FirstOrDefaultAsync(s => s.Id == scheduleId);
 
             if (schedule == null)
@@ -107,7 +106,7 @@ namespace DotNetCoreSqlDb.Services
             var lessonTimeUtc = schedule.DateTime;
             var easternZone = TZConvert.GetTimeZoneInfo("Eastern Standard Time"); 
             var lessonTimeEst = TimeZoneInfo.ConvertTimeFromUtc(lessonTimeUtc, easternZone);
-            var teacherName = schedule.Assignment?.Teacher?.Name ?? "your teacher";
+            var teacherName = schedule.Teacher?.Name ?? "your teacher";
             
             foreach (var studentContact in studentContacts)
             {   _logger.LogInformation("studentcontact id: " + studentContact.StudentId);

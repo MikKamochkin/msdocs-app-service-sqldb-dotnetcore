@@ -106,6 +106,7 @@ builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IBlobService, BlobService>();
 builder.Services.AddScoped<IEmailInboxReader, ImapEmailReader>();
 builder.Services.AddScoped<INotesService, NotesService>();
+builder.Services.AddScoped<ITeacherBalanceService, TeacherBalanceService>();
 
 builder.Services.AddHostedService<TimedHostedService>();
 
