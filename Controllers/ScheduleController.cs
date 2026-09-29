@@ -161,6 +161,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             ViewBag.Groups = groupItems;
             ViewBag.ScheduleDefaultsJson = JsonSerializer.Serialize(scheduleDefaults);
+            ViewBag.PayUnits = DropdownOptions.PayUnitTypes;
 
             // 7) Load existing schedule entries for that teacher + date via UTC range
             var existing = new List<Schedule>();

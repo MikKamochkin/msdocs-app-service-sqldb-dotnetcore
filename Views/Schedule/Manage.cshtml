@@ -9,71 +9,193 @@
     var tokens = AntiForgery.GetAndStoreTokens(ViewContext.HttpContext);
 }
 <style>
-    .notifyTeacher-btn {
-        background-color: #8b0000;
-        color: #fff;
+    .schedule-manage-page { background: #e8ecfc; }
+    .schedule-manage-content { min-width: 0; padding: 18px 24px 20px; color: #2f3445; }
+    .schedule-manage-shell { width: 100%; max-width: 1500px; margin: 0 auto; }
+    .schedule-manage-content h2 { margin: 0 0 12px; color: #29314d; font-size: 1.8rem; font-weight: 600; line-height: 1.2; }
+    .schedule-card { min-width: 0; padding: 14px 16px; border-radius: 8px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.1); margin-bottom: 12px; }
+    .schedule-filters { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 12px 16px; align-items: end; }
+    .schedule-filter-form { display: grid; grid-template-columns: minmax(250px, 1fr) minmax(350px, 1.2fr); gap: 24px; align-items: end; margin: 0; min-width: 0; }
+    .schedule-manage-content .form-group { min-width: 0; margin: 0; }
+    .schedule-manage-content label { display: block; margin: 0 0 5px; color: #424a66; font-size: .95rem; font-weight: 600; }
+    .schedule-inline-controls { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .schedule-inline-controls .btn { flex-shrink: 0; white-space: nowrap; }
+    .schedule-manage-content .form-control { width: 100%; min-width: 0; height: 38px; border: 1px solid #ccd2e8; border-radius: 6px; background: #fff; color: #2f3445; font-size: .95rem; box-shadow: none; }
+    .schedule-manage-content .form-control:focus { border-color: #6981ec; box-shadow: 0 0 0 3px rgba(105,129,236,.16); }
+    .schedule-manage-content #selectedDate { flex: 1 1 145px; min-width: 135px; }
+    .schedule-manage-content #dayOfWeek { color: #39446c; font-size: .95rem; font-weight: 600; white-space: nowrap; }
+    .schedule-entry-fields { display: grid; grid-template-columns: 100px minmax(200px, 2fr) minmax(140px, 1fr) 130px; gap: 10px 16px; align-items: end; }
+    .schedule-entry-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 38px; }
+    .schedule-manage-content .btn { padding: 7px 13px; border: 1px solid #6981ec; border-radius: 6px; background: #fff; color: #5d73d8; font-size: .95rem; font-weight: 600; line-height: 1.35; box-shadow: none; transition: color .15s ease, background-color .15s ease; }
+    .schedule-manage-content .btn:hover, .schedule-manage-content .btn:focus { border-color: #6981ec; background: #6981ec; color: #fff; }
+    .schedule-manage-content .btn-primary { background: #6981ec; color: #fff; }
+    .schedule-manage-content .btn-primary:hover { background: #536bd7; border-color: #536bd7; }
+    .schedule-manage-content .btn-danger { border-color: #e3b8c2; background: #fff7f8; color: #a23e52; }
+    .schedule-manage-content .btn-danger:hover { border-color: #a23e52; background: #a23e52; color: #fff; }
+    .schedule-table-card { padding: 0; overflow: hidden; }
+    .schedule-table-scroll { max-height: max(180px, calc(100vh - 420px)); overflow: auto; }
+    .schedule-manage-content #entriesTable { width: 100%; min-width: 760px; margin: 0; border-collapse: separate; border-spacing: 0; border: 0; color: #34394b; font-size: .95rem; }
+    .schedule-manage-content #entriesTable th, .schedule-manage-content #entriesTable td { padding: 7px 10px; border: 0; border-right: 1px solid #e0e3ef; border-bottom: 1px solid #e0e3ef; vertical-align: middle; }
+    .schedule-manage-content #entriesTable th { position: sticky; top: 0; z-index: 1; background: #f0f2fa; color: #3a425e; font-weight: 600; white-space: nowrap; }
+    .schedule-manage-content #entriesTable tbody tr:nth-child(even) { background: #f6f7fb; }
+    .schedule-manage-content #entriesTable tbody tr:hover { background: #eef1ff; }
+    .schedule-manage-content #entriesTable tbody tr.table-info > td:not(.notes-cell) { background: #e0e6ff; }
+    .schedule-manage-content #entriesTable td[onclick] { cursor: pointer; }
+    .schedule-manage-content #entriesTable .notes-cell { overflow-wrap: anywhere; }
+    .schedule-manage-content #entriesTable .btn-sm { padding: 3px 8px; }
+    .schedule-manage-content #entriesTable .btn-lg { padding: 0; font-size: 1.1rem; }
+    .schedule-manage-content td.notes-priority-white { background-color: #fff !important; }
+    .schedule-manage-content td.notes-priority-green { background-color: #d4edda !important; }
+    .schedule-manage-content td.notes-priority-yellow { background-color: #fff3cd !important; }
+    .schedule-manage-content td.notes-priority-red { background-color: #f8d7da !important; }
+    .schedule-footer-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .schedule-footer-actions form { margin: 0; }
+    .schedule-footer-actions .btn { margin: 0 !important; }
+    @@media (max-width: 1200px) {
+        .schedule-filters { grid-template-columns: 1fr; }
+        .schedule-entry-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .schedule-table-scroll { max-height: 45vh; }
     }
+    @@media (max-width: 767px) {
+        .schedule-manage-content { padding: 16px 12px 22px; }
+        .schedule-filter-form { grid-template-columns: 1fr; }
+        .schedule-entry-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .schedule-date-controls { flex-wrap: wrap; }
+        .schedule-footer-actions { justify-content: flex-start; }
+    }
+    @@media (max-width: 420px) {
+        .schedule-entry-fields { grid-template-columns: 1fr; }
+    }
+    .schedule-navigation-panel { padding: 10px; border: 1px solid #e0e3ef; border-radius: 6px; background: #f6f7fb; }
+    .schedule-pricing-fields { display: grid; grid-template-columns: minmax(210px, 1fr) minmax(210px, 1fr) minmax(150px, .8fr) auto; gap: 12px 20px; align-items: end; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e3ef; }
+    .schedule-money-pair { display: flex; min-width: 0; }
+    .schedule-money-pair input.form-control { flex: 1 1 90px; border-radius: 6px 0 0 6px; }
+    .schedule-money-pair select.form-control { flex: 0 0 110px; width: 110px; border-left: 0; border-radius: 0 6px 6px 0; background: #f6f7fb; }
+    .schedule-manage-content select[hidden] { display: none !important; }
+    .schedule-searchable { position: relative; min-width: 0; flex: 1 1 auto; }
+    .schedule-manage-content .schedule-search-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; text-align: left; cursor: pointer; }
+    .schedule-search-trigger span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .schedule-search-popup { position: absolute; left: 0; right: 0; top: calc(100% + 4px); min-width: 220px; padding: 8px; z-index: 20; background: #fff; border: 1px solid #ccd2e8; border-radius: 6px; box-shadow: 0 6px 20px rgba(30,38,70,.18); }
+    .schedule-search-popup[hidden] { display: none; }
+    .schedule-search-options { max-height: 230px; overflow-y: auto; margin-top: 6px; }
+    .schedule-search-option { padding: 8px 10px; cursor: pointer; overflow-wrap: anywhere; border-radius: 4px; }
+    .schedule-search-option[aria-selected="true"] { background: #e8ecfc; color: #39446c; }
+    .schedule-search-option:hover { background: #eef1ff; }
+    .schedule-search-empty { padding: 8px 10px; color: #68718c; }
+    @@media (max-width: 1200px) {
+        .schedule-entry-fields { grid-template-columns: 100px minmax(180px, 2fr) minmax(130px, 1fr) 120px; }
+        .schedule-pricing-fields { grid-template-columns: repeat(2, minmax(210px, 1fr)); }
+    }
+    @@media (max-width: 767px) {
+        .schedule-entry-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .schedule-pricing-fields { grid-template-columns: 1fr; }
+        .schedule-search-popup { min-width: 0; }
+    }
+    @@media (max-width: 420px) {
+        .schedule-entry-fields { grid-template-columns: 1fr; }
+    }
+    /* Fixed preferred widths: selected text and the Cancel button cannot resize fields. */
+    .schedule-entry-fields { display: flex; flex-wrap: wrap; }
+    .schedule-entry-fields > .form-group { flex: 0 1 160px; width: 160px; max-width: 100%; }
+    .schedule-entry-fields > .form-group:first-child { flex-basis: 100px; width: 100px; }
+    .schedule-entry-fields > .form-group:nth-child(2) { flex-basis: 320px; width: 320px; }
+    .schedule-entry-fields > .form-group:last-child { flex-basis: 150px; width: 150px; }
+    .schedule-pricing-fields { display: flex; flex-wrap: wrap; }
+    .schedule-pricing-fields > .form-group { flex: 0 1 240px; width: 240px; max-width: 100%; }
+    .schedule-pricing-fields > .form-group:nth-child(3) { flex-basis: 180px; width: 180px; }
+    .schedule-pricing-fields > .schedule-entry-actions { flex: 0 1 210px; width: 210px; max-width: 100%; }
+    .schedule-money-pair { width: 100%; }
+    .schedule-money-pair input.form-control { width: 0; flex: 1 1 0; box-sizing: border-box; }
+    .schedule-money-pair select.form-control { box-sizing: border-box; }
+    .schedule-manage-content #entriesTable th:nth-child(7),
+    .schedule-manage-content #entriesTable td:nth-child(7) { text-align: center; }
+    .schedule-manage-content #entriesTable td:nth-child(7) .btn { display: inline-flex; align-items: center; justify-content: center; }
 
-    td.notes-priority-white {
-        background-color: #ffffff !important;
+    /* Balanced editor cards; field dimensions do not depend on their values. */
+    .schedule-manage-shell { max-width: 1300px; container-type: inline-size; }
+    .schedule-filters { grid-template-columns: minmax(0, 1fr) 190px; }
+    .schedule-filter-form { grid-template-columns: minmax(250px, 1fr) minmax(370px, 1fr); gap: 16px; }
+    .schedule-manage-content #selectedDate { flex: 0 1 180px; width: 180px; }
+    .schedule-editor-grid.schedule-entry-fields { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 16px; align-items: stretch; margin-bottom: 12px; }
+    .schedule-editor-grid > .schedule-card { margin: 0; padding: 16px; }
+    .schedule-editor-grid h3 { margin: 0 0 12px; color: #39446c; font-size: 1.15rem; font-weight: 600; line-height: 1.3; }
+    .schedule-student-field { width: 320px; max-width: 100%; }
+    .schedule-lesson-row.schedule-entry-fields { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 12px; }
+    .schedule-lesson-row.schedule-entry-fields > .form-group { flex: 0 1 160px; width: 160px; max-width: 100%; }
+    .schedule-lesson-row.schedule-entry-fields > .form-group:first-child { flex-basis: 100px; width: 100px; }
+    .schedule-lesson-row.schedule-entry-fields > .form-group:last-child { flex-basis: 150px; width: 150px; }
+    .schedule-lesson-card .schedule-accounting-field { width: 240px; max-width: 100%; margin-top: 12px; }
+    .schedule-price-card { display: flex; flex-direction: column; }
+    .schedule-price-stack.schedule-pricing-fields { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin: 0; padding: 0; border: 0; }
+    .schedule-price-stack.schedule-pricing-fields > .form-group { flex: none; width: 240px; max-width: 100%; }
+    .schedule-price-card .schedule-entry-actions { width: 210px; max-width: 100%; min-height: 38px; flex: none; margin-top: auto; padding-top: 12px; box-sizing: content-box; }
+    .schedule-money-pair { width: 100%; }
+    .schedule-money-pair input.form-control { width: 0; flex: 1 1 0; }
+    .schedule-search-trigger span:first-child { min-width: 0; }
+    @@container (max-width: 1000px) {
+        .schedule-editor-grid.schedule-entry-fields { grid-template-columns: 1fr; }
+        .schedule-filters { grid-template-columns: 1fr; }
+        .schedule-price-card .schedule-entry-actions { margin-top: 0; }
     }
-
-    td.notes-priority-green {
-        background-color: #d4edda !important;
+    @@container (max-width: 700px) {
+        .schedule-filter-form { grid-template-columns: 1fr; }
+        .schedule-date-controls { flex-wrap: wrap; }
     }
-
-    td.notes-priority-yellow {
-        background-color: #fff3cd !important;
+    @@media (max-width: 767px) {
+        .schedule-editor-grid.schedule-entry-fields { grid-template-columns: 1fr; }
+        .schedule-filters, .schedule-filter-form { grid-template-columns: 1fr; }
+        .schedule-price-card .schedule-entry-actions { margin-top: 0; }
     }
-
-    td.notes-priority-red {
-        background-color: #f8d7da !important;
-    }
+    .schedule-price-stack.schedule-pricing-fields > .schedule-accounting-field { width: 240px; }
+    .schedule-editor-actions { justify-content: flex-end; margin: 0 0 12px; min-height: 38px; }
 </style>
-<div class="row no-gutters">
+<div class="row no-gutters schedule-manage-page">
     @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
     {
         <partial name="_AdminSidebar" />
     }
 
-    <div class="col">
+    <div class="col schedule-manage-content">
+        <div class="schedule-manage-shell">
         <h2>Manage Schedule</h2>
 
+        <div class="schedule-card schedule-filters">
         <!-- Filter: Teacher & Date -->
-        <form asp-action="Manage" method="get" class="form-row mb-3 align-items-end">
-            <div class="form-group col-md-2">
-                <label for="teacherSelect">Teacher</label>
+        <form asp-action="Manage" method="get" class="schedule-filter-form">
+            <div class="form-group schedule-navigation-panel">
+                <label id="teacherSelectLabel" for="teacherSelect">Teacher</label>
 
-                <div class="d-flex align-items-center">
+                <div class="schedule-inline-controls schedule-teacher-controls">
+                    <button type="button" class="btn" onclick="selectPreviousTeacher()" aria-label="Previous teacher" title="Previous teacher">←</button>
                     <select id="teacherSelect" name="teacherId" class="form-control"
                         asp-items="(SelectList)ViewBag.Teachers" onchange="this.form.submit()" style="flex: 1 1 auto;">
                         <option value="">— select —</option>
                     </select>
-                    <button type="button" class="btn-sm btn-outline-secondary ml-2" onclick="selectNextTeacher()">
-                        Next →
+                    <button type="button" class="btn btn-outline-secondary" onclick="selectNextTeacher()" aria-label="Next teacher" title="Next teacher">
+                        →
                     </button>
                 </div>
             </div>
-            <div class="form-group col-md-4 d-flex align-items-center">
-                <button type="button" class="btn btn-outline-secondary mr-2" onclick="shiftDay(-1)">← Prev</button>
-                <b><input type="date" id="selectedDate" name="date" value="@ViewBag.SelectedDate"
-                        class="form-control mr-2" onchange="this.form.submit()" /></b>
-                <span id="dayOfWeek" class="ml-2 font-weight-bold">
+            <div class="form-group schedule-navigation-panel">
+                <label for="selectedDate">Lesson date</label>
+                <div class="schedule-inline-controls schedule-date-controls">
+                <button type="button" class="btn btn-outline-secondary" onclick="shiftDay(-1)" aria-label="Previous day" title="Previous day">←</button>
+                <input type="date" id="selectedDate" name="date" value="@ViewBag.SelectedDate"
+                        class="form-control" onchange="this.form.submit()" />
+                <span id="dayOfWeek" class="font-weight-bold">
                     @if (ViewBag.SelectedDate != null)
                     {
                         var date = DateTime.Parse(ViewBag.SelectedDate.ToString());
-                        <b>
-                            <h2>&nbsp;&nbsp;@date.ToString("dddd")&nbsp;&nbsp;</h2>
-                        </b>
+                        <text>@date.ToString("dddd")</text>
                     }
                 </span>
-                <button type="button" class="btn btn-outline-secondary ml-2" onclick="shiftDay(1)">Next →</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="shiftDay(1)" aria-label="Next day" title="Next day">→</button>
+                </div>
             </div>
         </form>
 
         <!-- Time Zone (client-only) -->
-        <div class="form-row mb-3">
-            <div class="form-group col-md-3">
+        <div class="form-group">
                 <label for="timeZoneSelect">Time Zone</label>
                 <select id="timeZoneSelect" class="form-control" onchange="renderTable()">
                     @foreach (var tz in timeZones)
@@ -94,65 +216,81 @@
         <!-- AJAX anti-forgery token -->
         <input type="hidden" id="__RequestVerificationToken" value="@tokens.RequestToken" />
 
-        <hr />
 
         <!-- Entry form -->
-        <div class="form-inline col-md-3">
-            <label class="mr-2">Time</label>
-            <select id="timeSelect" class="form-control mr-3"
-                asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
-
-            <label class="mr-2">Student</label>
-            <select id="groupSelect" class="form-control mr-3" asp-items="(IEnumerable<SelectListItem>)ViewBag.Groups">
+        <div class="schedule-editor-grid schedule-entry-fields">
+            <div class="schedule-card schedule-lesson-card">
+                <h3>Lesson details</h3>
+                <div class="schedule-student-field form-group">
+<label id="groupSelectLabel" for="groupSelect">Student</label>
+                <select id="groupSelect" class="form-control" asp-items="(IEnumerable<SelectListItem>)ViewBag.Groups">
                 <option value="" selected>— select student —</option>
             </select>
-
-            <label class="mr-2">Status</label>
-            <select id="statusSelect" class="form-control mr-3"
+                </div>
+                <div class="schedule-lesson-row schedule-entry-fields">
+<div class="form-group">
+                <label for="timeSelect">Time</label>
+                <select id="timeSelect" class="form-control"
+                asp-items="(IEnumerable<SelectListItem>)ViewBag.Times"></select>
+            </div>
+<div class="form-group">
+                <label for="statusSelect">Status</label>
+                <select id="statusSelect" class="form-control"
                 asp-items="(IEnumerable<SelectListItem>)ViewBag.Statuses"></select>
-
-            <label class="mr-2">Duration</label>
-            <select id="durationSelect" class="form-control mr-3"
+            </div>
+<div class="form-group">
+                <label for="durationSelect">Duration</label>
+                <select id="durationSelect" class="form-control"
                 asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonDurationTypes">
-                <option value="" selected>— select duration —</option>
+                <option value="" selected>select duration</option>
             </select>
-
-            <label class="mr-2">Student Charge</label>
-            <input id="studentChargeAmount"
-                type="number"
-                class="form-control mr-2"
-                step="1" />
-
-            <label class="mr-2">Student Currency</label>
-            <input id="studentChargeCurrency"
-                type="text"
-                class="form-control mr-3" />
-
-            <label class="mr-2">Teacher Pay</label>
-            <input id="teacherPayAmount"
-                type="number"
-                class="form-control mr-2"
-                step="1" />
-
-            <label class="mr-2">Teacher Currency</label>
-            <input id="teacherPayCurrency"
-                type="text"
-                class="form-control mr-3" />
-
-            <label class="mr-2">Accounting Type</label>
-            <select id="lessonAccountingType" class="form-control mr-3"
+            </div>
+                </div>
+                
+            </div>
+            <div class="schedule-card schedule-price-card">
+                <h3>Pricing</h3>
+                <div class="schedule-price-stack schedule-pricing-fields">
+<div class="form-group">
+                <label for="studentChargeAmount">Student charge</label>
+                <div class="schedule-money-pair">
+                    <input id="studentChargeAmount" type="number" class="form-control" step="1" aria-label="Student charge amount" />
+                    <select id="studentChargeCurrency" class="form-control" aria-label="Student currency"
+                            asp-items="(IEnumerable<SelectListItem>)ViewBag.PayUnits">
+                        <option value="">Currency</option>
+                    </select>
+                </div>
+            </div>
+<div class="form-group">
+                <label for="teacherPayAmount">Teacher pay</label>
+                <div class="schedule-money-pair">
+                    <input id="teacherPayAmount" type="number" class="form-control" step="1" aria-label="Teacher pay amount" />
+                    <select id="teacherPayCurrency" class="form-control" aria-label="Teacher currency"
+                            asp-items="(IEnumerable<SelectListItem>)ViewBag.PayUnits">
+                        <option value="">Currency</option>
+                    </select>
+                </div>
+            </div>
+                <div class="schedule-accounting-field form-group">
+<label for="lessonAccountingType">Accounting Type</label>
+                <select id="lessonAccountingType" class="form-control"
                 asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonAccountingType">
                 <option value="" selected>— select type —</option>
             </select>
-            <br>
-            <button type="button" class="btn btn-primary" onclick="saveEntryAjax()">Save Entry</button>
-            <button type="button" class="btn btn-secondary ml-2" id="cancelEditBtn" style="display:none;"
-                onclick="cancelEdit()">Cancel</button>
+                </div>
+</div>
+
+            </div>
         </div>
 
+<div class="schedule-entry-actions schedule-editor-actions">
+            <button type="button" class="btn btn-primary" onclick="saveEntryAjax()">Save Entry</button>
+            <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display:none;"
+                onclick="cancelEdit()">Cancel</button>
+            </div>
 
-
-
+        <div class="schedule-card schedule-table-card">
+        <div class="schedule-table-scroll" tabindex="0" role="region" aria-label="Schedule entries">
         <table class="table table-bordered" id="entriesTable">
             <thead>
                 <tr>
@@ -168,7 +306,9 @@
             </thead>
             <tbody></tbody>
         </table>
-        <div class="d-inline-flex gap-2">
+        </div>
+        </div>
+        <div class="schedule-footer-actions">
             <form id="copyForm" method="post">
                 <input type="hidden" name="teacherId" />
                 <input type="hidden" name="selectedDate" />
@@ -190,13 +330,14 @@
                 <input type="hidden" name="selectedDate" />
                 <button type="submit" formmethod="post"
                     formaction="@Url.Action("SendEmailAboutScheduleChange", "Schedule")"
-                    class="btn notifyTeacher-btn ml-2" onclick="prepareCopy('notifyTeacherForm')">
+                    class="btn notifyTeacher-btn ml-2" title="Notify teacher of schedule change" aria-label="Notify teacher of schedule change" onclick="prepareCopy('notifyTeacherForm')">
                     <i class="fa-regular fa-paper-plane"></i> <i class="fa-regular fa-envelope"></i> <i
                         class="fa-solid fa-chalkboard-user"></i>
                 </button>
             </form>
         </div>
     </div>
+</div>
 </div>
 
 @section Scripts {
@@ -211,6 +352,24 @@
         let editingRow = null;
 
         $(function () {
+            makeSearchableSelect('teacherSelect', 'Search teachers…');
+            makeSearchableSelect('groupSelect', 'Search students…');
+            // Blank-space clicks leave edit mode; controls and schedule rows keep it.
+            document.querySelector('.schedule-manage-content').addEventListener('click', event => {
+                if (!editingRow || !(event.target instanceof Element)) return;
+                if (event.target.closest(
+                    'input, select, textarea, button, a, label, [role="button"], ' +
+                    '[role="combobox"], [contenteditable], .schedule-searchable, ' +
+                    '#entriesTable, .modal, [onclick], [tabindex]:not(.schedule-table-scroll)'
+                )) return;
+                // Only unused layout space counts; clicking text does not cancel editing.
+                if (event.target.matches(
+                    '.schedule-manage-content, .schedule-manage-shell, .schedule-card, ' +
+                    '.schedule-entry-fields, .schedule-pricing-fields, .schedule-entry-actions, ' +
+                    '.schedule-filters, .schedule-filter-form, .form-group, ' +
+                    '.schedule-inline-controls, .schedule-table-scroll, .schedule-footer-actions'
+                )) cancelEdit();
+            });
             renderTable();
 
             if (!editingRow) {
@@ -350,7 +509,7 @@
             const r = editingRow;
             const zone = $('#timeZoneSelect').val();
             $('#timeSelect').val(DateTime.fromISO(r.DateTime).setZone(zone).toFormat('HH:mm'));
-            $('#groupSelect').val(r.GroupId);
+            $('#groupSelect').val(r.GroupId).trigger('searchable:sync');
             $('#studentChargeAmount').val(r.StudentChargeAmount);
             $('#studentChargeCurrency').val(r.StudentChargeCurrency);
             $('#teacherPayAmount').val(r.TeacherPayAmount);
@@ -369,7 +528,7 @@
         function cancelEdit() {
             editingRow = null;
             $('#timeSelect').val('');
-            $('#groupSelect').val('');
+            $('#groupSelect').val('').trigger('searchable:sync');
             $('#studentChargeAmount').val('');
             $('#studentChargeCurrency').val('');
             $('#teacherPayAmount').val('');
@@ -539,6 +698,144 @@
 
             form.querySelector('input[name="teacherId"]').value = tid;
             form.querySelector('input[name="selectedDate"]').value = dt;
+        }
+
+
+        // Keep the original select as the only submitted value. Search text is never saved.
+        function makeSearchableSelect(id, placeholder) {
+            const select = document.getElementById(id);
+            const wrapper = document.createElement('div');
+            wrapper.className = 'schedule-searchable';
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = 'form-control schedule-search-trigger';
+            trigger.id = id + 'Trigger';
+            trigger.setAttribute('aria-haspopup', 'listbox');
+            trigger.setAttribute('aria-expanded', 'false');
+            trigger.setAttribute('aria-labelledby', id + 'Label ' + id + 'Value');
+            const caption = document.createElement('span');
+            caption.id = id + 'Value';
+            const arrow = document.createElement('span');
+            arrow.textContent = '▾';
+            arrow.setAttribute('aria-hidden', 'true');
+            trigger.append(caption, arrow);
+            const popup = document.createElement('div');
+            popup.className = 'schedule-search-popup';
+            popup.hidden = true;
+            const search = document.createElement('input');
+            search.type = 'text';
+            search.className = 'form-control';
+            search.placeholder = placeholder;
+            search.autocomplete = 'off';
+            search.setAttribute('role', 'combobox');
+            search.setAttribute('aria-label', placeholder);
+            search.setAttribute('aria-autocomplete', 'list');
+            search.setAttribute('aria-expanded', 'false');
+            const list = document.createElement('div');
+            list.id = id + 'Options';
+            list.className = 'schedule-search-options';
+            list.setAttribute('role', 'listbox');
+            list.setAttribute('aria-label', placeholder);
+            search.setAttribute('aria-controls', list.id);
+            trigger.setAttribute('aria-controls', list.id);
+            popup.append(search, list);
+            wrapper.append(trigger, popup);
+            select.after(wrapper);
+            select.hidden = true;
+            document.querySelector('label[for="' + id + '"]').htmlFor = trigger.id;
+            let matches = [];
+            let active = -1;
+            const sync = () => { caption.textContent = select.selectedOptions[0]?.text || placeholder; };
+            function close(restoreFocus = false) {
+                popup.hidden = true;
+                trigger.setAttribute('aria-expanded', 'false');
+                search.setAttribute('aria-expanded', 'false');
+                search.removeAttribute('aria-activedescendant');
+                if (restoreFocus) trigger.focus();
+            }
+            function highlight(index) {
+                active = index;
+                Array.from(list.children).forEach((item, i) => {
+                    if (item.getAttribute('role') === 'option') item.setAttribute('aria-selected', String(i === active));
+                });
+                if (active >= 0) {
+                    search.setAttribute('aria-activedescendant', list.children[active].id);
+                    list.children[active].scrollIntoView({ block: 'nearest' });
+                } else search.removeAttribute('aria-activedescendant');
+            }
+            function choose(index) {
+                if (!matches[index]) return;
+                select.value = matches[index].value;
+                sync();
+                close(true);
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            function filter() {
+                const query = search.value.trim().toLocaleLowerCase();
+                matches = Array.from(select.options).filter(option =>
+                    !option.disabled && !option.parentElement.disabled &&
+                    option.text.toLocaleLowerCase().includes(query));
+                list.replaceChildren();
+                matches.forEach((option, i) => {
+                    const item = document.createElement('div');
+                    item.id = id + 'Option' + i;
+                    item.className = 'schedule-search-option';
+                    item.setAttribute('role', 'option');
+                    item.textContent = option.text;
+                    item.addEventListener('click', () => choose(i));
+                    list.append(item);
+                });
+                if (!matches.length) {
+                    const empty = document.createElement('div');
+                    empty.className = 'schedule-search-empty';
+                    empty.setAttribute('role', 'status');
+                    empty.textContent = 'No matching options';
+                    list.append(empty);
+                }
+                const selected = matches.findIndex(option => option.value === select.value);
+                highlight(matches.length ? Math.max(0, selected) : -1);
+            }
+            function open(query = '') {
+                popup.hidden = false;
+                trigger.setAttribute('aria-expanded', 'true');
+                search.setAttribute('aria-expanded', 'true');
+                search.value = query;
+                filter();
+                search.focus();
+            }
+            trigger.addEventListener('click', () => popup.hidden ? open() : close());
+            trigger.addEventListener('keydown', event => {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault(); open();
+                } else if (event.key.length === 1 && event.key !== ' ' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                    event.preventDefault(); open(event.key);
+                }
+            });
+            search.addEventListener('input', filter);
+            search.addEventListener('keydown', event => {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    if (matches.length) highlight((active + (event.key === 'ArrowDown' ? 1 : -1) + matches.length) % matches.length);
+                } else if (event.key === 'Enter') {
+                    event.preventDefault(); choose(active);
+                } else if (event.key === 'Escape') {
+                    event.preventDefault(); close(true);
+                }
+            });
+            document.addEventListener('pointerdown', event => { if (!wrapper.contains(event.target)) close(); });
+            document.addEventListener('focusin', event => { if (!wrapper.contains(event.target)) close(); });
+            $(select).on('change searchable:sync', sync);
+            sync();
+        }
+
+        function selectPreviousTeacher() {
+            const select = document.getElementById('teacherSelect');
+            const options = Array.from(select.options).filter(option =>
+                (option.value || '').trim() !== '' && !option.disabled);
+            if (!options.length) return;
+            const index = options.findIndex(option => option.index === select.selectedIndex);
+            select.value = options[index <= 0 ? options.length - 1 : index - 1].value;
+            select.form.submit();
         }
 
         function selectNextTeacher() {
