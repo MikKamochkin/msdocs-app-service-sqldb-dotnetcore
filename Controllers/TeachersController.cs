@@ -99,8 +99,11 @@ namespace DotNetCoreSqlDb.Controllers
                 }
 
             }
+            bool enableInvoicing = teacher.EnableInvoicing ?? false;
+            ViewBag.EnableInvoicing = enableInvoicing;
             ViewBag.TimeZones = timeZones;
             ViewBag.Username = user.Username;
+            
 
             return View(teacher);
         }
@@ -110,6 +113,15 @@ namespace DotNetCoreSqlDb.Controllers
         {
 
             var userId = User.FindFirst("UserID")?.Value;
+            var teacher = await _context.Teacher
+                //.Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.Id.ToString() == userId);
+
+            if (teacher == null)
+            {
+                return NotFound();
+            }
+
             ViewBag.TeacherId = userId;
             if (!Guid.TryParse(userId, out var teacherId))
                 return NotFound();
@@ -170,7 +182,8 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 ViewBag.Impersonating = true;
             }
-
+            bool enableInvoicing = teacher.EnableInvoicing ?? false;
+            ViewBag.EnableInvoicing = enableInvoicing;
             // 6) Pass the raw schedule entries into the Razor view
             return View(scheduleEntries);
         }
@@ -456,6 +469,15 @@ namespace DotNetCoreSqlDb.Controllers
             if (!Guid.TryParse(userId, out var teacherId))
                 return NotFound();
 
+            var teacher = await _context.Teacher
+                //.Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.Id.ToString() == userId);
+
+            if (teacher == null)
+            {
+                return NotFound();
+            }
+
             ViewBag.TeacherId = teacherId;
 
             // Selected date (defaults to today, local)
@@ -591,6 +613,9 @@ namespace DotNetCoreSqlDb.Controllers
             {
                 ReferenceHandler = ReferenceHandler.IgnoreCycles
             });
+
+            bool enableInvoicing = teacher.EnableInvoicing ?? false;
+            ViewBag.EnableInvoicing = enableInvoicing;
 
             return View("EditSchedule", existing);
         }
@@ -816,6 +841,15 @@ namespace DotNetCoreSqlDb.Controllers
             if (!Guid.TryParse(userId, out var teacherId))
                 return NotFound();
 
+            var teacher = await _context.Teacher
+                //.Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.Id.ToString() == userId);
+
+            if (teacher == null)
+            {
+                return NotFound();
+            }
+
             var utcNow = DateTime.UtcNow;
             DateTime beginningOfWeek = utcNow.Date.AddDays(-(int)(utcNow.DayOfWeek - DayOfWeek.Monday + 7) % 7);
             DateTime mondayWithWeekOffset = beginningOfWeek.AddDays(week * 7);
@@ -858,6 +892,8 @@ namespace DotNetCoreSqlDb.Controllers
             ViewBag.Week = week;
             ViewBag.Monday = mondayWithWeekOffset;
             ViewBag.Sunday = sundayWithWeekOffset;
+            bool enableInvoicing = teacher.EnableInvoicing ?? false;
+            ViewBag.EnableInvoicing = enableInvoicing;
             return View(scheduleEntries);
         }
 
@@ -902,10 +938,14 @@ namespace DotNetCoreSqlDb.Controllers
                 if (exists)
                     continue;
 
+                
+                //_logger.LogInformation("assignment id: " + entry.AssignmentId + " group id: " + entry.GroupId + " teacher id: " + entry.TeacherId);
+
                 var copy = new Schedule
                 {
                     Id = Guid.NewGuid(),
 
+                    AssignmentId = entry.AssignmentId,
                     GroupId = entry.GroupId,
                     TeacherId = entry.TeacherId,
 

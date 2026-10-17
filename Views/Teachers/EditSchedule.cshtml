@@ -7,6 +7,7 @@
     var existingJson = ViewBag.ExistingJson as string ?? "[]";
     var timeZones = ViewBag.TimeZones as List<SelectListItem>;
     var tokens = AntiForgery.GetAndStoreTokens(ViewContext.HttpContext);
+    var enableInvoicing = ViewBag.EnableInvoicing as bool? ?? false;
 }
 
 <!DOCTYPE html>
@@ -524,6 +525,14 @@
                             <i class="fa-solid fa-message"></i>
                         </a>
                     </li>*@
+                    @if (enableInvoicing)
+                    {
+                        <li>
+                            <a asp-controller="TeacherInvoices" asp-action="Index" title="Invoices">
+                                <i class="fa-solid fa-file-invoice-dollar"></i>
+                            </a>
+                        </li>
+                    }
                 </ul>
 
                 <div class="burger" id="burger">

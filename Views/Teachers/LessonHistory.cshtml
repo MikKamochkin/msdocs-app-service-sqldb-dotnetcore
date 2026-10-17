@@ -6,6 +6,7 @@
 	var existingJson = ViewBag.ExistingJson as string ?? "[]";
 	var timeZones = ViewBag.TimeZones as List<SelectListItem>;
 	var impersonating = ViewBag.Impersonating;
+	var enableInvoicing = ViewBag.EnableInvoicing as bool? ?? false;
 
 	int week = ViewBag.Week;
 	var monday = ViewBag.Monday;
@@ -330,6 +331,14 @@
                         <i class="fa-solid fa-message"></i>
                     </a>
                 </li>*@
+				@if (enableInvoicing)
+				{
+					<li>
+						<a asp-controller="TeacherInvoices" asp-action="Index" title="Invoices">
+							<i class="fa-solid fa-file-invoice-dollar"></i>
+						</a>
+					</li>
+				}
 			</ul>
 
 			<div class="burger">

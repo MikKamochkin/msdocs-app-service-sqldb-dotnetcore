@@ -466,6 +466,7 @@ namespace DotNetCoreSqlDb.Controllers
                 {
                     Id = Guid.NewGuid(),
 
+                    AssignmentId = entry.AssignmentId,
                     GroupId = entry.GroupId,
                     TeacherId = entry.TeacherId,
 

@@ -164,7 +164,7 @@ namespace DotNetCoreSqlDb.Controllers
             var sixHoursAgo = DateTime.UtcNow.AddHours(-6);
             var utcNow = DateTime.UtcNow;
 
-            // 3) Pull every schedule entry for those groups
+
             var scheduleEntries = await _context.Schedule
                 .Include(s => s.Teacher)
                 .Where(s => groupIds.Contains(s.GroupId))

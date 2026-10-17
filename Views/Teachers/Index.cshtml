@@ -2,6 +2,7 @@
 @{
 	ViewData["Title"] = "My Information";
 	var timeZones = ViewBag.TimeZones as List<SelectListItem>;
+	var enableInvoicing = ViewBag.EnableInvoicing as bool? ?? false;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -362,6 +363,16 @@
 							<i class="fa-regular fa-calendar-days"></i>
 						</a>
 					</li>
+					@if (enableInvoicing)
+					{
+						<li>
+							<a asp-controller="TeacherInvoices" asp-action="Index" title="Invoices">
+								<i class="fa-solid fa-file-invoice-dollar"></i>
+							</a>
+						</li>
+					}
+
+
 					@*<li>
 						<a asp-controller="Teachers" asp-action="Conversations" title="Conversations">
 							<i class="fa-solid fa-message"></i>

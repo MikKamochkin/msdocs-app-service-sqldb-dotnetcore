@@ -84,6 +84,14 @@ namespace DotNetCoreSqlDb.Controllers
 
             existingTeacher.Name = updatedTeacher.Name;
             existingTeacher.Email = updatedTeacher.Email;
+            existingTeacher.StreetAddress = updatedTeacher.StreetAddress;
+            existingTeacher.City = updatedTeacher.City;
+            existingTeacher.ProvinceOrState = updatedTeacher.ProvinceOrState;
+            existingTeacher.PostalCode = updatedTeacher.PostalCode;
+            existingTeacher.Country = updatedTeacher.Country;
+            existingTeacher.PhoneNumber = updatedTeacher.PhoneNumber;
+            existingTeacher.ETransferEmail = updatedTeacher.ETransferEmail;
+            existingTeacher.EnableInvoicing = updatedTeacher.EnableInvoicing;
 
             try
             {
@@ -136,7 +144,7 @@ namespace DotNetCoreSqlDb.Controllers
             
             if (ModelState.IsValid)
             {
-                // 1) Save the new Student (and its Contacts)
+                // 1) Save the new teacher
                 teacher.Id = Guid.NewGuid();
                 _context.Add(teacher);
 

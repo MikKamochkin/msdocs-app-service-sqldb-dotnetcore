@@ -4,9 +4,216 @@
     ViewData["Title"] = "Create Teacher";
 }
 
-<div class="row no-gutters">
+<style>
+    .teacher-create-page,
+    .teacher-edit-page,
+    .teacher-details-page {
+        min-height: 100vh;
+        background: #e8ecfc;
+    }
+
+    .teacher-create-content,
+    .teacher-edit-content,
+    .teacher-details-content {
+        min-width: 0;
+        padding: 22px 24px 28px;
+        color: #2f3445;
+    }
+
+    .teacher-create-shell,
+    .teacher-edit-shell,
+    .teacher-details-shell {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+    }
+
+    .teacher-create-content h2,
+    .teacher-edit-content h2,
+    .teacher-details-content h2 {
+        margin: 0 0 16px;
+        color: #29314d;
+        font-size: 1.8rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .teacher-form-card,
+    .teacher-details-card {
+        min-width: 0;
+        padding: 16px;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
+    }
+
+    .teacher-form-card h4,
+    .teacher-details-card h4 {
+        margin: 0 0 12px;
+        color: #39446c;
+        font-size: 1.2rem;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    .teacher-fields {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px 16px;
+    }
+
+    .teacher-fields .form-group {
+        min-width: 0;
+        margin: 0;
+    }
+
+    .teacher-fields .control-label,
+    .teacher-fields .col-md-10 {
+        display: block;
+        float: none;
+        width: 100%;
+        max-width: none;
+        padding: 0;
+        text-align: left;
+    }
+
+    .teacher-fields .control-label {
+        margin-bottom: 5px;
+        color: #424a66;
+        font-size: .95rem;
+        font-weight: 600;
+    }
+
+    .teacher-create-content .form-control,
+    .teacher-edit-content .form-control {
+        width: 100%;
+        min-height: 38px;
+        border: 1px solid #ccd2e8;
+        border-radius: 6px;
+        background: #fff;
+        color: #2f3445;
+        font-size: .95rem;
+        box-shadow: none;
+    }
+
+    .teacher-create-content .form-control:focus,
+    .teacher-edit-content .form-control:focus {
+        border-color: #6981ec;
+        box-shadow: 0 0 0 3px rgba(105, 129, 236, .16);
+    }
+
+    .teacher-create-content .btn,
+    .teacher-edit-content .btn,
+    .teacher-details-content .btn {
+        padding: 7px 13px;
+        border: 1px solid #6981ec;
+        border-radius: 6px;
+        background: #fff;
+        color: #5d73d8;
+        font-size: .95rem;
+        font-weight: 600;
+        line-height: 1.35;
+        box-shadow: none;
+        transition: color .15s ease, background-color .15s ease;
+    }
+
+    .teacher-create-content .btn:hover,
+    .teacher-create-content .btn:focus,
+    .teacher-edit-content .btn:hover,
+    .teacher-edit-content .btn:focus,
+    .teacher-details-content .btn:hover,
+    .teacher-details-content .btn:focus {
+        border-color: #6981ec;
+        background: #6981ec;
+        color: #fff;
+    }
+
+    .teacher-form-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin: 16px 0 0;
+        padding: 0;
+    }
+
+    .teacher-form-actions .col-md-offset-2,
+    .teacher-form-actions .col-md-10 {
+        display: flex;
+        float: none;
+        width: auto;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+    }
+
+    .teacher-form-actions .btn-primary {
+        border-color: #6981ec;
+        background: #6981ec;
+        color: #fff;
+    }
+
+    .teacher-form-actions .btn-primary:hover,
+    .teacher-form-actions .btn-primary:focus {
+        border-color: #536bd7;
+        background: #536bd7;
+    }
+
+    .teacher-create-content .text-danger,
+    .teacher-edit-content .text-danger {
+        font-size: .9rem;
+    }
+
+    .teacher-create-content .validation-summary-errors,
+    .teacher-edit-content .validation-summary-errors {
+        margin-bottom: 14px;
+        padding: 12px 16px;
+        border: 1px solid #e3b8c2;
+        border-radius: 8px;
+        background: #fff7f8;
+    }
+
+    .teacher-create-content .alert {
+        margin: 14px 0 0;
+        border-radius: 8px;
+    }
+
+    @@media (max-width: 1100px) {
+        .teacher-fields {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 767px) {
+        .teacher-create-content,
+        .teacher-edit-content,
+        .teacher-details-content {
+            padding: 16px 12px 22px;
+        }
+
+        .teacher-fields {
+            grid-template-columns: 1fr;
+        }
+
+        .teacher-form-card,
+        .teacher-details-card {
+            padding: 14px;
+        }
+
+        .teacher-form-actions,
+        .teacher-form-actions .col-md-offset-2,
+        .teacher-form-actions .col-md-10 {
+            width: 100%;
+        }
+
+        .teacher-form-actions .btn {
+            flex: 1;
+        }
+    }
+</style>
+
+<div class="row no-gutters teacher-create-page">
     <partial name="_AdminSidebar" />
-    <div class="col-md-9">
+    <main class="col-md-9 teacher-create-content">
+        <div class="teacher-create-shell">
         <h2>Create Teacher</h2>
 
         @Html.ValidationSummary(true, "", new { @class = "text-danger" })
@@ -17,25 +224,83 @@
 
             <input type="hidden" name="FormToken" value="@ViewBag.FormToken" />
 
-            <div class="form-horizontal">
+            <div class="form-horizontal teacher-form-card">
                 <h4>Teacher</h4>
-                <hr />
-                <div class="form-group">
-                    @Html.LabelFor(m => m.Name, new { @class = "control-label col-md-2" })
+                <div class="teacher-fields">
+                <div class="form-group; control-label col-md-2">
+                    @*@Html.LabelFor(m => m.Name, new { @class = "control-label col-md-2" })*@
+                    Name
                     <div class="col-md-10">
                         @Html.EditorFor(m => m.Name, new { htmlAttributes = new { @class = "form-control" } })
                         @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
                     </div>
                 </div>
-                <div class="form-group">
-                    @Html.LabelFor(m => m.Email, new { @class = "control-label col-md-2" })
+                <div class="form-group; control-label col-md-2">
+                    @*@Html.LabelFor(m => m.Email, new { @class = "control-label col-md-2" })*@
+                    Email
                     <div class="col-md-10">
                         @Html.EditorFor(m => m.Email, new { htmlAttributes = new { @class = "form-control" } })
                         @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
                     </div>
                 </div>
-                <br>
-                <div class="form-group">
+                <div class="form-group; control-label col-md-2">
+                    Street Address
+                    @*@Html.LabelFor(m => m.StreetAddress, new { @class = "control-label col-md-2" })@**@
+                    <div class="col-md-10">
+                        @Html.EditorFor(m => m.StreetAddress, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(m => m.StreetAddress, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+                <div class="form-group; control-label col-md-2">
+                    @*@Html.LabelFor(m => m.City, new { @class = "control-label col-md-2" })*@
+                    City
+                    <div class="col-md-10">
+                        @Html.EditorFor(m => m.City, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(m => m.City, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+                <div class="form-group; control-label col-md-2">
+                    @*@Html.LabelFor(m => m.ProvinceOrState, new { @class = "control-label col-md-2" })*@
+                    Province Or State
+                    <div class="col-md-10">
+                        @Html.EditorFor(m => m.ProvinceOrState, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(m => m.ProvinceOrState, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+                <div class="form-group; control-label col-md-2">
+                    @*@Html.LabelFor(m => m.PostalCode, new { @class = "control-label col-md-2" })*@
+                    Postal Code
+                    <div class="col-md-10">
+                        @Html.EditorFor(m => m.PostalCode, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(m => m.PostalCode, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+                <div class="form-group; control-label col-md-2">
+                    @*@Html.LabelFor(m => m.Country, new { @class = "control-label col-md-2" })*@
+                    Country
+                    <div class="col-md-10">
+                        @Html.EditorFor(m => m.Country, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(m => m.Country, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+                <div class="form-group; control-label col-md-2">
+                    @*@Html.LabelFor(m => m.PhoneNumber, new { @class = "control-label col-md-2" })*@
+                    Phone Number
+                    <div class="col-md-10">
+                        @Html.EditorFor(m => m.PhoneNumber, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(m => m.PhoneNumber, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+                <div class="form-group; control-label col-md-2">
+                    @*@Html.LabelFor(m => m.ETransferEmail, new { @class = "control-label col-md-2" })*@
+                    ETransfer Email
+                    <div class="col-md-10">
+                        @Html.EditorFor(m => m.ETransferEmail, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(m => m.ETransferEmail, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+                </div>
+                <div class="form-group teacher-form-actions">
                     <div class="col-md-offset-2 col-md-10">
                         <input type="submit" value="Create" class="btn btn-primary" />
                     </div>
@@ -49,7 +314,8 @@
 
             </div>
         }
-    </div>
+        </div>
+    </main>
 </div>
 
 @section Scripts {

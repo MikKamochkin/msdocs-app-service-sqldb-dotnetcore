@@ -1,0 +1,393 @@
+@model DotNetCoreSqlDb.Models.TeacherInvoicePage
+@using System.Globalization
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "My invoices";
+    var signing = !string.IsNullOrWhiteSpace(Model.SigningUrl);
+}
+<style>
+    header,
+    header * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    .invoice-page [hidden] { display: none !important; }
+    body { background: #e8ecfc; color: #333; font-family: Helvetica, sans-serif; }
+    header {
+        position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+        height: 60px; background: #6981ec; box-shadow: 0 2px 5px rgba(0,0,0,.1);
+    }
+    .header-container {
+        position: relative; width: 100%; max-width: 1200px; height: 100%;
+        margin: 0 auto; padding: 0 20px; box-sizing: border-box;
+    }
+    #logo {
+        position: absolute; left: 12%; top: 50%; transform: translate(-50%, -50%);
+        color: #fff; font-size: 1.5rem; white-space: nowrap;
+    }
+    nav {
+        position: absolute;
+        left: 20%;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    .nav-links {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .nav-links li {
+        display: inline-block;
+        margin-left: 20px;
+    }
+    .nav-links li a {
+        color: #000;
+        text-decoration: none;
+        padding: 10px 15px;
+        display: inline-block;
+        transition: background-color .3s;
+    }
+    .nav-links li a:hover {
+        background-color: #ced6ff;
+        scale: 110%;
+        border-radius: 10%;
+    }
+    .nav-links li a.active-page,
+    .nav-links li a.inactive-page {
+        background-color: #fff;
+        border-radius: 10%;
+    }
+    .burger {
+        display: none;
+        cursor: pointer;
+        margin-left: 15px;
+    }
+    .burger div {
+        width: 25px;
+        height: 3px;
+        background: #fff;
+        margin: 5px;
+        transition: .3s;
+    }
+    .invoice-page { max-width: 1100px; margin: 80px auto 40px; padding: 0 20px; }
+    .invoice-card { background: #fff; border-radius: 8px; padding: 24px; margin: 18px 0; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
+    .invoice-page h1 { font-size: 1.8rem; color: #333; }
+    .invoice-page h2 { font-size: 1.2rem; color: #333; }
+    .invoice-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+    .invoice-fields label { display: block; font-weight: 600; margin-bottom: 5px; }
+    .invoice-fields input { width: 100%; }
+    .invoice-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    .invoice-actions-next { justify-content: flex-end; }
+    .invoice-table-wrap { overflow-x: auto; }
+    .invoice-table { width:100%; border-collapse:collapse; }
+    .invoice-table th,.invoice-table td { padding: .75rem 1rem; border-bottom:1px solid #f0f0f0; color:#444; }
+    .invoice-table th { background:#e9efff; color:#333; border-bottom-color:#d4d9ff; }
+    .invoice-table tbody tr:nth-child(even) { background:#fafbff; }
+    .invoice-table .invoice-notes { text-align:left; }
+    .invoice-money { text-align:right; white-space:nowrap; }
+    .invoice-muted { color: #555; }
+    .invoice-modal .modal-content { border: 0; border-radius: 8px; }
+    .invoice-modal .modal-header { background: #6981ec; color: #fff; }
+    .invoice-modal .modal-title { color: #fff; }
+    .invoice-modal .btn-close { filter: brightness(0) invert(1); }
+    @@media (max-width: 768px) {
+        #logo {
+            left: 20px;
+            transform: translateY(-50%);
+            position: static;
+        }
+        nav {
+            position: relative;
+            left: 0;
+            top: 0;
+            transform: none;
+            margin-top: 10px;
+        }
+        .nav-links {
+            display: none;
+            width: 100%;
+            text-align: center;
+            position: absolute;
+            background: #333;
+            top: 60px;
+            left: 0;
+            z-index: 1;
+        }
+        .nav-links.active { display: block; }
+        .nav-links li { display: block; margin: 10px 0; }
+        .burger {
+            display: block;
+            float: right;
+            margin-top: 15px;
+        }
+        .burger.active .line1 { transform: rotate(45deg) translate(-5px, 6px); }
+        .burger.active .line2 { opacity: 0; }
+        .burger.active .line3 { transform: rotate(-45deg) translate(-5px, -6px); }
+        .invoice-fields { grid-template-columns: 1fr; }
+    }
+</style>
+<header>
+    <div class="header-container">
+        <div id="logo">Teacher invoices</div>
+        <nav>
+            <ul class="nav-links">
+                <li>
+                    <a asp-controller="Teachers" asp-action="Schedule" title="Schedule">
+                        <i class="hgi hgi-stroke hgi-calendar-03"></i>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Teachers" asp-action="Index" title="Account">
+                        <i class="fas fa-user-graduate"></i>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Teachers" asp-action="EditSchedule" title="Edit Schedule">
+                        <i class="fa-regular fa-calendar-plus"></i>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="Teachers" asp-action="LessonHistory" title="History">
+                        <i class="fa-regular fa-calendar-days"></i>
+                    </a>
+                </li>
+                <li>
+                    <a asp-controller="TeacherInvoices" asp-action="Index" title="Invoices" class="active-page">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </a>
+                </li>
+            </ul>
+            <div class="burger">
+                <div class="line1"></div>
+                <div class="line3"></div>
+            </div>
+        </nav>
+    </div>
+</header>
+<div class="invoice-page">
+    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+    @if (!signing)
+    {
+        <form asp-action="Preview" method="post" class="invoice-card" id="invoiceEditor">
+            <h2>Invoice details</h2>
+            <div class="invoice-fields">
+                <div><label asp-for="Input.StartDate">From (inclusive)</label><input asp-for="Input.StartDate" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" /></div>
+                <div><label asp-for="Input.EndDate">To (inclusive)</label><input asp-for="Input.EndDate" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" /></div>
+                <div><label asp-for="Input.InvoiceNumber">Invoice number</label><input asp-for="Input.InvoiceNumber" class="form-control" /></div>
+                <div><label asp-for="Input.Name">Name</label><input asp-for="Input.Name" class="form-control" /></div>
+                <div><label asp-for="Input.Email">Email</label><input asp-for="Input.Email" class="form-control" type="email" /></div>
+                <div><label asp-for="Input.PhoneNumber">Phone</label><input asp-for="Input.PhoneNumber" class="form-control" /></div>
+                <div><label asp-for="Input.StreetAddress">Street address</label><input asp-for="Input.StreetAddress" class="form-control" /></div>
+                <div><label asp-for="Input.City">City</label><input asp-for="Input.City" class="form-control" /></div>
+                <div><label asp-for="Input.ProvinceOrState">Province / state</label><input asp-for="Input.ProvinceOrState" class="form-control" /></div>
+                <div><label asp-for="Input.PostalCode">Postal code</label><input asp-for="Input.PostalCode" class="form-control" /></div>
+                <div><label asp-for="Input.Country">Country</label><input asp-for="Input.Country" class="form-control" /></div>
+                <div><label asp-for="Input.ETransferEmail">E-transfer email</label><input asp-for="Input.ETransferEmail" class="form-control" type="email" /></div>
+            </div>
+            @*<h2 class="mt-4">Correction line (optional)</h2>
+            <div class="invoice-fields">
+                <div>
+                    <label asp-for="Input.CorrectionDescription">Correction description</label>
+                    <textarea asp-for="Input.CorrectionDescription"
+                            class="form-control"
+                            rows="3"
+                            maxlength="1000"
+                            placeholder="For example: Reimbursement for textbook"></textarea>
+                    <span asp-validation-for="Input.CorrectionDescription"
+                        class="text-danger"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Input.CorrectionDate">Date</label>
+                    <input asp-for="Input.CorrectionDate"
+                        type="date"
+                        asp-format="{0:yyyy-MM-dd}"
+                        class="form-control" />
+                    <span asp-validation-for="Input.CorrectionDate"
+                        class="text-danger"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Input.CorrectionAmount">Correction Amount</label>
+                    <input asp-for="Input.CorrectionAmount"
+                        type="number"
+                        step="0.01"
+                        class="form-control"
+                        placeholder="20.00" />
+                    <span asp-validation-for="Input.CorrectionAmount"
+                        class="text-danger"></span>
+                </div>
+            </div>*@
+            <div class="mt-4">
+                <label asp-for="Input.Note">General notes</label>
+                <textarea asp-for="Input.Note"
+                        class="form-control"
+                        rows="4"
+                        maxlength="5000"
+                        placeholder="Optional notes to include on this invoice"></textarea>
+                <span asp-validation-for="Input.Note"
+                    class="text-danger"></span>
+            </div>
+            <div class="invoice-actions invoice-actions-next">
+                <button class="btn btn-primary" type="submit">Next</button>
+            </div>
+            <p id="previewWarning" class="invoice-muted mt-2" hidden>Details changed. Preview again to see the updated lessons and total.</p>
+        </form>
+    }
+    @if (Model.Preview is { } invoice)
+    {   
+        <div class="modal fade invoice-modal" id="invoicePreviewModal" tabindex="-1" aria-labelledby="invoicePreviewTitle" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title" id="invoicePreviewTitle">Invoice preview</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h3>@invoice.Input.InvoiceNumber</h3>
+                        <p>@invoice.Input.Name · @invoice.Input.StartDate.ToString("MMM d, yyyy") – @invoice.Input.EndDate.ToString("MMM d, yyyy")</p>
+                        <p>Invoice date: @invoice.InvoiceDate.ToString("MMM d, yyyy") · Payment due: @invoice.PaymentDue.ToString("MMM d, yyyy")</p>
+                        <div class="invoice-table-wrap"><table class="invoice-table">
+                            <thead><tr><th>Service Date and Time</th><th>Assignment</th><th class="invoice-money">Amount (@invoice.Currency)</th></tr></thead>
+                            <tbody>
+                            @foreach (var lesson in invoice.Lessons)
+                            {
+                                <tr>
+                                    <td>@lesson.TorontoDateTime.ToString("MMM d, yyyy HH:mm")</td>
+                                    <td>French lesson with @lesson.GroupName - @lesson.DurationMinutes mins</td>
+                                    <td class="invoice-money">@lesson.Amount.ToString("N2", CultureInfo.InvariantCulture)</td>
+                                </tr>
+                            }
+                            
+                            @*@if (invoice.Input.HasCorrection)
+                            {
+                                <tr>
+                                    <td>@(invoice.Input.CorrectionDate?.ToString("MMM d, yyyy") ?? "")</td>
+                                    <td>
+                                        <strong>Correction description</strong>
+                                        <div style="white-space: pre-wrap; overflow-wrap: anywhere;">@invoice.Input.CorrectionDescription</div>
+                                    </td>
+                                    <td class="invoice-money">@(invoice.Input.CorrectionAmount?.ToString("N2", CultureInfo.InvariantCulture) ?? "")</td>
+                                </tr>
+                            }*@
+                            </tbody>
+                        </table></div>
+                            <p class="invoice-money mt-3"><strong>Total: @invoice.Total.ToString("N2", CultureInfo.InvariantCulture) @invoice.Currency</strong></p>
+                            @if (!string.IsNullOrWhiteSpace(invoice.Input.Note))
+                            {
+                                <tr>
+                                    <td class="invoice-notes" colspan="3">
+                                        <strong>General notes</strong>
+                                        <div style="white-space: pre-wrap; overflow-wrap: anywhere;">@invoice.Input.Note</div>
+                                    </td>
+                                </tr>
+                            }
+                            
+                        @*<p class="invoice-money mt-3"><strong>Total: @invoice.Total.ToString("N2", CultureInfo.InvariantCulture) @invoice.Currency</strong></p>*@
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" form="invoiceEditor" formaction="@Url.Action("Generate", "TeacherInvoices")" class="btn btn-primary">Generate PDF and sign</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    @if (signing)
+    {
+        <section class="invoice-card">
+            <p>To change the invoice, <a asp-action="Index">start a new invoice</a> before signing.</p>
+            <docuseal-form id="invoiceSigning" data-src="@Model.SigningUrl" data-send-copy-email="false"
+                data-allow-to-resubmit="false" data-with-download-button="false" data-with-send-copy-button="false"></docuseal-form>
+            <form id="invoiceCompletion" asp-action="Complete" method="post">
+                <input type="hidden" name="token" value="@Model.Token" />
+                <button type="submit" class="btn btn-outline-primary mt-3">Check signing completion</button>
+            </form>
+            <p id="signingStatus" role="status" class="mt-3">Sign above to enable the signed PDF.</p>
+            <div id="signedActions" class="invoice-actions" hidden>
+                <form asp-action="Pdf" method="post" target="_blank">
+                    <input type="hidden" name="token" value="@Model.Token" />
+                    <input type="hidden" name="download" value="false" />
+                    <button type="submit" class="btn btn-success">Open signed PDF / Print</button>
+                </form>
+                <form asp-action="Pdf" method="post">
+                    <input type="hidden" name="token" value="@Model.Token" />
+                    <input type="hidden" name="download" value="true" />
+                    <button type="submit" class="btn btn-outline-success">Download signed PDF</button>
+                </form>
+            </div>
+            <a asp-action="Index" class="btn btn-link mt-3">Start a new invoice</a>
+        </section>
+    }
+</div>
+@section Scripts {
+    <script>
+        (() => {
+            document.querySelector('.burger').addEventListener('click', e => {
+                e.currentTarget.classList.toggle('active');
+                document.querySelector('.nav-links').classList.toggle('active');
+            });
+        })();
+    </script>
+    @if (signing)
+    {
+        <script src="https://cdn.docuseal.com/js/form.js"></script>
+        <script>
+        (() => {
+            const form = document.getElementById('invoiceCompletion');
+            const status = document.getElementById('signingStatus');
+            const actions = document.getElementById('signedActions');
+            let busy = false;
+            const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+            async function check() {
+                if (busy) return;
+                busy = true;
+                const button = form.querySelector('button');
+                button.disabled = true;
+                try {
+                    for (let attempt = 0; attempt < 12; attempt++) {
+                        status.textContent = 'Checking the signed invoice…';
+                        const response = await fetch(form.action, {
+                            method: 'POST', body: new FormData(form),
+                            credentials: 'same-origin', headers: { 'Accept': 'application/json' }
+                        });
+                        if (response.redirected) throw new Error('Your sign-in may have expired. Sign in again.');
+                        let result;
+                        try { result = await response.json(); }
+                        catch { throw new Error('Could not check completion. Refresh your sign-in or contact the administrator.'); }
+                        if (!response.ok) throw new Error(result.message || 'Could not check completion.');
+                        if (result.ready) {
+                            actions.hidden = false;
+                            status.textContent = 'Invoice signed. Open the PDF and use the PDF viewer’s Print button.';
+                            return;
+                        }
+                        if (attempt < 11) await pause(2500);
+                    }
+                    status.textContent = 'The signed PDF is not ready yet. Finish signing, then check again.';
+                } catch (error) { status.textContent = error.message; }
+                finally { busy = false; button.disabled = false; }
+            }
+            form.addEventListener('submit', e => { e.preventDefault(); check(); });
+            document.getElementById('invoiceSigning').addEventListener('completed', check);
+        })();
+        </script>
+    }
+    else
+    {
+        <script>
+            (() => {
+                const form = document.getElementById('invoiceEditor');
+
+                form.addEventListener('input', () => {
+                    document.getElementById('previewWarning').hidden = false;
+                });
+
+                const previewModal = document.getElementById('invoicePreviewModal');
+                if (previewModal) {
+                    bootstrap.Modal.getOrCreateInstance(previewModal).show();
+                }
+            })();
+        </script>
+    }
+}

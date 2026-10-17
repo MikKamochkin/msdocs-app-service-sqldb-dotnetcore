@@ -9,6 +9,7 @@ using System.Net.Http.Headers;
 using DotNetCoreSqlDb.Hubs;
 using DotNetCoreSqlDb.Helpers;
 using Azure.Storage.Blobs;
+using DotNetCoreSqlDb.Services.TeacherInvoices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -107,6 +108,12 @@ builder.Services.AddScoped<IBlobService, BlobService>();
 builder.Services.AddScoped<IEmailInboxReader, ImapEmailReader>();
 builder.Services.AddScoped<INotesService, NotesService>();
 builder.Services.AddScoped<ITeacherBalanceService, TeacherBalanceService>();
+builder.Services.AddTeacherInvoices(builder.Configuration);
+
+builder.Services.PostConfigure<TeacherInvoiceOptions>(options =>
+{
+    options.ApiKey = builder.Configuration["DOCUSEAL-API-KEY"] ?? "";
+});
 
 builder.Services.AddHostedService<TimedHostedService>();
 
@@ -157,5 +164,7 @@ app.MapHub<ConversationHub>("/hubs/conversationHub");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=Index}/{id?}");
+
+
 
 app.Run();

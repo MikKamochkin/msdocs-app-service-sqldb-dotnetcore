@@ -1,0 +1,5 @@
+add payment type dropdown (for now only interac etransfer, when selected, the etransfer field pops up)
+add business name field (nullable)
+change name -> contact name
+add general notes on top of correction
+auto send pdf email to the teacher email and kamochkin@gmail.com (2 seperate emails to not see in cc)

@@ -16,4 +16,11 @@ public interface IEmailSender
         string? note = null,
         CancellationToken ct = default);
 
+    Task SendWithAttachmentAsync( 
+        string to,
+        string subject,
+        string htmlBody,
+        byte[] attachmentBytes,
+        string attachmentFileName,
+        CancellationToken ct = default);
 }

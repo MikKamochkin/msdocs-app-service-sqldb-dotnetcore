@@ -42,6 +42,53 @@ public sealed class MailKitEmailSender : IEmailSender
         await smtp.DisconnectAsync(true, ct);
     }
 
+    public async Task SendWithAttachmentAsync(
+        string to,
+        string subject,
+        string htmlBody,
+        byte[] attachmentBytes,
+        string attachmentFileName,
+        CancellationToken ct = default)
+    {
+        // 1. Build MIME message
+        var email = new MimeMessage();
+
+        email.From.Add(
+            new MailboxAddress(_cfg.DisplayName, _cfg.Username));
+
+        email.To.Add(MailboxAddress.Parse(to));
+        email.Subject = subject;
+
+        var builder = new BodyBuilder
+        {
+            HtmlBody = htmlBody
+        };
+
+        // Attach the signed PDF
+        builder.Attachments.Add(
+            attachmentFileName,
+            attachmentBytes,
+            ContentType.Parse("application/pdf"));
+
+        email.Body = builder.ToMessageBody();
+
+        // 2. Send
+        using var smtp = new SmtpClient();
+
+        var socketOpt = _cfg.UseSsl
+            ? SecureSocketOptions.SslOnConnect
+            : SecureSocketOptions.StartTlsWhenAvailable;
+
+        await smtp.ConnectAsync(
+            _cfg.Host, _cfg.Port, socketOpt, ct);
+
+        await smtp.AuthenticateAsync(
+            _cfg.Username, _cfg.Password, ct);
+
+        await smtp.SendAsync(email, ct);
+        await smtp.DisconnectAsync(true, ct);
+    }
+
     public async Task ForwardAsync(
         string to,
         string subject,
