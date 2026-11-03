@@ -135,15 +135,7 @@ namespace DotNetCoreSqlDb.Controllers
             }
 
             var balances = await _context.StudentBalance
-                .Where(b => b.StudentId == id
-                    && b.Assignment.IsActive == true
-                    && _context.StudentGroupComposition.Any(sgc =>
-                        sgc.StudentId == b.StudentId
-                        && sgc.GroupId == b.Assignment.GroupId))
-                .Include(b => b.Assignment)
-                    .ThenInclude(a => a.Teacher)
-                .Include(b => b.Assignment)
-                    .ThenInclude(a => a.Group)
+                .Where(b => b.StudentId == id)
                 .ToListAsync();
 
             ViewBag.StudentName = student.Name;
@@ -151,8 +143,6 @@ namespace DotNetCoreSqlDb.Controllers
 
             var transactions = await _context.StudentBalanceTransactionLog
                 .Where(s => s.ScheduleId == null && s.StudentId == id)
-                .Include(s => s.Assignment)
-                    .ThenInclude(s => s.Teacher)
                 .OrderByDescending(s => s.DateTime)
                 .Take(10)
                 .ToListAsync();
@@ -201,16 +191,19 @@ namespace DotNetCoreSqlDb.Controllers
         {
             //_logger.LogInformation("get transactiondetails for id: " + transactionLogId);
             var tx = await _context.StudentBalanceTransactionLog
-                .Include(t => t.Assignment).ThenInclude(a => a.Teacher)
                 .FirstOrDefaultAsync(t => t.Id == transactionLogId);
 
             if (tx == null) return NotFound();
 
+            var teacherName = await _context.Schedule
+                .Where(s => s.Id == tx.ScheduleId && s.Teacher != null)
+                .Select(s => s.Teacher!.Name)
+                .FirstOrDefaultAsync();
 
             return Json(new
             {
                 DateTime = tx.DateTime?.ToString("g"),
-                Teacher = tx.Assignment?.Teacher?.Name,
+                Teacher = teacherName,
                 Units = tx.TransactionAmount,
                 AmountPaid = tx.AmountPaid,
                 Currency = tx.Currency,
@@ -223,7 +216,7 @@ namespace DotNetCoreSqlDb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddToBalance(Guid balanceId, float unitsToAdd, float amountPaid,
+        public async Task<IActionResult> AddToBalance(Guid balanceId, float amountPaid,
         string adminNotes, string currency, string payerNotes, string paymentReference, string paymentType)
         {
             var balance = await _context.StudentBalance.FindAsync(balanceId);
@@ -233,14 +226,18 @@ namespace DotNetCoreSqlDb.Controllers
                 return NotFound();
             }
 
-            balance.Balance += unitsToAdd;
+            if (!StudentBalanceHelper.IsSupportedCurrency(currency))
+            {
+                return BadRequest("Unsupported currency.");
+            }
+
+            float newBalance = StudentBalanceHelper.AdjustBalance(balance, currency, amountPaid);
             await _context.SaveChangesAsync();
 
             if (balance != null)
             {
                 var student = await _context.Student.FindAsync(balance.StudentId);
-                Guid assignmentId = balance.AssignmentId;
-                await _logHelper.LogStudentBalanceAsync(student.ID, assignmentId, currency, paymentType, paymentReference, payerNotes, adminNotes, unitsToAdd, amountPaid);
+                await _logHelper.LogStudentBalanceAsync(student.ID, currency, paymentType, paymentReference, payerNotes, adminNotes, amountPaid, amountPaid, newBalance);
             }
 
 
@@ -265,9 +262,16 @@ namespace DotNetCoreSqlDb.Controllers
         [HttpGet]
         public async Task<IActionResult> BalancesForAssignment(Guid assignmentId)
         {
+            // Balances are per student, so show the balances of the students in the assignment's group
+            var groupId = await _context.Assignments
+                .Where(a => a.Id == assignmentId)
+                .Select(a => a.GroupId)
+                .FirstOrDefaultAsync();
+
             // INNER JOIN to get Student.Name without a viewmodel
             var rows = await _context.StudentBalance
-                .Where(b => b.AssignmentId == assignmentId)
+                .Where(b => _context.StudentGroupComposition.Any(sgc =>
+                    sgc.GroupId == groupId && sgc.StudentId == b.StudentId))
                 .Join(
                     _context.Student,
                     b => b.StudentId,
@@ -276,11 +280,13 @@ namespace DotNetCoreSqlDb.Controllers
                     {
                         StudentId = b.StudentId,
                         StudentName = s.Name,
-                        AssignmentId = b.AssignmentId,
-                        Balance = b.Balance
+                        CADBalance = b.CADBalance,
+                        USDBalance = b.USDBalance,
+                        EURBalance = b.EURBalance,
+                        RUBBalance = b.RUBBalance
                     }
                 )
-                .OrderByDescending(r => r.Balance)
+                .OrderBy(r => r.StudentName)
                 .ToListAsync();
 
             return Json(rows);

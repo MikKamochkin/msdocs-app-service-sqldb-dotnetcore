@@ -14,14 +14,19 @@ namespace DotNetCoreSqlDb.Models
         [ForeignKey("Student")]
         public Guid StudentId { get; set; }
 
-        [ForeignKey("Assignment")]
-        public Guid AssignmentId { get; set; }
+        /*[ForeignKey("Assignment")]
+        public Guid AssignmentId { get; set; }*/
+
+        public float CADBalance { get; set; }
+        public float USDBalance { get; set; }
+        public float EURBalance { get; set; }
+        public float RUBBalance { get; set; }
         
-        public float Balance { get; set; }
+        //public float Balance { get; set; }
 
 
         /* ─── Navigation references ─────────────────────── */
         public Student Student { get; set; } = null!;
-        public Assignments Assignment { get; set; } = null!;
+        //public Assignments Assignment { get; set; } = null!;
     }
 }

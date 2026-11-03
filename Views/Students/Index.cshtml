@@ -564,18 +564,20 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th style="width: 20%;">Teacher</th>
-                                <th style="width: 33%;">Lesson Duration</th>
-                                <th style="width: 33%;">Balance</th>
+                                <th style="width: 25%;">CAD</th>
+                                <th style="width: 25%;">USD</th>
+                                <th style="width: 25%;">EUR</th>
+                                <th style="width: 25%;">RUB</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var b in balances)
                             {
                                 <tr>
-                                    <td data-label="Teacher">@Html.DisplayFor(t => b.Assignment.Teacher.Name)</td>
-                                    <td data-label="Lesson Duration">@Html.DisplayFor(t => b.Assignment.StudentUnitDuration) mins</td>
-                                    <td data-label="Balance">@Html.DisplayFor(t => b.Balance)</td>
+                                    <td data-label="CAD">@Html.DisplayFor(t => b.CADBalance)</td>
+                                    <td data-label="USD">@Html.DisplayFor(t => b.USDBalance)</td>
+                                    <td data-label="EUR">@Html.DisplayFor(t => b.EURBalance)</td>
+                                    <td data-label="RUB">@Html.DisplayFor(t => b.RUBBalance)</td>
 
                                 </tr>
                             }

@@ -89,21 +89,21 @@ namespace DotNetCoreSqlDb.Helpers
 
         public async Task<Guid> LogStudentBalanceAsync(
             Guid studentId,
-            Guid assignmentId,
             string currency,
             string paymentType,
             string paymentReference,
             string payerNotes,
             string adminNotes,
             float transactionAmount,
-            float amountPaid
+            float amountPaid,
+            float currentBalance
             )
         {
             var log = new StudentBalanceTransactionLog
             {
                 StudentId = studentId,
-                AssignmentId = assignmentId,
                 DateTime = DateTime.Now,
+                CurrentBalance = currentBalance,
                 Currency = currency,
                 PaymentType = paymentType,
                 PaymentReference = paymentReference,
@@ -120,17 +120,17 @@ namespace DotNetCoreSqlDb.Helpers
 
         public async Task LogStudentBalanceAsync(
             Guid studentId,
-            Guid assignmentId,
             Guid scheduleId,
+            string currency,
             float transactionAmount,
             float currentBalance)
         {
             var log = new StudentBalanceTransactionLog
             {
                 StudentId = studentId,
-                AssignmentId = assignmentId,
                 DateTime = DateTime.Now,
                 ScheduleId = scheduleId,
+                Currency = currency,
                 CurrentBalance = currentBalance,
                 TransactionAmount = transactionAmount
             };

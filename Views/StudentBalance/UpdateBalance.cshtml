@@ -52,25 +52,22 @@
     }
 
     <div class="col-md-9">
-        <h2>Assignments for @studentName</h2>
+        <h2>Balance for @studentName</h2>
 
         @if (Model == null || !Model.Any())
         {
-            <p>No assignments found for this student.</p>
+            <p>No balance found for this student.</p>
         }
         else
         {
             <table class="table table-bordered table-sm">
                 <thead>
                     <tr>
-                        <th>Balance</th>
-                        <th>Group Name</th>
-                        <th>Teacher</th>
-                        <th>StudentUnitCost</th>
-                        <th>StudentUnitType</th>
-                        <th>Lesson Duration</th>
+                        <th>CAD</th>
+                        <th>USD</th>
+                        <th>EUR</th>
+                        <th>RUB</th>
                         <th>Action</th>
-                        <th>Edit Assignment</th>
 
                     </tr>
                 </thead>
@@ -79,25 +76,16 @@
                     {
                         <tr>
 
-                            <td>@balance.Balance</td>
-                            <td>@balance.Assignment.Group.Name</td>
-                            <td>@balance.Assignment.Teacher.Name</td>
-                            <td>@balance.Assignment.StudentUnitCost</td>
-                            <td>@balance.Assignment.StudentUnitType</td>
-                            <td>@balance.Assignment.StudentUnitDuration</td>
+                            <td>@balance.CADBalance</td>
+                            <td>@balance.USDBalance</td>
+                            <td>@balance.EURBalance</td>
+                            <td>@balance.RUBBalance</td>
                             <td>
                                 <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#balanceModal"
-                                        data-id="@balance.Id" data-current="@balance.Balance">
+                                        data-id="@balance.Id">
                                     Add Amount
                                 </button>
                             </td>
-                            <td>
-                                <a asp-controller="Assignments"
-                                asp-action="Details"
-                                asp-route-id="@balance.Assignment.Id"
-                                class="btn btn-primary btn-sm">
-                                    Assignment Details
-                                </a></td>
                         </tr>
                     }
                 </tbody>
@@ -113,8 +101,8 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Teacher</th>
-                                    <th>Units Added</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
                                 </tr>
                             </thead>
 
@@ -125,8 +113,8 @@
                                     {
                                         <tr data-id="@tx.Id">
                                             <td>@tx.DateTime?.ToString("g")</td>
-                                            <td>@tx.Assignment?.Teacher?.Name</td>
-                                            <td>@tx.TransactionAmount</td>
+                                            <td>@tx.PaymentType</td>
+                                            <td>@tx.TransactionAmount @tx.Currency</td>
                                         </tr>
                                     }
                                 }
@@ -154,7 +142,7 @@
                                     <td id="tdTeacher">—</td>
                                 </tr>
                                 <tr>
-                                    <th scope="row">Units</th>
+                                    <th scope="row">Amount Added</th>
                                     <td id="tdUnits">—</td>
                                 </tr>
                                 <tr>
@@ -208,7 +196,7 @@
                             {
                                 <tr data-id="@lesson.Id">
                                     <td>@lesson.DateTime?.ToString("g")</td>
-                                    <td>@lesson.Assignment?.Teacher?.Name</td>
+                                    <td>@lesson.Teacher?.Name</td>
                                     <td>@lesson.Duration</td>
                                 </tr>
                             }
@@ -242,15 +230,9 @@
                     <div class="modal-body">
                         <input type="hidden" name="balanceId" id="balanceId" />
                         <div class="form-group">
-                            <label for="unitsToAdd">Units to Add</label>
-                            <input type="number" step="0.01" name="unitsToAdd" id="unitsToAdd" class="form-control"
-                                   required />
-                        </div>
-
-                        <!-- New String Fields -->
-                        <div class="form-group">
                             <label for="amountPaid">Amount Paid</label>
-                            <input type="text" name="amountPaid" id="amountPaid" class="form-control" />
+                            <input type="number" step="0.01" name="amountPaid" id="amountPaid" class="form-control"
+                                   required />
                         </div>
                         <div class="form-group">
                             <label for="adminNotes">AdminNotes</label>
@@ -303,7 +285,6 @@
 
             var modal = $(this);
             modal.find('#balanceId').val(balanceId);
-            modal.find('#unitsToAdd').val('');
             modal.find('#amountPaid').val('');
             modal.find('#adminNotes').val('');
             modal.find('#currency').val('CAD');

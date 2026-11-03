@@ -82,7 +82,7 @@ namespace DotNetCoreSqlDb.Data
                 .IsUnique();
 
             modelBuilder.Entity<StudentBalance>()
-            .HasIndex(sb => new { sb.StudentId, sb.AssignmentId })
+            .HasIndex(sb => sb.StudentId)
             .IsUnique();
 
             modelBuilder.Entity<Schedule>()

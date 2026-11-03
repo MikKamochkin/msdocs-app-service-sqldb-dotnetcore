@@ -24,12 +24,28 @@ public sealed class TeacherInvoiceInput
     public DateTime? CorrectionDate { get; set; }
     public decimal? CorrectionAmount { get; set; }
 
+    [Required(ErrorMessage = "Select the statement that applies to this invoice.")]
+    [RegularExpression("^(Canadian|NonResident)$", ErrorMessage = "Select the statement that applies to this invoice.")]
+    public string? ContractorType { get; set; }
+
     [StringLength(5000)] public string? Note { get; set; }
 
     public bool HasCorrection =>
         !string.IsNullOrWhiteSpace(CorrectionDescription) ||
         CorrectionDate.HasValue ||
         CorrectionAmount.HasValue;
+}
+public static class ContractorDeclaration
+{
+    public const string Canadian = "Canadian";
+    public const string NonResident = "NonResident";
+    public const string CanadianTitle = "Canadian Contractor";
+    public const string NonResidentTitle = "Non-Resident Contractor";
+    public const string CanadianStatement = "I confirm that I am a resident of Canada for Canadian income-tax purposes and that all services covered by this invoice were performed while I was physically located in Canada.";
+    public const string NonResidentStatement = "I confirm that I am not a resident of Canada for Canadian income-tax purposes and that all services covered by this invoice were performed while I was physically located outside Canada.";
+
+    public static string Title(string? type) => type == Canadian ? CanadianTitle : NonResidentTitle;
+    public static string Statement(string? type) => type == Canadian ? CanadianStatement : NonResidentStatement;
 }
 public sealed record InvoiceLesson(Guid ScheduleId, DateTime TorontoDateTime,
     string GroupName, int DurationMinutes, decimal Amount);

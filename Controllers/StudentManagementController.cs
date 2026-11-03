@@ -542,6 +542,13 @@ namespace DotNetCoreSqlDb.Controllers
                 };
                 _context.StudentGroupComposition.Add(composition);
 
+                // 4) Create the student's balance (one per student)
+                _context.StudentBalance.Add(new StudentBalance
+                {
+                    Id = Guid.NewGuid(),
+                    StudentId = student.ID
+                });
+
                 Random rnd = new Random();
                 string defaultPassword = rnd.Next(100000, 1000000) + "";
                 //Random rnd = new Random();

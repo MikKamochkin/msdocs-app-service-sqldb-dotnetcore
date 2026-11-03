@@ -28,7 +28,7 @@ public sealed class DocuSealClient(HttpClient http, IHttpClientFactory factory,
             Content = JsonContent.Create(new
             {
                 name = $"Teacher invoice {invoice.Input.InvoiceNumber}", send_email = false,
-                documents = new[] { new { name = "Teacher invoice", html, size = "Letter" } },
+                documents = new[] { new { name = "Contractor invoice", html, size = "Letter" } },
                 submitters = new[] { new {
                     role = "Teacher", name = invoice.Input.Name, email = invoice.Input.Email,
                     external_id = invoice.TeacherId.ToString("D"), send_email = false,
@@ -48,7 +48,8 @@ public sealed class DocuSealClient(HttpClient http, IHttpClientFactory factory,
     public async Task<(byte[] Pdf, DateTimeOffset CompletedAt, string? AuditUrl)> GetSignedAsync(
         long id, Guid teacherId, CancellationToken ct)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"submissions/{id}");
+        // Without include, the combined PDF is only returned if the DocuSeal account generates it automatically.
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"submissions/{id}?include=combined_document_url");
         using var doc = await SendAsync(request, ct);
         var root = doc.RootElement;
         var signers = root.GetProperty("submitters").EnumerateArray().ToArray();
@@ -60,9 +61,15 @@ public sealed class DocuSealClient(HttpClient http, IHttpClientFactory factory,
             signers[0].GetProperty("status").GetString() != "completed")
             throw new InvoiceNotCompletedException();
         var completedAt = root.GetProperty("completed_at").GetDateTimeOffset();
-        var documents = root.GetProperty("documents").EnumerateArray().ToArray();
-        if (documents.Length != 1) throw new HttpRequestException("Expected one signed invoice document.");
-        var url = documents[0].GetProperty("url").GetString();
+        // The combined PDF is the signed invoice followed by the audit log. Never fall back to the
+        // invoice alone, so every emailed or viewed copy includes the audit log.
+        var url = root.TryGetProperty("combined_document_url", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            // DocuSeal may still be generating it just after signing.
+            if (DateTimeOffset.UtcNow - completedAt < TimeSpan.FromMinutes(2)) throw new InvoiceNotCompletedException();
+            throw new InvoiceValidationException("DocuSeal did not provide the signed invoice with its audit log. Contact the administrator.");
+        }
         var pdf = await DownloadAsync(url, ct);
         string? audit = root.TryGetProperty("audit_log_url", out var a) && a.ValueKind == JsonValueKind.String ? a.GetString() : null;
         return (pdf, completedAt, audit);

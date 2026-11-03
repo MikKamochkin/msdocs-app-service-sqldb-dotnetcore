@@ -1,5 +1,6 @@
 @model DotNetCoreSqlDb.Models.TeacherInvoicePage
 @using System.Globalization
+@using DotNetCoreSqlDb.Models
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     ViewData["Title"] = "My invoices";
@@ -77,6 +78,9 @@
     .invoice-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
     .invoice-fields label { display: block; font-weight: 600; margin-bottom: 5px; }
     .invoice-fields input { width: 100%; }
+    .invoice-declaration-option { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; cursor: pointer; }
+    .invoice-declaration-option input { margin-top: 4px; flex-shrink: 0; }
+    .invoice-declaration-option strong { display: block; }
     .invoice-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
     .invoice-actions-next { justify-content: flex-end; }
     .invoice-table-wrap { overflow-x: auto; }
@@ -219,13 +223,24 @@
                         class="text-danger"></span>
                 </div>
             </div>*@
+            <fieldset class="mt-4">
+                <label class="invoice-declaration-option">
+                    <input asp-for="Input.ContractorType" id="contractorCanadian" type="radio" value="@ContractorDeclaration.Canadian" required />
+                    <span><strong>@ContractorDeclaration.CanadianTitle</strong>@ContractorDeclaration.CanadianStatement</span>
+                </label>
+                <label class="invoice-declaration-option">
+                    <input asp-for="Input.ContractorType" id="contractorNonResident" type="radio" value="@ContractorDeclaration.NonResident" required />
+                    <span><strong>@ContractorDeclaration.NonResidentTitle</strong>@ContractorDeclaration.NonResidentStatement</span>
+                </label>
+                <p class="invoice-muted mb-0">If neither statement is accurate, do not submit this invoice and contact torontofrench.com Inc.</p>
+                <span asp-validation-for="Input.ContractorType" class="text-danger"></span>
+            </fieldset>
             <div class="mt-4">
-                <label asp-for="Input.Note">General notes</label>
+                <label asp-for="Input.Note"><b>Comments (optional):</b> Add any relevant tax, VAT, licensing, registration, or other information applicable to this invoice.</label>
                 <textarea asp-for="Input.Note"
                         class="form-control"
                         rows="4"
-                        maxlength="5000"
-                        placeholder="Optional notes to include on this invoice"></textarea>
+                        maxlength="5000"></textarea>
                 <span asp-validation-for="Input.Note"
                     class="text-danger"></span>
             </div>
@@ -274,11 +289,12 @@
                             </tbody>
                         </table></div>
                             <p class="invoice-money mt-3"><strong>Total: @invoice.Total.ToString("N2", CultureInfo.InvariantCulture) @invoice.Currency</strong></p>
+                            <p><strong>@ContractorDeclaration.Title(invoice.Input.ContractorType)</strong><br />@ContractorDeclaration.Statement(invoice.Input.ContractorType)</p>
                             @if (!string.IsNullOrWhiteSpace(invoice.Input.Note))
                             {
                                 <tr>
                                     <td class="invoice-notes" colspan="3">
-                                        <strong>General notes</strong>
+                                        <strong>Comments</strong>
                                         <div style="white-space: pre-wrap; overflow-wrap: anywhere;">@invoice.Input.Note</div>
                                     </td>
                                 </tr>
@@ -339,9 +355,11 @@
             const status = document.getElementById('signingStatus');
             const actions = document.getElementById('signedActions');
             let busy = false;
+            // Each successful Complete request emails the signed invoice, so stop checking after the first one.
+            let done = false;
             const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
             async function check() {
-                if (busy) return;
+                if (busy || done) return;
                 busy = true;
                 const button = form.querySelector('button');
                 button.disabled = true;
@@ -358,6 +376,8 @@
                         catch { throw new Error('Could not check completion. Refresh your sign-in or contact the administrator.'); }
                         if (!response.ok) throw new Error(result.message || 'Could not check completion.');
                         if (result.ready) {
+                            done = true;
+                            form.hidden = true;
                             actions.hidden = false;
                             status.textContent = 'Invoice signed. Open the PDF and use the PDF viewer’s Print button.';
                             return;
@@ -366,7 +386,7 @@
                     }
                     status.textContent = 'The signed PDF is not ready yet. Finish signing, then check again.';
                 } catch (error) { status.textContent = error.message; }
-                finally { busy = false; button.disabled = false; }
+                finally { busy = false; button.disabled = done; }
             }
             form.addEventListener('submit', e => { e.preventDefault(); check(); });
             document.getElementById('invoiceSigning').addEventListener('completed', check);

@@ -106,6 +106,11 @@ namespace DotNetCoreSqlDb.Controllers
             };
             _context.StudentGroupComposition.Add(composition);
 
+            _context.StudentBalance.Add(new StudentBalance
+            {
+                Id = Guid.NewGuid(),
+                StudentId = studentID
+            });
 
             Random rnd = new Random();
             string defaultPassword = rnd.Next(100000, 1000000) + "";

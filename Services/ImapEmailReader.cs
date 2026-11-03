@@ -257,41 +257,15 @@ namespace DotNetCoreSqlDb.Services
             
             var student = payer!.Student;
 
-            var balances = await _context.StudentBalance
-                .Include(sb => sb.Assignment)
-                .Where(sb => sb.StudentId == student!.ID
-                    && sb.Assignment.IsActive
-                    && _context.StudentGroupComposition.Any(sgc =>
-                        sgc.StudentId == sb.StudentId
-                        && sgc.GroupId == sb.Assignment.GroupId))
-                .ToListAsync();
+            var balance = await _context.StudentBalance
+                .FirstOrDefaultAsync(sb => sb.StudentId == student!.ID);
 
-            if (balances == null || balances.Count() == 0)
+            if (balance == null)
             {
                 string error = "Failed because balance doesn't exist";
                 await SetFailureReason(queueItemId, error);
                 return;
-            } 
-
-            if (balances.Count() > 1)
-            {
-                string error = "Failed because there are more than 1 balances";
-                await SetFailureReason(queueItemId, error);
-                return;
-            } 
-               
-            var balance = balances.FirstOrDefault();
-
-            var assignment = balance?.Assignment;
-
-            if (assignment == null)
-            {
-                string error = "Failed because assignment doesn't exist";
-                await SetFailureReason(queueItemId, error);
-                return;
-            } 
-
-            var lessonCost = assignment.StudentUnitCost;
+            }
 
             var amountMatch = Regex.Match(
                 text,
@@ -318,25 +292,24 @@ namespace DotNetCoreSqlDb.Services
                 }
             }
 
-            int unitsToAdd;
+            // Interac e-transfers are in CAD; the fallback regex doesn't capture a currency
+            if (string.IsNullOrWhiteSpace(currency))
+            {
+                currency = "CAD";
+            }
 
-            if (lessonCost == 55 && amount == 250)
+            if (!StudentBalanceHelper.IsSupportedCurrency(currency))
             {
-                unitsToAdd = 5;
+                string error = "Failed because currency " + currency + " is not supported";
+                await SetFailureReason(queueItemId, error);
+                return;
             }
-            else if (lessonCost == 55 && amount == 500)
+
+            if (amount <= 0)
             {
-                unitsToAdd = 10;
-            }
-            else
-            {   
-                if (amount % lessonCost != 0)
-                {
-                    string error = "Failed because amount paid isnt divisble by lesson cost";
-                    await SetFailureReason(queueItemId, error);
-                    return;
-                } 
-                unitsToAdd = (int)(amount / lessonCost);
+                string error = "Failed because amount could not be read from the email";
+                await SetFailureReason(queueItemId, error);
+                return;
             }
 
             var messageMatch = Regex.Match(
@@ -359,7 +332,6 @@ namespace DotNetCoreSqlDb.Services
 
             var transactionLogId = await _updateBalanceSvc.AddToBalanceAsync(
                 balance!.Id,
-                unitsToAdd,
                 amount,
                 "Handled automatically",
                 currency,
@@ -437,8 +409,6 @@ namespace DotNetCoreSqlDb.Services
             //var student = payer!.Student;
             
             var balance = await _context.StudentBalance
-                .Include(sb => sb.Assignment)
-                    .ThenInclude(a => a.Teacher) // optional, only if you use Teacher somewhere
                 .FirstOrDefaultAsync(sb => sb.Id == balanceId);
 
             if (balance == null)
@@ -449,17 +419,6 @@ namespace DotNetCoreSqlDb.Services
             }
 
             var student = await _context.Student.Where(s => s.ID == balance.StudentId).FirstOrDefaultAsync();
-               
-            var assignment = balance?.Assignment;
-
-            if (assignment == null)
-            {
-                string error = "Failed because assignment doesn't exist";
-                await SetFailureReason(queueItemId, error);
-                return;
-            } 
-
-            var lessonCost = assignment.StudentUnitCost;
 
             var amountMatch = Regex.Match(
                 text,
@@ -486,25 +445,24 @@ namespace DotNetCoreSqlDb.Services
                 }
             }
 
-            int unitsToAdd;
+            // Interac e-transfers are in CAD; the fallback regex doesn't capture a currency
+            if (string.IsNullOrWhiteSpace(currency))
+            {
+                currency = "CAD";
+            }
 
-            if (lessonCost == 55 && amount == 250)
+            if (!StudentBalanceHelper.IsSupportedCurrency(currency))
             {
-                unitsToAdd = 5;
+                string error = "Failed because currency " + currency + " is not supported";
+                await SetFailureReason(queueItemId, error);
+                return;
             }
-            else if (lessonCost == 55 && amount == 500)
+
+            if (amount <= 0)
             {
-                unitsToAdd = 10;
-            }
-            else
-            {   
-                if (amount % lessonCost != 0)
-                {
-                    string error = "Failed because amount paid isnt divisble by lesson cost";
-                    await SetFailureReason(queueItemId, error);
-                    return;
-                } 
-                unitsToAdd = (int)(amount / lessonCost);
+                string error = "Failed because amount could not be read from the email";
+                await SetFailureReason(queueItemId, error);
+                return;
             }
 
             var messageMatch = Regex.Match(
@@ -527,7 +485,6 @@ namespace DotNetCoreSqlDb.Services
 
             var transactionLogId = await _updateBalanceSvc.AddToBalanceAsync(
                 balance!.Id,
-                unitsToAdd,
                 amount,
                 "Handled automatically",
                 currency,

@@ -242,17 +242,6 @@ namespace DotNetCoreSqlDb.Controllers
             assignment.Id = Guid.NewGuid();
             _context.Assignments.Add(assignment);
 
-            foreach (var studentId in studentIds)
-            {
-                _context.StudentBalance.Add(new StudentBalance
-                {
-                    Id = Guid.NewGuid(),
-                    StudentId = studentId,
-                    AssignmentId = assignment.Id,
-                    Balance = 0
-                });
-            }
-
             if (group.StudentGroupCompositions.Count == 1)
             {
                 _context.Conversations.Add(new Conversations

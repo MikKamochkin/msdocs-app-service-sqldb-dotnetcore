@@ -60,7 +60,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("TeacherId");
 
-                    b.ToTable("Assignments");
+                    b.ToTable("Assignments", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Contact", b =>
@@ -91,7 +91,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentID");
 
-                    b.ToTable("Contact");
+                    b.ToTable("Contact", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Conversations", b =>
@@ -124,7 +124,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("TeacherId");
 
-                    b.ToTable("Conversations");
+                    b.ToTable("Conversations", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.DefaultSchedule", b =>
@@ -160,7 +160,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("AssignmentId");
 
-                    b.ToTable("DefaultSchedule");
+                    b.ToTable("DefaultSchedule", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.EmailPaymentsLog", b =>
@@ -194,7 +194,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentBalanceTransactionLogId");
 
-                    b.ToTable("EmailPaymentsLog");
+                    b.ToTable("EmailPaymentsLog", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Group", b =>
@@ -215,7 +215,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Group");
+                    b.ToTable("Group", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.InteracPaymentsQueue", b =>
@@ -244,7 +244,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("InteracPaymentsQueue");
+                    b.ToTable("InteracPaymentsQueue", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.MailLog", b =>
@@ -270,7 +270,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MailLog");
+                    b.ToTable("MailLog", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.MessageAttachment", b =>
@@ -308,7 +308,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("MessageAttachment");
+                    b.ToTable("MessageAttachment", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Messages", b =>
@@ -338,7 +338,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("Messages");
+                    b.ToTable("Messages", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Notes", b =>
@@ -366,7 +366,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentID");
 
-                    b.ToTable("Note");
+                    b.ToTable("Note", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Payer", b =>
@@ -386,7 +386,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentId");
 
-                    b.ToTable("Payer");
+                    b.ToTable("Payer", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Schedule", b =>
@@ -446,7 +446,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("TeacherId");
 
-                    b.ToTable("Schedule");
+                    b.ToTable("Schedule", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.SignInLog", b =>
@@ -473,7 +473,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SignInLog");
+                    b.ToTable("SignInLog", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Student", b =>
@@ -510,7 +510,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Student");
+                    b.ToTable("Student", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentBalance", b =>
@@ -519,23 +519,27 @@ namespace DotNetCoreSqlDb.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("AssignmentId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<float>("CADBalance")
+                        .HasColumnType("real");
 
-                    b.Property<float>("Balance")
+                    b.Property<float>("EURBalance")
+                        .HasColumnType("real");
+
+                    b.Property<float>("RUBBalance")
                         .HasColumnType("real");
 
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<float>("USDBalance")
+                        .HasColumnType("real");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("AssignmentId");
-
-                    b.HasIndex("StudentId", "AssignmentId")
+                    b.HasIndex("StudentId")
                         .IsUnique();
 
-                    b.ToTable("StudentBalance");
+                    b.ToTable("StudentBalance", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentBalanceTransactionLog", b =>
@@ -549,9 +553,6 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.Property<float?>("AmountPaid")
                         .HasColumnType("real");
-
-                    b.Property<Guid?>("AssignmentId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Currency")
                         .HasColumnType("nvarchar(max)");
@@ -582,11 +583,9 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AssignmentId");
-
                     b.HasIndex("StudentId");
 
-                    b.ToTable("StudentBalanceTransactionLog");
+                    b.ToTable("StudentBalanceTransactionLog", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentGroupComposition", b =>
@@ -610,7 +609,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentId");
 
-                    b.ToTable("StudentGroupComposition");
+                    b.ToTable("StudentGroupComposition", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Teacher", b =>
@@ -662,7 +661,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Teacher");
+                    b.ToTable("Teacher", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Todo", b =>
@@ -688,7 +687,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Todo");
+                    b.ToTable("Todo", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.TwilioLessonRemindersLog", b =>
@@ -713,7 +712,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TwilioLessonRemindersLog");
+                    b.ToTable("TwilioLessonRemindersLog", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.User", b =>
@@ -758,7 +757,7 @@ namespace DotNetCoreSqlDb.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("User");
+                    b.ToTable("User", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.WassengerApiLog", b =>
@@ -780,7 +779,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WassengerApiLog");
+                    b.ToTable("WassengerApiLog", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.WhatsAppVoiceMessages", b =>
@@ -808,7 +807,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WhatsAppVoiceMessages");
+                    b.ToTable("WhatsAppVoiceMessages", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.ZoomMeetingLog", b =>
@@ -850,7 +849,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("ZoomMeetingId");
 
-                    b.ToTable("ZoomMeetingLog");
+                    b.ToTable("ZoomMeetingLog", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.ZoomMeetings", b =>
@@ -898,7 +897,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("ScheduleId");
 
-                    b.ToTable("ZoomMeetings");
+                    b.ToTable("ZoomMeetings", (string)null);
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Assignments", b =>
@@ -1047,36 +1046,22 @@ namespace DotNetCoreSqlDb.Migrations
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentBalance", b =>
                 {
-                    b.HasOne("DotNetCoreSqlDb.Models.Assignments", "Assignment")
-                        .WithMany()
-                        .HasForeignKey("AssignmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("DotNetCoreSqlDb.Models.Student", "Student")
                         .WithMany()
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Assignment");
 
                     b.Navigation("Student");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentBalanceTransactionLog", b =>
                 {
-                    b.HasOne("DotNetCoreSqlDb.Models.Assignments", "Assignment")
-                        .WithMany()
-                        .HasForeignKey("AssignmentId");
-
                     b.HasOne("DotNetCoreSqlDb.Models.Student", "Student")
                         .WithMany()
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Assignment");
 
                     b.Navigation("Student");
                 });

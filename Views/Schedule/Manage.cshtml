@@ -829,7 +829,7 @@
                             <div class="form-group">
                                 <label for="studentChargeAmount">Student charge</label>
                                 <div class="schedule-money-pair">
-                                    <input id="studentChargeAmount" type="number" class="form-control" step="1"
+                                    <input id="studentChargeAmount" type="number" class="form-control" step="0.01"
                                            aria-label="Student charge amount" />
                                     <select id="studentChargeCurrency" class="form-control"
                                             aria-label="Student currency"
@@ -841,7 +841,7 @@
                             <div class="form-group">
                                 <label for="teacherPayAmount">Teacher pay</label>
                                 <div class="schedule-money-pair">
-                                    <input id="teacherPayAmount" type="number" class="form-control" step="1"
+                                    <input id="teacherPayAmount" type="number" class="form-control" step="0.01"
                                            aria-label="Teacher pay amount" />
                                     <select id="teacherPayCurrency" class="form-control" aria-label="Teacher currency"
                                             asp-items="(IEnumerable<SelectListItem>)ViewBag.PayUnits">
@@ -929,6 +929,8 @@
                 const existing = @Html.Raw(existingJson);
                 let rows = existing.slice();
                 let editingRow = null;
+                // Amounts and duration that scaling starts from, so repeated duration changes don't compound rounding.
+                let pricingBase = null;
 
                 $(function () {
                     makeSearchableSelect('teacherSelect', 'Search teachers…');
@@ -963,6 +965,7 @@
                         $('#studentChargeCurrency').val('');
                         $('#teacherPayAmount').val('');
                         $('#teacherPayCurrency').val('');
+                        pricingBase = null;
                         return;
                     }
 
@@ -975,6 +978,24 @@
 
                     $('#teacherPayAmount').val(defaults.TeacherPayAmount);
                     $('#teacherPayCurrency').val(defaults.TeacherPayCurrency);
+                    capturePricingBase();
+                }
+
+                function capturePricingBase() {
+                    const duration = +$('#durationSelect').val();
+                    pricingBase = duration
+                        ? {
+                            duration,
+                            studentCharge: parseFloat($('#studentChargeAmount').val()),
+                            teacherPay: parseFloat($('#teacherPayAmount').val())
+                        }
+                        : null;
+                }
+
+                function scaleAmount(selector, baseAmount, duration) {
+                    if (Number.isNaN(baseAmount)) return;
+                    const scaled = baseAmount * duration / pricingBase.duration;
+                    $(selector).val(Math.round(scaled * 100) / 100);
                 }
 
                 $('#groupSelect').on('change', function () {
@@ -983,6 +1004,21 @@
                         applyScheduleDefaults($(this).val());
                     }
                 });
+
+                // Only changes the form values, which apply to this lesson when it is saved.
+                $('#durationSelect').on('change', function () {
+                    const duration = +$(this).val();
+                    if (!duration) return;
+                    if (!pricingBase) {
+                        capturePricingBase();
+                        return;
+                    }
+                    scaleAmount('#studentChargeAmount', pricingBase.studentCharge, duration);
+                    scaleAmount('#teacherPayAmount', pricingBase.teacherPay, duration);
+                });
+
+                // A manually typed amount becomes the new rate for later duration changes.
+                $('#studentChargeAmount, #teacherPayAmount').on('input', capturePricingBase);
 
                 function shiftDay(delta) {
                     const input = $('#selectedDate')[0];
@@ -1095,6 +1131,7 @@
                     $('#statusSelect').val(r.Status);
                     $('#durationSelect').val(r.Duration);
                     $('#lessonAccountingType').val(r.LessonAccountingType);
+                    capturePricingBase();
 
                     // Highlight the selected row
                     $(`#entriesTable tbody tr[data-id="${r.Id}"]`).addClass('table-info');
@@ -1105,6 +1142,7 @@
 
                 function cancelEdit() {
                     editingRow = null;
+                    pricingBase = null;
                     $('#timeSelect').val('');
                     $('#groupSelect').val('').trigger('searchable:sync');
                     $('#studentChargeAmount').val('');

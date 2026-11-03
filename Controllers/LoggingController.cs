@@ -160,17 +160,14 @@ namespace DotNetCoreSqlDb.Controllers
 
             var options = await _context.StudentBalance
                 .AsNoTracking()
-                .Include(sb => sb.Assignment)
-                    .ThenInclude(a => a.Teacher)
                 .Include(sb => sb.Student)
                 .Where(sb => studentIds.Contains(sb.StudentId))
-                .Where(sb => sb.Assignment.IsActive)
                 .Select(sb => new
                 {
                     studentId = sb.StudentId,
                     studentName = sb.Student.Name,
                     id = sb.Id,
-                    label = sb.Assignment.Teacher!.Name + " - " + sb.Balance.ToString("0.##") + " units"
+                    label = sb.CADBalance.ToString("0.##") + " CAD"
                 })
                 .ToListAsync();
 

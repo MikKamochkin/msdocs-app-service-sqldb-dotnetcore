@@ -320,10 +320,8 @@ namespace DotNetCoreSqlDb.Controllers
             var sched = await _context.Schedule
                 .FirstOrDefaultAsync(s => s.Id == id);
 
-            //If a schedule was marked as cancelled with pay before lesson starts with StudentCharge = 0, accounted set to true
-            //Then, we "uncancel" this lesson, set it back to scheduled, and set StudentCharge = 100, accounted is still true
-            //We don't want to charge them again when we start this lesson
-            //Otherwise, all scheduled lessons will have accounted == false
+            //Scheduled lessons have accounted == false, including cancelled lessons set back to scheduled, which are refunded at that point
+            //A lesson that was already charged (accounted == true) is not charged again when we start it
             if (sched != null && sched.Accounted == false)
             {
                 await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, id);
@@ -640,6 +638,15 @@ namespace DotNetCoreSqlDb.Controllers
             public string Status { get; set; } = "";
         }
 
+        // Same linear scaling as the Schedule Manage page, rounded to cents
+        private static float ScaleToDuration(float unitAmount, int duration, float unitDuration)
+        {
+            if (unitDuration <= 0)
+                return unitAmount;
+
+            return (float)Math.Round((double)unitAmount * duration / unitDuration, 2, MidpointRounding.AwayFromZero);
+        }
+
         // Teachers can only create new rows; if Id is present, we reject it
         [HttpPost]
         public async Task<IActionResult> SaveEntry([FromBody] ScheduleDto dto)
@@ -672,10 +679,10 @@ namespace DotNetCoreSqlDb.Controllers
                 GroupId = assignment.GroupId,
                 TeacherId = teacherId,
 
-                StudentChargeAmount = (int)assignment.StudentUnitCost,
+                StudentChargeAmount = ScaleToDuration(assignment.StudentUnitCost, dto.Duration, assignment.StudentUnitDuration),
                 StudentChargeCurrency = assignment.StudentUnitType,
 
-                TeacherPayAmount = (int)assignment.TeacherPayForUnit,
+                TeacherPayAmount = ScaleToDuration(assignment.TeacherPayForUnit, dto.Duration, assignment.StudentUnitDuration),
                 TeacherPayCurrency = assignment.TeacherPayUnitType,
 
                 DateTime = dto.DateTime.Kind == DateTimeKind.Local
@@ -929,7 +936,7 @@ namespace DotNetCoreSqlDb.Controllers
             foreach (var entry in lastWeekEntries)
             {
                 //_logger.LogInformation("entry: {a}", entry.Id);
-                var newDate = entry.DateTime.AddDays(7);
+                var newDate = TimeZoneMapping.AddDaysKeepingLocalTime(entry.DateTime, 7, tzInfo);
 
                 var exists = await _context.Schedule.AnyAsync(s =>
                     s.TeacherId == teacherId &&

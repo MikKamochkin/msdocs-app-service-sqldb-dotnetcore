@@ -15,7 +15,7 @@ public sealed class TeacherInvoiceService(MyDatabaseContext db, TorontoInvoiceCl
     {
         var t = await db.Teacher.AsNoTracking().SingleOrDefaultAsync(x => x.Id == teacherId, ct)
             ?? throw new InvoiceValidationException("Teacher profile not found.");
-        var (start, end) = clock.LastWeek();
+        var (start, end) = clock.DefaultInvoiceWeek(clock.Today);
         return new TeacherInvoiceInput {
             StartDate = start, EndDate = end,
             InvoiceNumber = $"INV-{clock.Today:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8]}",

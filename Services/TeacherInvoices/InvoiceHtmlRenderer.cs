@@ -104,6 +104,7 @@ public sealed class InvoiceHtmlRenderer(IOptions<TeacherInvoiceOptions> options)
         <h3>ITEMS</h3><table class="lessons"><thead><tr><th style="width:5%">#</th><th style="width:25%">Service date/time</th><th style="width:50%">Assignment</th><th style="width:20%; text-align: right;">Amount {{E(invoice.Currency)}}</th></tr></thead><tbody>{{rows}}</tbody></table>
         <div class="total"><strong>TOTAL DUE: {{Money(invoice.Total)}} {{E(invoice.Currency)}}</strong></div>
         {{generalNotes}}
+        <h3>CONTRACTOR DECLARATION</h3><p><strong>{{E(ContractorDeclaration.Title(i.ContractorType))}}</strong><br>{{E(ContractorDeclaration.Statement(i.ContractorType))}}</p>
         <h3>PAYMENT INFORMATION</h3><p>Payment method: Electronic transfer<br>E-transfer email: {{E(i.ETransferEmail ?? i.Email)}}</p>
         <p>Please include invoice number {{E(i.InvoiceNumber)}} with the payment.</p>
         <div class="signature"><strong>CONTRACTOR SIGNATURE</strong><br>

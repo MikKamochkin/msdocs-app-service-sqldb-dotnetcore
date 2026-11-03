@@ -151,10 +151,10 @@ namespace DotNetCoreSqlDb.Controllers
                             AssignmentId = a.Id,
                             Duration = a.StudentUnitDuration,
 
-                            StudentChargeAmount = (int)a.StudentUnitCost,
+                            StudentChargeAmount = a.StudentUnitCost,
                             StudentChargeCurrency = a.StudentUnitType,
 
-                            TeacherPayAmount = (int)a.TeacherPayForUnit,
+                            TeacherPayAmount = a.TeacherPayForUnit,
                             TeacherPayCurrency = a.TeacherPayUnitType
                         });
             }
@@ -453,7 +453,7 @@ namespace DotNetCoreSqlDb.Controllers
             foreach (var entry in lastWeekEntries)
             {
                 //_logger.LogInformation("entry: {a}", entry.Id);
-                var newDate = entry.DateTime.AddDays(7);
+                var newDate = TimeZoneMapping.AddDaysKeepingLocalTime(entry.DateTime, 7, tzInfo);
 
                 var exists = await _context.Schedule.AnyAsync(s =>
                     s.TeacherId == teacherId &&
@@ -587,9 +587,9 @@ namespace DotNetCoreSqlDb.Controllers
                     GroupId = def.Assignment.GroupId,
                     TeacherId = def.Assignment.TeacherId.Value,
 
-                    StudentChargeAmount = (int)def.Assignment.StudentUnitCost,
+                    StudentChargeAmount = def.Assignment.StudentUnitCost,
                     StudentChargeCurrency = def.Assignment.StudentUnitType,
-                    TeacherPayAmount = (int)def.Assignment.TeacherPayForUnit,
+                    TeacherPayAmount = def.Assignment.TeacherPayForUnit,
                     TeacherPayCurrency = def.Assignment.TeacherPayUnitType,
 
                     DateTime = utcDateTime,
@@ -725,10 +725,10 @@ namespace DotNetCoreSqlDb.Controllers
             public Guid GroupId { get; set; }
             public Guid TeacherId { get; set; }
 
-            public int StudentChargeAmount { get; set; }
+            public float StudentChargeAmount { get; set; }
             public string StudentChargeCurrency { get; set; } = "";
 
-            public int TeacherPayAmount { get; set; }
+            public float TeacherPayAmount { get; set; }
             public string TeacherPayCurrency { get; set; } = "";
 
             public DateTime SelectedDate { get; set; }
@@ -752,6 +752,8 @@ namespace DotNetCoreSqlDb.Controllers
             // 1) Pull in the tracked entity (if it exists)
             var entity = await _context.Schedule
                 .FirstOrDefaultAsync(s => s.Id == dto.Id);
+
+            var chargeWasUndone = false;
 
             // 2) If it didn't exist, create + add it
             if (entity == null)
@@ -804,11 +806,13 @@ namespace DotNetCoreSqlDb.Controllers
             }
             else
             {
-                await ProcessAccountingTypeChange(
+                chargeWasUndone = await ProcessAccountingTypeChange(
                     entity.LessonAccountingType,
                     dto.LessonAccountingType,
                     entity.Status,
                     dto.Status,
+                    dto.StudentChargeAmount,
+                    dto.StudentChargeCurrency,
                     entity);
             }
 
@@ -828,7 +832,7 @@ namespace DotNetCoreSqlDb.Controllers
 
             // 5) Save and then do any "new" logic
             await _context.SaveChangesAsync();
-            await ProcessNewAccountingType(entity.LessonAccountingType, entity);
+            await ProcessNewAccountingType(entity.LessonAccountingType, entity, chargeWasUndone);
 
             var teacherId = entity.TeacherId;
 
@@ -987,23 +991,37 @@ namespace DotNetCoreSqlDb.Controllers
             return Ok();
         }
         
-        private async Task ProcessAccountingTypeChange(string oldAccountingType, string newAccountingType, string oldStatus, string newStatus, Schedule schedule)
+        // Runs before the entity is updated, so the undo refunds the amount that was originally charged.
+        // Returns true if the charge was undone and needs to be re-applied.
+        private async Task<bool> ProcessAccountingTypeChange(string oldAccountingType, string newAccountingType, string oldStatus, string newStatus, float newChargeAmount, string newChargeCurrency, Schedule schedule)
         {
             //_logger.LogInformation("In ProcessAccountingTypeChange method");
-            if ((oldAccountingType != newAccountingType && schedule.Accounted) ||
-                (oldStatus == "Cancelled" && oldStatus != newStatus && schedule.Accounted))
+            // A cancelled lesson going back to scheduled is refunded and charged again when it starts
+            if (schedule.Accounted && oldStatus == "Cancelled" && newStatus == "Scheduled")
+            {
+                await _balanceSvc.UndoTransactionAsync(HttpContext.RequestAborted, schedule.Id, oldAccountingType, markUnaccounted: true);
+                return false;
+            }
+
+            if (schedule.Accounted &&
+                (oldAccountingType != newAccountingType ||
+                 (oldStatus == "Cancelled" && oldStatus != newStatus) ||
+                 schedule.StudentChargeAmount != newChargeAmount ||
+                 schedule.StudentChargeCurrency != newChargeCurrency))
             {
                 _logger.LogInformation("In UNDO If statement--------");
                 await _balanceSvc.UndoTransactionAsync(HttpContext.RequestAborted, schedule.Id, oldAccountingType);
                 //await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, schedule.Id);
+                return true;
             }
+            return false;
         }
 
-        private async Task ProcessNewAccountingType(string newValue, Schedule schedule)
+        private async Task ProcessNewAccountingType(string newValue, Schedule schedule, bool chargeWasUndone)
         {
             //_logger.LogInformation("In ProcessNewAccountingType method");
             //_logger.LogInformation("in process new, accounted: {1}", schedule.Accounted);
-            if (schedule.Accounted || (schedule.Status == "Cancelled" && schedule.Accounted == false))
+            if (chargeWasUndone || (schedule.Status == "Cancelled" && schedule.Accounted == false))
             {
                 //_logger.LogInformation("In ProcessNewAccountingType If statement-----");
                 await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, schedule.Id);

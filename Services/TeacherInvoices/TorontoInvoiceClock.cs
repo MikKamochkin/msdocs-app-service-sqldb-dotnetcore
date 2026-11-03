@@ -13,10 +13,12 @@ public sealed class TorontoInvoiceClock
         DateTime.SpecifyKind(utc, DateTimeKind.Utc), Zone);
     public DateTime ToUtc(DateTime toronto) => TimeZoneInfo.ConvertTimeToUtc(
         DateTime.SpecifyKind(toronto, DateTimeKind.Unspecified), Zone);
-    public (DateTime Start, DateTime End) LastWeek()
+    // Monday to Wednesday defaults to last week; Thursday to Sunday defaults to this week.
+    public (DateTime Start, DateTime End) DefaultInvoiceWeek(DateTime today)
     {
-        var today = Today;
-        var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
-        return (monday.AddDays(-7), monday.AddDays(-1));
+        var daysSinceMonday = ((int)today.DayOfWeek + 6) % 7;
+        var monday = today.AddDays(-daysSinceMonday);
+        var start = daysSinceMonday <= 2 ? monday.AddDays(-7) : monday;
+        return (start, start.AddDays(6));
     }
 }

@@ -10,9 +10,27 @@
     <input type="hidden" asp-for="StudentId" />
 
     <div class="form-group">
-        <label asp-for="Balance"></label>
-        <input asp-for="Balance" class="form-control" />
-        <span asp-validation-for="Balance" class="text-danger"></span>
+        <label asp-for="CADBalance"></label>
+        <input asp-for="CADBalance" class="form-control" />
+        <span asp-validation-for="CADBalance" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="USDBalance"></label>
+        <input asp-for="USDBalance" class="form-control" />
+        <span asp-validation-for="USDBalance" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="EURBalance"></label>
+        <input asp-for="EURBalance" class="form-control" />
+        <span asp-validation-for="EURBalance" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="RUBBalance"></label>
+        <input asp-for="RUBBalance" class="form-control" />
+        <span asp-validation-for="RUBBalance" class="text-danger"></span>
     </div>
 
     <button type="submit" class="btn btn-success">Save</button>

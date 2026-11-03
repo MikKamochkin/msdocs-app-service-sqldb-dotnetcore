@@ -87,52 +87,57 @@ namespace DotNetCoreSqlDb.Services
                         .ThenInclude(g => g.StudentGroupCompositions)
                     .SingleOrDefaultAsync(s => s.Id == scheduleId);
 
-                /*if (lesson != null)
+                if (lesson != null && lesson.Group != null)
                 {
-                    var a = lesson.Assignment;
-                    if (a!.StudentUnitDuration > 0)
+                    string currency = lesson.StudentChargeCurrency;
+                    if (!StudentBalanceHelper.IsSupportedCurrency(currency))
                     {
-                        float studentCostMutliplier = 1;
-                        string lessonType = lesson.LessonAccountingType;
-                        switch (lessonType)
-                        {
-                            case "S100T100":
-                                studentCostMutliplier = 1;
-                                break;
-                            case "S50T100":
-                                studentCostMutliplier = 0.5f;
-                                break;
-                            case "S0T0":
-                                studentCostMutliplier = 0;
-                                break;
-                            case "S0T100":
-                                studentCostMutliplier = 0;
-                                break;
-                            default:
-                                studentCostMutliplier = 1;
-                                break;
-                        }
-
-                        float spent = (float)(lesson.Duration / a.StudentUnitDuration) * studentCostMutliplier;
-                        foreach (var sgc in a.Group.StudentGroupCompositions.Where(sgc => sgc.UseMyBalance == true))
-                        {
-                            Guid studentId = sgc.StudentId;
-
-                            // 1) fetch (or create) the StudentBalance row for this student & assignment
-                            var sb = await _context.StudentBalance
-                                .SingleOrDefaultAsync(b => b.StudentId == studentId &&
-                                                         b.AssignmentId == a.Id);
-                            // 2) decrease the balance
-                            if (sb != null)
-                            {
-                                sb.Balance -= spent;
-                                await _logHelper.LogStudentBalanceAsync(studentId, a.Id, scheduleId, -spent, sb.Balance);
-                            }
-
-                        }
-                        lesson.Accounted = true;
+                        _logger.LogWarning(
+                            "Schedule {ScheduleId} has unsupported charge currency '{Currency}'; balance not updated.",
+                            scheduleId, currency);
+                        await tx.RollbackAsync(cancellationToken);
+                        return;
                     }
-                }*/
+
+                    float studentCostMutliplier = 1;
+                    string lessonType = lesson.LessonAccountingType;
+                    switch (lessonType)
+                    {
+                        case "S100T100":
+                            studentCostMutliplier = 1;
+                            break;
+                        case "S50T100":
+                            studentCostMutliplier = 0.5f;
+                            break;
+                        case "S0T0":
+                            studentCostMutliplier = 0;
+                            break;
+                        case "S0T100":
+                            studentCostMutliplier = 0;
+                            break;
+                        default:
+                            studentCostMutliplier = 1;
+                            break;
+                    }
+
+                    float spent = lesson.StudentChargeAmount * studentCostMutliplier;
+                    foreach (var sgc in lesson.Group.StudentGroupCompositions.Where(sgc => sgc.UseMyBalance == true))
+                    {
+                        Guid studentId = sgc.StudentId;
+
+                        // 1) fetch the StudentBalance row for this student
+                        var sb = await _context.StudentBalance
+                            .SingleOrDefaultAsync(b => b.StudentId == studentId, cancellationToken);
+                        // 2) decrease the balance in the lesson's currency
+                        if (sb != null)
+                        {
+                            float newBalance = StudentBalanceHelper.AdjustBalance(sb, currency, -spent);
+                            await _logHelper.LogStudentBalanceAsync(studentId, scheduleId, currency, -spent, newBalance);
+                        }
+
+                    }
+                    lesson.Accounted = true;
+                }
 
                 // 3) Persist and release lock
                 await _context.SaveChangesAsync(cancellationToken);
@@ -150,7 +155,7 @@ namespace DotNetCoreSqlDb.Services
             }
         }
 
-        public async Task UndoTransactionAsync(CancellationToken cancellationToken, Guid scheduleId, string originalAccountingType)
+        public async Task UndoTransactionAsync(CancellationToken cancellationToken, Guid scheduleId, string originalAccountingType, bool markUnaccounted = false)
         {
             try
             {
@@ -201,53 +206,60 @@ namespace DotNetCoreSqlDb.Services
                         .ThenInclude(g => g.StudentGroupCompositions)
                     .SingleOrDefaultAsync(s => s.Id == scheduleId);
 
-                /*if (lesson != null)
+                if (lesson != null && lesson.Group != null)
                 {
 
                     if (lesson.Accounted == true)
                     {
-                        var a = lesson.Assignment;
-                        if (a!.StudentUnitDuration > 0)
+                        string currency = lesson.StudentChargeCurrency;
+                        if (!StudentBalanceHelper.IsSupportedCurrency(currency))
                         {
-                            float studentCostMultiplier = 1;
-                            string lessonType = originalAccountingType;
-                            switch (lessonType)
-                            {
-                                case "S100T100":
-                                    studentCostMultiplier = 1;
-                                    break;
-                                case "S50T100":
-                                    studentCostMultiplier = 0.5f;
-                                    break;
-                                case "S0T0":
-                                    studentCostMultiplier = 0;
-                                    break;
-                                case "S0T100":
-                                    studentCostMultiplier = 0;
-                                    break;
-                                default:
-                                    studentCostMultiplier = 1;
-                                    break;
-                            }
-
-                            float spent = (float)(lesson.Duration / a.StudentUnitDuration) * studentCostMultiplier;
-                            foreach (var sgc in a.Group.StudentGroupCompositions.Where(sgc => sgc.UseMyBalance == true))
-                            {
-                                Guid studentId = sgc.StudentId;
-
-                                var sb = await _context.StudentBalance
-                                    .SingleOrDefaultAsync(b => b.StudentId == studentId && b.AssignmentId == a.Id);
-
-                                if (sb != null)
-                                {
-                                    sb.Balance += spent;
-                                    await _logHelper.LogStudentBalanceAsync(studentId, a.Id, scheduleId, -spent, sb.Balance);
-                                }
-                            }
-                            lesson.Accounted = true;
+                            _logger.LogWarning(
+                                "Schedule {ScheduleId} has unsupported charge currency '{Currency}'; balance not restored.",
+                                scheduleId, currency);
+                            await tx.RollbackAsync(cancellationToken);
+                            return;
                         }
+
+                        float studentCostMultiplier = 1;
+                        string lessonType = originalAccountingType;
+                        switch (lessonType)
+                        {
+                            case "S100T100":
+                                studentCostMultiplier = 1;
+                                break;
+                            case "S50T100":
+                                studentCostMultiplier = 0.5f;
+                                break;
+                            case "S0T0":
+                                studentCostMultiplier = 0;
+                                break;
+                            case "S0T100":
+                                studentCostMultiplier = 0;
+                                break;
+                            default:
+                                studentCostMultiplier = 1;
+                                break;
+                        }
+
+                        float spent = lesson.StudentChargeAmount * studentCostMultiplier;
+                        foreach (var sgc in lesson.Group.StudentGroupCompositions.Where(sgc => sgc.UseMyBalance == true))
+                        {
+                            Guid studentId = sgc.StudentId;
+
+                            var sb = await _context.StudentBalance
+                                .SingleOrDefaultAsync(b => b.StudentId == studentId, cancellationToken);
+
+                            if (sb != null)
+                            {
+                                float newBalance = StudentBalanceHelper.AdjustBalance(sb, currency, spent);
+                                await _logHelper.LogStudentBalanceAsync(studentId, scheduleId, currency, spent, newBalance);
+                            }
+                        }
+                        // Saved with the refund, so a failed undo can't leave the lesson chargeable twice
+                        lesson.Accounted = !markUnaccounted;
                     }
-                }*/
+                }
 
                 // 6) Persist and release lock
                 await _context.SaveChangesAsync(cancellationToken);
@@ -267,7 +279,6 @@ namespace DotNetCoreSqlDb.Services
 
         public async Task<Guid?> AddToBalanceAsync(
             Guid balanceId,
-            float unitsToAdd,
             float amountPaid,
             string adminNotes,
             string currency,
@@ -275,28 +286,28 @@ namespace DotNetCoreSqlDb.Services
             string paymentReference,
             string paymentType)
         {
+            if (!StudentBalanceHelper.IsSupportedCurrency(currency)) return null;
+
             var balance = await _context.StudentBalance.FindAsync(balanceId);
             if (balance == null) return null;
 
-            balance.Balance += unitsToAdd;
+            float newBalance = StudentBalanceHelper.AdjustBalance(balance, currency, amountPaid);
             await _context.SaveChangesAsync();
 
             var student = await _context.Student.FindAsync(balance.StudentId);
             if (student == null) return null;
 
-            Guid assignmentId = balance.AssignmentId;
-
             var transactionLogId =
                 await _logHelper.LogStudentBalanceAsync(
                     student.ID,
-                    assignmentId,
                     currency,
                     paymentType,
                     paymentReference,
                     payerNotes,
                     adminNotes,
-                    unitsToAdd,
-                    amountPaid);
+                    amountPaid,
+                    amountPaid,
+                    newBalance);
 
             return transactionLogId;
         }

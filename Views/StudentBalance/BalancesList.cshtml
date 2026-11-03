@@ -66,7 +66,7 @@
                     const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                     if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
-                    const data = await resp.json(); // [{ studentId, studentName, assignmentId, balance }, ...]
+                    const data = await resp.json(); // [{ studentId, studentName, cadBalance, usdBalance, eurBalance, rubBalance }, ...]
 
                     if (!Array.isArray(data) || data.length === 0) {
                         content.innerHTML = '<div class="text-muted">No balances for this assignment.</div>';
@@ -77,14 +77,20 @@
                     let html = '<table class="table table-bordered table-sm mb-2">'
                         + '<thead><tr>'
                         + '<th style="width:40%">Student</th>'
-                        + '<th class="text-end" style="width:30%">Balance</th>'
+                        + '<th class="text-end" style="width:15%">CAD</th>'
+                        + '<th class="text-end" style="width:15%">USD</th>'
+                        + '<th class="text-end" style="width:15%">EUR</th>'
+                        + '<th class="text-end" style="width:15%">RUB</th>'
                         + '</tr></thead><tbody>';
 
                     for (const r of data) {
                         const name = (r.studentName && r.studentName.trim()) ? r.studentName : '[unknown]';
                         html += '<tr>'
                             + '<td>' + name + '</td>'
-                            + '<td class="text-end">' + r.balance + '</td>'
+                            + '<td class="text-end">' + r.cadBalance + '</td>'
+                            + '<td class="text-end">' + r.usdBalance + '</td>'
+                            + '<td class="text-end">' + r.eurBalance + '</td>'
+                            + '<td class="text-end">' + r.rubBalance + '</td>'
                             + '</tr>';
                     }
                     html += '</tbody></table>';

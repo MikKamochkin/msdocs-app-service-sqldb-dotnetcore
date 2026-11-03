@@ -458,22 +458,13 @@ namespace DotNetCoreSqlDb.Controllers
                 newGroup.IsManualGroup = true;
                 _context.Add(newGroup);
 
-                // --- (B) Capture ORIGINAL student ids before we change anything ---
-                var originalStudentIds = await _context.StudentGroupComposition
-                    .Where(sgc => sgc.GroupId == id)
-                    .Select(sgc => sgc.StudentId)
-                    .ToListAsync();
-
-                // parse posted students once (we'll use them twice)
+                // parse posted students
                 var postedStudentIds = Request.Form["StudentIds"].ToString()
                     .Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(s => Guid.TryParse(s, out var g) ? g : (Guid?)null)
                     .Where(g => g.HasValue)
                     .Select(g => g!.Value)
                     .ToList();
-
-                // --- (C) Determine NEW students added in this copy ---
-                var newStudentIds = postedStudentIds.Except(originalStudentIds).ToList();
 
                 // --- (D) Deactivate original group + copy its ACTIVE assignments ---
                 var originalGroup = await _context.Group.FindAsync(id);
@@ -485,21 +476,9 @@ namespace DotNetCoreSqlDb.Controllers
                         .Where(a => a.GroupId == id && a.IsActive)
                         .ToListAsync();
 
-                    // Keep track of all NEW assignment IDs we create for the new group
-                    var newAssignmentIds = new List<Guid>();
-
                     foreach (var a in activeAssignments)
                     {
-                        // We'll use this ID for both (1) moving existing SB rows and (2) seeding SB for NEW students
                         var assignmentCopyId = Guid.NewGuid();
-                        newAssignmentIds.Add(assignmentCopyId);
-
-                        // Move existing student balances over to the copied assignment
-                        var studentBalances = await _context.StudentBalance
-                            .Where(s => s.AssignmentId == a.Id)
-                            .ToListAsync();
-                        foreach (var sb in studentBalances)
-                            sb.AssignmentId = assignmentCopyId;
 
                         // Deactivate original assignment and add the copy
                         a.IsActive = false;
@@ -541,38 +520,6 @@ namespace DotNetCoreSqlDb.Controllers
                             StudentId = studentId,
                             UseMyBalance = useMyBalance
                         });
-                    }
-
-                    // --- (F) Seed StudentBalance ONLY for NEW students across the NEW assignments ---
-                    // Avoid duplicates (and satisfy the unique index on StudentId+AssignmentId).
-                    if (newStudentIds.Count > 0 && newAssignmentIds.Count > 0)
-                    {
-                        // Fetch existing pairs once (should be none for the new assignments, but be safe)
-                        var existingPairs = await _context.StudentBalance
-                            .Where(sb => newAssignmentIds.Contains(sb.AssignmentId)
-                                         && newStudentIds.Contains(sb.StudentId))
-                            .Select(sb => new { sb.AssignmentId, sb.StudentId })
-                            .ToListAsync();
-
-                        var existingSet = new HashSet<(Guid AssignmentId, Guid StudentId)>(
-                            existingPairs.Select(p => (p.AssignmentId, p.StudentId)));
-
-                        foreach (var assignmentId in newAssignmentIds)
-                        {
-                            foreach (var sid in newStudentIds)
-                            {
-                                if (!existingSet.Contains((assignmentId, sid)))
-                                {
-                                    _context.StudentBalance.Add(new StudentBalance
-                                    {
-                                        Id = Guid.NewGuid(),
-                                        StudentId = sid,
-                                        AssignmentId = assignmentId,
-                                        Balance = 0
-                                    });
-                                }
-                            }
-                        }
                     }
                 }
 

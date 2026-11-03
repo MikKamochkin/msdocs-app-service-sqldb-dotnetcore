@@ -104,10 +104,6 @@ namespace DotNetCoreSqlDb.Controllers
 
             var balances = await _context.StudentBalance
                 .Where(b => b.StudentId == student.ID)
-                .Include(a => a.Assignment)
-                    .ThenInclude(t => t.Teacher)
-                .Include(b => b.Assignment)
-                    .ThenInclude(a => a.Group)
                 .ToListAsync();
 
             ViewBag.Balances = balances;
@@ -330,9 +326,10 @@ namespace DotNetCoreSqlDb.Controllers
                     t.TransactionAmount,
                     t.Currency,
                     t.PaymentType,
-                    TeacherName = t.Assignment != null && t.Assignment.Teacher != null
-                        ? t.Assignment.Teacher.Name
-                        : null
+                    TeacherName = _context.Schedule
+                        .Where(s => s.Id == t.ScheduleId && s.Teacher != null)
+                        .Select(s => s.Teacher!.Name)
+                        .FirstOrDefault()
                 })
                 .ToListAsync();
 
@@ -357,9 +354,7 @@ namespace DotNetCoreSqlDb.Controllers
                     t.TransactionAmount,
                     t.Currency,
                     t.PaymentType,
-                    TeacherName = t.Assignment != null && t.Assignment.Teacher != null
-                        ? t.Assignment.Teacher.Name
-                        : null
+                    TeacherName = (string?)null
                 })
                 .ToListAsync();
 
@@ -545,16 +540,19 @@ namespace DotNetCoreSqlDb.Controllers
         {
             //_logger.LogInformation("get transactiondetails for id: " + transactionLogId);
             var tx = await _context.StudentBalanceTransactionLog
-                .Include(t => t.Assignment).ThenInclude(a => a.Teacher)
                 .FirstOrDefaultAsync(t => t.Id == transactionLogId);
 
             if (tx == null) return NotFound();
 
+            var teacherName = await _context.Schedule
+                .Where(s => s.Id == tx.ScheduleId && s.Teacher != null)
+                .Select(s => s.Teacher!.Name)
+                .FirstOrDefaultAsync();
 
             return Json(new
             {
                 DateTime = tx.DateTime?.ToString("g"),
-                Teacher = tx.Assignment?.Teacher?.Name,
+                Teacher = teacherName,
                 Units = tx.TransactionAmount,
                 AmountPaid = tx.AmountPaid,
                 Currency = tx.Currency,

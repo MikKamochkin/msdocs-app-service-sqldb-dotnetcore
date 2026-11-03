@@ -14,9 +14,6 @@ namespace DotNetCoreSqlDb.Models
         [ForeignKey("Student")]
         public Guid StudentId { get; set; }
 
-        [ForeignKey("Assignment")]
-        public Guid? AssignmentId { get; set; }
-
         [ForeignKey("Schedule")]
         public Guid? ScheduleId { get; set; }
 
@@ -40,6 +37,5 @@ namespace DotNetCoreSqlDb.Models
 
         /* ─── Navigation references ─────────────────────── */
         public Student Student { get; set; } = null!;
-        public Assignments Assignment { get; set; } = null!;
     }
 }
