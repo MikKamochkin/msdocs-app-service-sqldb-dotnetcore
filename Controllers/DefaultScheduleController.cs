@@ -103,14 +103,6 @@ namespace DotNetCoreSqlDb.Controllers
                 })
                 .ToList();
 
-            ViewBag.LessonAccountingType = DropdownOptions.LessonAccountingType
-                .Select(item => new SelectListItem
-                {
-                    Text = item.Text,
-                    Value = item.Value,
-                    Selected = item.Value == "S100T100"
-                });
-
             // 5) JSON for JS (teacher -> assignments map)
             var jsonOptions = new JsonSerializerOptions
             {
@@ -187,10 +179,6 @@ namespace DotNetCoreSqlDb.Controllers
                 ? "Scheduled"
                 : dto.Status;
 
-            var accountingType = string.IsNullOrWhiteSpace(dto.LessonAccountingType)
-                ? "S100T100"
-                : dto.LessonAccountingType;
-
             DefaultSchedule entity;
             if (existing == null)
             {
@@ -202,7 +190,6 @@ namespace DotNetCoreSqlDb.Controllers
                     DateTime = templateDate,
                     Status = status,
                     Duration = duration,
-                    LessonAccountingType = accountingType,
                     Accounted = false
                 };
                 _context.DefaultSchedule.Add(entity);
@@ -215,7 +202,6 @@ namespace DotNetCoreSqlDb.Controllers
                 entity.DayOfWeek = dto.DayOfWeek;
                 entity.Status = status;
                 entity.Duration = duration;
-                entity.LessonAccountingType = accountingType;
             }
 
             await _context.SaveChangesAsync();
@@ -275,7 +261,6 @@ namespace DotNetCoreSqlDb.Controllers
                     start = startLocal.ToString("o"),
                     end = endLocal.ToString("o"),
                     status = d.Status,
-                    accountingType = d.LessonAccountingType,
                     duration = d.Duration
                 });
             }
@@ -296,7 +281,6 @@ namespace DotNetCoreSqlDb.Controllers
 
         public string Status { get; set; } = "Scheduled";
         public int Duration { get; set; }
-        public string LessonAccountingType { get; set; } = "S100T100";
     }
 
 }

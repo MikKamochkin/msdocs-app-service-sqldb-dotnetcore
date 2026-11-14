@@ -178,10 +178,6 @@ namespace DotNetCoreSqlDb.Controllers
             }
             ViewBag.TimeZones = timeZones;
 
-            if (User.IsImpersonating())
-            {
-                ViewBag.Impersonating = true;
-            }
             bool enableInvoicing = teacher.EnableInvoicing ?? false;
             ViewBag.EnableInvoicing = enableInvoicing;
             // 6) Pass the raw schedule entries into the Razor view
@@ -324,7 +320,10 @@ namespace DotNetCoreSqlDb.Controllers
             //A lesson that was already charged (accounted == true) is not charged again when we start it
             if (sched != null && sched.Accounted == false)
             {
-                await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, id);
+                if (!await _balanceSvc.SetLessonChargeAsync(id, true, HttpContext.RequestAborted))
+                {
+                    _logger.LogError("Lesson {ScheduleId} was started but students could not be charged.", id);
+                }
             }
 
             var lesson = await _context.ZoomMeetings
@@ -507,15 +506,6 @@ namespace DotNetCoreSqlDb.Controllers
                 .Select(item => new SelectListItem { Text = item.Text, Value = item.Value })
                 .ToList();
 
-            // Accounting type dropdown (use your default S100T100)
-            /*ViewBag.LessonAccountingType = DropdownOptions.LessonAccountingType
-                .Select(item => new SelectListItem
-                {
-                    Text = item.Text,
-                    Value = item.Value,
-                    Selected = item.Value == "S100T100"
-                });*/
-
             // Time zones
             var timeZones = TimeZoneMapping.GetTimeZones();
             var defaultZoneIana = TZConvert.WindowsToIana("Eastern Standard Time");
@@ -594,6 +584,9 @@ namespace DotNetCoreSqlDb.Controllers
                 .OrderBy(s => s.DateTime)
                 .ToListAsync();
 
+            var withOutstandingCharge = await ScheduleRules.GetSchedulesWithOutstandingChargeAsync(
+                _context, existing.Select(s => s.Id));
+
             // Map your existing Schedule models to DTOs
             var flat = existing.Select(r => new ScheduleEditDto
             {
@@ -602,7 +595,7 @@ namespace DotNetCoreSqlDb.Controllers
                 Duration = r.Duration,
                 GroupName = r.Group?.Name ?? "(unknown)",
                 IsExisting = true,                         // same as before
-                CanDelete = !r.HasReachedMinimumDuration ?? false,                         // explicit field in DTO
+                CanDelete = (!r.HasReachedMinimumDuration ?? false) && !ScheduleRules.IsBlockedByCharge(r, withOutstandingCharge.Contains(r.Id)),                         // explicit field in DTO
                 Status = r.Status
             }).ToList();
 
@@ -692,7 +685,6 @@ namespace DotNetCoreSqlDb.Controllers
                 Status = "Scheduled",
                 Duration = dto.Duration,
 
-                LessonAccountingType = "S100T100",
                 Accounted = false,
                 HasReachedMinimumDuration = false
             };
@@ -757,6 +749,11 @@ namespace DotNetCoreSqlDb.Controllers
             if (entity.Status == "Ongoing")
             {
                 return BadRequest("An ongoing lesson cannot be deleted");
+            }
+
+            if (await ScheduleRules.IsDeleteBlockedAsync(_context, entity))
+            {
+                return BadRequest(ScheduleRules.ChargedLessonDeleteMessage);
             }
 
             // Collect affected IDs before delete
@@ -892,10 +889,6 @@ namespace DotNetCoreSqlDb.Controllers
             }
             ViewBag.TimeZones = timeZones;
 
-            if (User.IsImpersonating())
-            {
-                ViewBag.Impersonating = true;
-            }
             ViewBag.Week = week;
             ViewBag.Monday = mondayWithWeekOffset;
             ViewBag.Sunday = sundayWithWeekOffset;
@@ -966,7 +959,6 @@ namespace DotNetCoreSqlDb.Controllers
                     Status = "Scheduled",
                     Duration = entry.Duration,
 
-                    LessonAccountingType = "S100T100",
                     Accounted = false,
                     HasReachedMinimumDuration = false
                 };

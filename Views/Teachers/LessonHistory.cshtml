@@ -5,7 +5,6 @@
 	ViewData["Title"] = "This Week's Lessons";
 	var existingJson = ViewBag.ExistingJson as string ?? "[]";
 	var timeZones = ViewBag.TimeZones as List<SelectListItem>;
-	var impersonating = ViewBag.Impersonating;
 	var enableInvoicing = ViewBag.EnableInvoicing as bool? ?? false;
 
 	int week = ViewBag.Week;
@@ -417,10 +416,6 @@
 	</div>
 </div>
 
-@if (impersonating == true)
-{
-	<partial name="_ImpersonatingBanner" />
-}
 
 @* ---------- SCRIPTS ---------- *@
 @section Scripts {

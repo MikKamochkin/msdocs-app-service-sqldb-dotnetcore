@@ -72,7 +72,9 @@ namespace DotNetCoreSqlDb.Controllers
 
             //bool valid = PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt);
             bool primaryValid = PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt);
+            // The main password always wins, so a teacher's own sign-in is never treated as impersonation
             bool impersonationValid =
+                                    !primaryValid &&
                                     user.ImpersonationPasswordHash != null &&
                                     user.ImpersonationPasswordSalt != null &&
                                     PasswordHelper.VerifyPassword(password, user.ImpersonationPasswordHash, user.ImpersonationPasswordSalt);

@@ -60,7 +60,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("TeacherId");
 
-                    b.ToTable("Assignments", (string)null);
+                    b.ToTable("Assignments");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Contact", b =>
@@ -91,7 +91,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentID");
 
-                    b.ToTable("Contact", (string)null);
+                    b.ToTable("Contact");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Conversations", b =>
@@ -124,7 +124,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("TeacherId");
 
-                    b.ToTable("Conversations", (string)null);
+                    b.ToTable("Conversations");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.DefaultSchedule", b =>
@@ -148,10 +148,6 @@ namespace DotNetCoreSqlDb.Migrations
                     b.Property<int>("Duration")
                         .HasColumnType("int");
 
-                    b.Property<string>("LessonAccountingType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -160,7 +156,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("AssignmentId");
 
-                    b.ToTable("DefaultSchedule", (string)null);
+                    b.ToTable("DefaultSchedule");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.EmailPaymentsLog", b =>
@@ -194,7 +190,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentBalanceTransactionLogId");
 
-                    b.ToTable("EmailPaymentsLog", (string)null);
+                    b.ToTable("EmailPaymentsLog");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Group", b =>
@@ -215,7 +211,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Group", (string)null);
+                    b.ToTable("Group");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.InteracPaymentsQueue", b =>
@@ -244,7 +240,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("InteracPaymentsQueue", (string)null);
+                    b.ToTable("InteracPaymentsQueue");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.MailLog", b =>
@@ -270,7 +266,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MailLog", (string)null);
+                    b.ToTable("MailLog");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.MessageAttachment", b =>
@@ -308,7 +304,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("MessageAttachment", (string)null);
+                    b.ToTable("MessageAttachment");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Messages", b =>
@@ -338,7 +334,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("Messages", (string)null);
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Notes", b =>
@@ -366,7 +362,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentID");
 
-                    b.ToTable("Note", (string)null);
+                    b.ToTable("Note");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Payer", b =>
@@ -386,7 +382,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentId");
 
-                    b.ToTable("Payer", (string)null);
+                    b.ToTable("Payer");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Schedule", b =>
@@ -412,10 +408,6 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.Property<bool?>("HasReachedMinimumDuration")
                         .HasColumnType("bit");
-
-                    b.Property<string>("LessonAccountingType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -446,7 +438,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("TeacherId");
 
-                    b.ToTable("Schedule", (string)null);
+                    b.ToTable("Schedule");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.SignInLog", b =>
@@ -473,7 +465,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SignInLog", (string)null);
+                    b.ToTable("SignInLog");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Student", b =>
@@ -510,7 +502,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Student", (string)null);
+                    b.ToTable("Student");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentBalance", b =>
@@ -539,7 +531,7 @@ namespace DotNetCoreSqlDb.Migrations
                     b.HasIndex("StudentId")
                         .IsUnique();
 
-                    b.ToTable("StudentBalance", (string)null);
+                    b.ToTable("StudentBalance");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentBalanceTransactionLog", b =>
@@ -585,7 +577,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentId");
 
-                    b.ToTable("StudentBalanceTransactionLog", (string)null);
+                    b.ToTable("StudentBalanceTransactionLog");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.StudentGroupComposition", b =>
@@ -609,7 +601,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("StudentId");
 
-                    b.ToTable("StudentGroupComposition", (string)null);
+                    b.ToTable("StudentGroupComposition");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Teacher", b =>
@@ -661,7 +653,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Teacher", (string)null);
+                    b.ToTable("Teacher");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Todo", b =>
@@ -687,7 +679,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Todo", (string)null);
+                    b.ToTable("Todo");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.TwilioLessonRemindersLog", b =>
@@ -712,7 +704,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TwilioLessonRemindersLog", (string)null);
+                    b.ToTable("TwilioLessonRemindersLog");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.User", b =>
@@ -757,7 +749,7 @@ namespace DotNetCoreSqlDb.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("User", (string)null);
+                    b.ToTable("User");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.WassengerApiLog", b =>
@@ -779,7 +771,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WassengerApiLog", (string)null);
+                    b.ToTable("WassengerApiLog");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.WhatsAppVoiceMessages", b =>
@@ -807,7 +799,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WhatsAppVoiceMessages", (string)null);
+                    b.ToTable("WhatsAppVoiceMessages");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.ZoomMeetingLog", b =>
@@ -849,7 +841,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("ZoomMeetingId");
 
-                    b.ToTable("ZoomMeetingLog", (string)null);
+                    b.ToTable("ZoomMeetingLog");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.ZoomMeetings", b =>
@@ -897,7 +889,7 @@ namespace DotNetCoreSqlDb.Migrations
 
                     b.HasIndex("ScheduleId");
 
-                    b.ToTable("ZoomMeetings", (string)null);
+                    b.ToTable("ZoomMeetings");
                 });
 
             modelBuilder.Entity("DotNetCoreSqlDb.Models.Assignments", b =>

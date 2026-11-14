@@ -108,7 +108,7 @@ public sealed class InvoiceHtmlRenderer(IOptions<TeacherInvoiceOptions> options)
         <h3>PAYMENT INFORMATION</h3><p>Payment method: Electronic transfer<br>E-transfer email: {{E(i.ETransferEmail ?? i.Email)}}</p>
         <p>Please include invoice number {{E(i.InvoiceNumber)}} with the payment.</p>
         <div class="signature"><strong>CONTRACTOR SIGNATURE</strong><br>
-        <signature-field name="Teacher signature" role="Teacher" required="true" style="display:inline-block;width:240px;height:80px"></signature-field>
+        <signature-field name="Contractor signature" role="Teacher" required="true" style="display:inline-block;width:240px;height:80px"></signature-field>
         <p>{{E(i.Name)}} | Independent Contractor</p></div>
         </body></html>
         """;

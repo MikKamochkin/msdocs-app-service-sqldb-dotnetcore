@@ -2,6 +2,12 @@
 
 @{
     ViewData["Title"] = "Edit Teacher";
+
+    bool hasUser = ViewBag.HasUser == true;
+    bool hasImpersonationPassword = ViewBag.HasImpersonationPassword == true;
+    // One-time plaintext from SetImpersonationPassword
+    var impersonationUsername = TempData["ImpersonationUsername"] as string;
+    var impersonationPassword = TempData["ImpersonationPassword"] as string;
 }
 
 <style>
@@ -150,6 +156,40 @@
         background: #fff7f8;
     }
 
+    .teacher-impersonation-card {
+        margin-top: 16px;
+    }
+
+    .teacher-impersonation-card p {
+        margin: 0 0 12px;
+        color: #424a66;
+        font-size: .95rem;
+    }
+
+    .teacher-impersonation-creds {
+        margin: 0 0 12px;
+        padding: 12px 16px;
+        border: 1px solid #ccd2e8;
+        border-radius: 8px;
+        background: #f5f7ff;
+    }
+
+    .teacher-impersonation-creds code {
+        color: #29314d;
+        font-size: 1rem;
+        user-select: all;
+    }
+
+    .teacher-impersonation-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .teacher-impersonation-actions form {
+        margin: 0;
+    }
+
     @@media (max-width: 1100px) {
         .teacher-edit-fields {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -287,6 +327,54 @@
                         <a href="@Url.Action("Index", "TeacherManagement")" class="btn btn-secondary">Cancel</a>
                         <input type="submit" value="Save Teacher" class="btn btn-primary" />
                     </div>
+                </div>
+            </div>
+        }
+
+        @if (hasUser)
+        {
+            <div class="teacher-edit-card teacher-impersonation-card">
+                <h4>Impersonation Password</h4>
+                <p>
+                    A separate password for signing in as this teacher. Their own password keeps working,
+                    and impersonated sessions expire after 60 minutes.
+                </p>
+
+                @if (!string.IsNullOrWhiteSpace(impersonationPassword))
+                {
+                    <div class="teacher-impersonation-creds">
+                        <div><strong>Username:</strong> <code>@impersonationUsername</code></div>
+                        <div><strong>Impersonation password:</strong> <code id="impersonationPasswordVal">@impersonationPassword</code></div>
+                        <small>This is only shown once. Generating a new one replaces it.</small>
+                    </div>
+                }
+                else
+                {
+                    <p><strong>Status:</strong> @(hasImpersonationPassword ? "Set" : "Not set")</p>
+                }
+
+                <div class="teacher-impersonation-actions">
+                    @using (Html.BeginForm("SetImpersonationPassword", "TeacherManagement", FormMethod.Post))
+                    {
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="teacherId" value="@Model.Id" />
+                        <button type="submit" class="btn"
+                                onclick="return !@(hasImpersonationPassword ? "true" : "false") || confirm('Replace the current impersonation password?');">
+                            @(hasImpersonationPassword ? "Regenerate" : "Generate") Impersonation Password
+                        </button>
+                    }
+                    @if (hasImpersonationPassword)
+                    {
+                        @using (Html.BeginForm("ClearImpersonationPassword", "TeacherManagement", FormMethod.Post))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="teacherId" value="@Model.Id" />
+                            <button type="submit" class="btn"
+                                    onclick="return confirm('Remove the impersonation password? It will stop working immediately for new sign-ins.');">
+                                Remove Impersonation Password
+                            </button>
+                        }
+                    }
                 </div>
             </div>
         }

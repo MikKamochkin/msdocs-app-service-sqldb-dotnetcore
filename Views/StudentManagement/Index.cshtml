@@ -21,254 +21,876 @@
     var newUser = TempData["JustCreatedOrChangedStudentUsername"] as string;
     var newPass = TempData["JustCreatedOrChangedStudentPassword"] as string;
     bool hasNewCreds = !string.IsNullOrWhiteSpace(newUser) && !string.IsNullOrWhiteSpace(newPass);
+
+    bool isStaff = User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant");
+    int[] sizes = new[] { 25, 50, 100, 200 };
+    bool prevDisabled = pageNumber <= 1;
+    bool nextDisabled = pageNumber >= totalPagesCount;
 }
 
-<div class="row no-gutters">
-    @if (User.IsInRole("admin") || User.IsInRole("support") || User.IsInRole("assistant"))
+@{
+    int rangeStart = total == 0 ? 0 : ((pageNumber - 1) * pageSize) + 1;
+    int rangeEnd = Math.Min(pageNumber * pageSize, total);
+    bool hasQuery = !string.IsNullOrWhiteSpace(q);
+    int colCount = isStaff ? 5 : 4;
+
+    string Initials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var first = char.ToUpperInvariant(parts[0][0]).ToString();
+        return parts.Length > 1 ? first + char.ToUpperInvariant(parts[^1][0]) : first;
+    }
+
+    // Soft tints that sit well on the #6981ec / #e8ecfc palette
+    string[] avatarTones = { "tone-1", "tone-2", "tone-3", "tone-4", "tone-5", "tone-6" };
+    string AvatarTone(string? name)
+    {
+        int h = 0;
+        foreach (var c in name ?? "") h = (h * 31 + c) & 0x7fffffff;
+        return avatarTones[h % avatarTones.Length];
+    }
+}
+
+<style>
+    .student-list-page {
+        min-height: 100vh;
+        background: #e8ecfc;
+    }
+
+    .student-list-content {
+        min-width: 0;
+        padding: 1.25rem 1.5rem 2rem;
+        color: #2f3445;
+    }
+
+    .student-list-shell {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+    }
+
+    /* ================= Header ================= */
+    .sl-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .sl-eyebrow {
+        margin: 0 0 .15rem;
+        color: #6981ec;
+        font-size: .8rem;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+
+    .sl-header h2 {
+        margin: 0;
+        color: #29314d;
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+
+    .sl-header-sub {
+        margin: .25rem 0 0;
+        color: #68708a;
+        font-size: .95rem;
+    }
+
+    .sl-header-sub strong {
+        color: #39446c;
+    }
+
+    /* ================= Buttons ================= */
+    .sl-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .45rem;
+        min-height: 38px;
+        padding: .45rem .9rem;
+        border: 1px solid #6981ec;
+        border-radius: 6px;
+        background: #fff;
+        color: #5d73d8;
+        font-size: .95rem;
+        font-weight: 600;
+        line-height: 1.35;
+        text-decoration: none;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .sl-btn:hover,
+    .sl-btn:focus {
+        border-color: #6981ec;
+        background: #6981ec;
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .sl-btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(105, 129, 236, .25);
+    }
+
+    .sl-btn.primary {
+        background: #6981ec;
+        color: #fff;
+        box-shadow: 0 2px 6px rgba(105, 129, 236, .35);
+    }
+
+    .sl-btn.primary:hover,
+    .sl-btn.primary:focus {
+        border-color: #536bd7;
+        background: #536bd7;
+        box-shadow: 0 4px 12px rgba(83, 107, 215, .35);
+    }
+
+    .sl-btn.icon-only {
+        width: 34px;
+        min-height: 34px;
+        padding: 0;
+    }
+
+    .sl-btn.disabled {
+        border-color: #e1e5f2;
+        background: #f6f7fb;
+        color: #b4b9cc;
+        box-shadow: none;
+        pointer-events: none;
+    }
+
+    /* ================= Card ================= */
+    .sl-card {
+        min-width: 0;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
+        overflow: hidden;
+    }
+
+    /* Toolbar = card header */
+    .sl-toolbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: .6rem;
+        padding: .85rem 1rem;
+        border-bottom: 1px solid #e8ebf5;
+    }
+
+    .sl-search {
+        position: relative;
+        flex: 1 1 320px;
+        max-width: 560px;
+    }
+
+    .sl-search i {
+        position: absolute;
+        top: 50%;
+        left: .8rem;
+        transform: translateY(-50%);
+        color: #8a91ab;
+        font-size: .9rem;
+        pointer-events: none;
+        transition: color .15s ease;
+    }
+
+    .sl-search:focus-within i {
+        color: #6981ec;
+    }
+
+    .student-list-content .form-control {
+        min-height: 38px;
+        border: 1px solid #ccd2e8;
+        border-radius: 6px;
+        background: #f8f9fe;
+        color: #2f3445;
+        font-size: .95rem;
+        box-shadow: none;
+        transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+    }
+
+    .student-list-content .form-control:hover {
+        border-color: #b5bde0;
+    }
+
+    .student-list-content .form-control:focus {
+        border-color: #6981ec;
+        background: #fff;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(105, 129, 236, .16);
+    }
+
+    .sl-search .form-control {
+        width: 100%;
+        padding-left: 2.2rem;
+    }
+
+    .sl-toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        margin-left: auto;
+    }
+
+    .sl-toolbar-right label {
+        margin: 0;
+        color: #68708a;
+        font-size: .85rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .student-list-content select.form-control {
+        width: auto;
+        padding-right: 2rem;
+        cursor: pointer;
+    }
+
+    /* ================= Table ================= */
+    .sl-table-wrap {
+        overflow-x: auto;
+    }
+
+    .sl-table {
+        width: 100%;
+        margin: 0;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: .95rem;
+    }
+
+    .sl-table thead th {
+        padding: .6rem 1rem;
+        border-bottom: 1px solid #e2e5f2;
+        background: #f0f2fa;
+        color: #68708a;
+        font-size: .78rem;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-align: left;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .sl-table thead th a {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .sl-table thead th a:hover {
+        color: #39446c;
+    }
+
+    .sl-table thead th a.is-sorted {
+        color: #5d73d8;
+    }
+
+    .sl-table thead th a .sort-idle {
+        opacity: .35;
+    }
+
+    .sl-table thead th a:hover .sort-idle {
+        opacity: .7;
+    }
+
+    .sl-table tbody tr {
+        position: relative;
+        transition: background-color .15s ease, box-shadow .15s ease;
+    }
+
+    .sl-table tbody td {
+        padding: .7rem 1rem;
+        border-bottom: 1px solid #f0f1f6;
+        color: #444;
+        line-height: 1.3;
+        vertical-align: middle;
+    }
+
+    .sl-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .sl-table tbody tr.sl-row:hover {
+        background: #f4f6ff;
+        box-shadow: inset 3px 0 0 #6981ec;
+    }
+
+    /* Columns */
+    .sl-table .col-student { width: 34%; }
+    .sl-table .col-contact { width: auto; }
+    .sl-table .col-reset   { width: 120px; }
+    .sl-table .col-created { width: 190px; }
+    .sl-table .col-action  { width: 56px; text-align: right; }
+
+    .sl-cell-stack {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        min-width: 0;
+    }
+
+    .sl-cell-text {
+        min-width: 0;
+    }
+
+    .sl-truncate {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Avatar */
+    .sl-avatar {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        font-size: .85rem;
+        font-weight: 700;
+        letter-spacing: .02em;
+    }
+
+    .sl-avatar.tone-1 { background: #e3e8ff; color: #4a5fc8; }
+    .sl-avatar.tone-2 { background: #dff3ec; color: #2f7d62; }
+    .sl-avatar.tone-3 { background: #fdeadf; color: #b05a2c; }
+    .sl-avatar.tone-4 { background: #f1e4fb; color: #7b4aa8; }
+    .sl-avatar.tone-5 { background: #dff0fa; color: #2b6f99; }
+    .sl-avatar.tone-6 { background: #fbe3ea; color: #a8445f; }
+
+    .sl-name {
+        color: #29314d;
+        font-weight: 600;
+    }
+
+    .sl-sub {
+        margin-top: .1rem;
+        color: #68708a;
+        font-size: .85rem;
+    }
+
+    .sl-contact-line {
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        min-width: 0;
+    }
+
+    .sl-contact-line + .sl-contact-line {
+        margin-top: .15rem;
+    }
+
+    .sl-contact-line i {
+        flex: 0 0 14px;
+        color: #9aa1bb;
+        font-size: .78rem;
+        text-align: center;
+    }
+
+    .sl-contact-line.email {
+        color: #68708a;
+        font-size: .88rem;
+    }
+
+    .sl-placeholder {
+        color: #b4b9cc;
+    }
+
+    /* Status pill */
+    .sl-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .2rem .6rem;
+        border-radius: 999px;
+        font-size: .8rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .sl-pill.ok {
+        background: #e3f5ec;
+        color: #2f7d62;
+    }
+
+    .sl-pill.pending {
+        background: #f2f3f8;
+        color: #8a91ab;
+    }
+
+    .sl-date {
+        color: #68708a;
+        font-size: .9rem;
+        white-space: nowrap;
+    }
+
+    /* Details link — stretched so the whole row is clickable */
+    .sl-row-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        color: #9aa1bb;
+        text-decoration: none;
+        transition: color .15s ease, background-color .15s ease, transform .15s ease;
+    }
+
+    .sl-row-link::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+    }
+
+    .sl-row:hover .sl-row-link {
+        background: #6981ec;
+        color: #fff;
+        transform: translateX(2px);
+    }
+
+    .sl-row-link:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(105, 129, 236, .3);
+    }
+
+    /* Empty state */
+    .sl-empty {
+        padding: 3rem 1rem !important;
+        text-align: center;
+    }
+
+    .sl-empty-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        margin-bottom: .75rem;
+        border-radius: 50%;
+        background: #eef1ff;
+        color: #6981ec;
+        font-size: 1.3rem;
+    }
+
+    .sl-empty h5 {
+        margin: 0 0 .25rem;
+        color: #29314d;
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+
+    .sl-empty p {
+        margin: 0 0 1rem;
+        color: #68708a;
+        font-size: .92rem;
+    }
+
+    /* ================= Footer / pager ================= */
+    .sl-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: .75rem;
+        padding: .7rem 1rem;
+        border-top: 1px solid #e8ebf5;
+        background: #fafbff;
+        color: #68708a;
+        font-size: .88rem;
+    }
+
+    .sl-footer strong {
+        color: #39446c;
+    }
+
+    .sl-pager {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .sl-page-indicator {
+        padding: 0 .4rem;
+        white-space: nowrap;
+    }
+
+    /* ================= Credentials modal ================= */
+    .student-list-content .modal-content {
+        border: 0;
+        border-radius: 10px;
+        box-shadow: 0 8px 28px rgba(30, 38, 70, .2);
+        overflow: hidden;
+    }
+
+    .student-list-content .modal-header {
+        align-items: center;
+        gap: .75rem;
+        border-color: #e3e6f1;
+        background: #f6f7fb;
+    }
+
+    .student-list-content .modal-footer {
+        border-color: #e3e6f1;
+        background: #f6f7fb;
+    }
+
+    .sl-modal-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #e3f5ec;
+        color: #2f7d62;
+    }
+
+    .student-list-content .modal-title {
+        margin: 0;
+        color: #39446c;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+
+    .student-list-content .modal-header .close {
+        margin-left: auto;
+        border: 0;
+        background: transparent;
+        color: #8a91ab;
+        font-size: 1.5rem;
+        line-height: 1;
+    }
+
+    .student-list-content .modal-header .close:hover {
+        color: #333;
+    }
+
+    .sl-modal-hint {
+        margin: 0 0 .75rem;
+        color: #68708a;
+        font-size: .9rem;
+        white-space: normal;
+    }
+
+    .sl-cred {
+        padding: .55rem .75rem;
+        margin-bottom: .5rem;
+        border: 1px solid #d9ddef;
+        border-radius: 6px;
+        background: #fafbff;
+    }
+
+    .sl-cred:last-child {
+        margin-bottom: 0;
+    }
+
+    .sl-cred dt {
+        margin: 0 0 .15rem;
+        color: #68708a;
+        font-size: .75rem;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+    }
+
+    .sl-cred dd {
+        margin: 0;
+        color: #29314d;
+        font-size: 1rem;
+    }
+
+    .sl-cred code {
+        color: #29314d;
+        font-size: 1.05rem;
+        font-weight: 600;
+        letter-spacing: .03em;
+    }
+
+    /* ================= Responsive ================= */
+    @@media (max-width: 1100px) {
+        .sl-table .col-reset { display: none; }
+    }
+
+    @@media (max-width: 767px) {
+        .student-list-content { padding: .75rem; }
+        .sl-header h2 { font-size: 1.5rem; }
+        .sl-header .sl-btn.primary { width: 100%; }
+        .sl-toolbar-right { margin-left: 0; width: 100%; }
+        .sl-toolbar-right .sl-btn { flex: 1; }
+        .sl-table .col-created { display: none; }
+        .sl-table .col-student { width: 55%; }
+        .sl-footer { justify-content: center; }
+    }
+</style>
+
+<div class="row no-gutters student-list-page">
+    @if (isStaff)
     {
         <partial name="_AdminSidebar" />
-        <div class="col-md-10">
-            <h2>Students List</h2>
+    }
 
-            @* One-time credentials modal *@
-            @if (hasNewCreds)
+    <main class="col student-list-content">
+        <div class="student-list-shell">
+
+            @* One-time credentials modal (staff only) *@
+            @if (isStaff && hasNewCreds)
             {
                 <div id="credsModal" class="modal fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false"
                      aria-labelledby="credsModalLabel" aria-hidden="true">
-                    <div class="modal-dialog">
+                    <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header">
+                                <span class="sl-modal-icon"><i class="fa-solid fa-user-check" aria-hidden="true"></i></span>
                                 <h5 id="credsModalLabel" class="modal-title">Student Created</h5>
                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close" id="modalXClose">
                                     <span aria-hidden="true">&times;</span>
                                 </button>
                             </div>
                             <div class="modal-body" style="white-space:nowrap; overflow:auto;">
-                                @if (!string.IsNullOrWhiteSpace(newName))
-                                {
-                                    <p><strong>Name:</strong> @newName</p>
-                                }
-                                <p><strong>Student Number:</strong> <code id="newUserVal">@newUser</code></p>
-                                <p><strong>Password:</strong> <code id="newPassVal">@newPass</code></p>
+                                <p class="sl-modal-hint">These login details are only shown once — copy them before closing.</p>
+                                <dl class="m-0">
+                                    @if (!string.IsNullOrWhiteSpace(newName))
+                                    {
+                                        <div class="sl-cred">
+                                            <dt>Name</dt>
+                                            <dd>@newName</dd>
+                                        </div>
+                                    }
+                                    <div class="sl-cred">
+                                        <dt>Student Number</dt>
+                                        <dd><code id="newUserVal">@newUser</code></dd>
+                                    </div>
+                                    <div class="sl-cred">
+                                        <dt>Password</dt>
+                                        <dd><code id="newPassVal">@newPass</code></dd>
+                                    </div>
+                                </dl>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" id="copyBtn" class="btn btn-primary" onclick="copyCreds()">Copy</button>
+                                <button type="button" id="copyBtn" class="sl-btn primary" onclick="copyCreds()">
+                                    <i class="fa-regular fa-copy" aria-hidden="true"></i> Copy
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             }
 
-            <p>
-                <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
-            </p>
+            <header class="sl-header">
+                <div>
+                    @*<p class="sl-eyebrow">Student Management</p>*@
+                    <h2>Students List</h2>
+                    <p class="sl-header-sub"><strong>@total</strong> @(total == 1 ? "student" : "students")@(hasQuery ? " matching “" + q + "”" : "")</p>
+                </div>
+                <a href="@Url.Action("Create")" class="sl-btn primary">
+                    <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Create New Student
+                </a>
+            </header>
 
-            @* Search + page size *@
-            <form method="get" class="form-inline mb-3">
-                <input type="text" name="q" value="@q" class="form-control mr-2" style="min-width:280px"
-                       placeholder="Search name, phone, email, employer..." />
-                <input type="hidden" name="sortOrder" value="@currentSort" />
-                <input type="hidden" name="page" value="1" />
-                <select name="pageSize" class="form-control mr-2" onchange="this.form.submit()">
-                    @{
-                        int[] sizes = new[] { 25, 50, 100, 200 };
-                        foreach (var s in sizes)
-                        {
-                            if (s == pageSize)
+            <section class="sl-card">
+                @* Search + page size *@
+                <form method="get" class="sl-toolbar">
+                    <div class="sl-search">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" name="q" value="@q" class="form-control" aria-label="Search students"
+                               placeholder="Search name, phone, email, employer..." />
+                    </div>
+                    <input type="hidden" name="sortOrder" value="@currentSort" />
+                    <input type="hidden" name="page" value="1" />
+                    <div class="sl-toolbar-right">
+                        <label for="slPageSize">Show</label>
+                        <select id="slPageSize" name="pageSize" class="form-control" onchange="this.form.submit()">
+                            @foreach (var s in sizes)
                             {
-                                <option value="@s" selected>@s / page</option>
+                                if (s == pageSize)
+                                {
+                                    <option value="@s" selected>@s / page</option>
+                                }
+                                else
+                                {
+                                    <option value="@s">@s / page</option>
+                                }
                             }
-                            else
+                        </select>
+                        <button type="submit" class="sl-btn">Search</button>
+                    </div>
+                </form>
+
+                <div class="sl-table-wrap">
+                    <table class="sl-table">
+                        <thead>
+                            <tr>
+                                <th class="col-student">
+                                    <a href="@Url.Action("Index", new { sortOrder = nameSortParam, q = q, page = 1, pageSize = pageSize })"
+                                       class="@(currentSort == "Name" || currentSort == "name_desc" ? "is-sorted" : "")">
+                                        Student
+                                        @if (currentSort == "Name")
+                                        {
+                                            <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+                                        }
+                                        else if (currentSort == "name_desc")
+                                        {
+                                            <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fa-solid fa-sort sort-idle" aria-hidden="true"></i>
+                                        }
+                                    </a>
+                                </th>
+                                <th class="col-contact">Contact</th>
+                                @if (isStaff)
+                                {
+                                    <th class="col-reset">Password</th>
+                                }
+                                <th class="col-created">
+                                    <a href="@Url.Action("Index", new { sortOrder = dateSortParam, q = q, page = 1, pageSize = pageSize })"
+                                       class="@(currentSort == "CreatedDate" || currentSort == "createdDate_desc" ? "is-sorted" : "")">
+                                        Created
+                                        @if (currentSort == "CreatedDate")
+                                        {
+                                            <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+                                        }
+                                        else if (currentSort == "createdDate_desc")
+                                        {
+                                            <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fa-solid fa-sort sort-idle" aria-hidden="true"></i>
+                                        }
+                                    </a>
+                                </th>
+                                <th class="col-action"><span class="visually-hidden">Details</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items)
                             {
-                                <option value="@s">@s / page</option>
+                                <tr class="sl-row">
+                                    <td class="col-student">
+                                        <div class="sl-cell-stack">
+                                            <span class="sl-avatar @AvatarTone(item.Name)" aria-hidden="true">@Initials(item.Name)</span>
+                                            <div class="sl-cell-text">
+                                                <span class="sl-name sl-truncate" title="@item.Name">@item.Name</span>
+                                                @if (!string.IsNullOrWhiteSpace(item.ParentOrEmployer))
+                                                {
+                                                    <span class="sl-sub sl-truncate" title="@item.ParentOrEmployer">@item.ParentOrEmployer</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="col-contact">
+                                        <div class="sl-contact-line">
+                                            <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                                            @if (!string.IsNullOrWhiteSpace(item.Phone))
+                                            {
+                                                <span class="sl-truncate" title="@item.Phone">@item.Phone</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="sl-placeholder">—</span>
+                                            }
+                                        </div>
+                                        <div class="sl-contact-line email">
+                                            <i class="fa-regular fa-envelope" aria-hidden="true"></i>
+                                            @if (!string.IsNullOrWhiteSpace(item.Email))
+                                            {
+                                                <span class="sl-truncate" title="@item.Email">@item.Email</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="sl-placeholder">—</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    @if (isStaff)
+                                    {
+                                        <td class="col-reset">
+                                            @if (item.HasPasswordReset)
+                                            {
+                                                <span class="sl-pill ok" title="Password was set/reset"><i class="fa-solid fa-check" aria-hidden="true"></i> Set</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="sl-pill pending">Not set</span>
+                                            }
+                                        </td>
+                                    }
+                                    <td class="col-created">
+                                        <span class="sl-date localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
+                                    </td>
+                                    <td class="col-action">
+                                        <a href="@Url.Action("Details", new { id = item.ID })" class="sl-row-link"
+                                           title="View details" aria-label="View details for @item.Name">
+                                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                                        </a>
+                                    </td>
+                                </tr>
                             }
-                        }
-                    }
-                </select>
-                <button type="submit" class="btn btn-secondary">Search</button>
-            </form>
+                            @if (!Model.Items.Any())
+                            {
+                                <tr>
+                                    <td colspan="@colCount" class="sl-empty">
+                                        <span class="sl-empty-icon"><i class="fa-solid fa-user-graduate" aria-hidden="true"></i></span>
+                                        @if (hasQuery)
+                                        {
+                                            <h5>No students match “@q”</h5>
+                                            <p>Try a different name, phone number, email or employer.</p>
+                                            <a href="@Url.Action("Index", new { sortOrder = currentSort, page = 1, pageSize = pageSize })" class="sl-btn">Clear search</a>
+                                        }
+                                        else
+                                        {
+                                            <h5>No students yet</h5>
+                                            <p>Students you create will appear here.</p>
+                                            <a href="@Url.Action("Create")" class="sl-btn primary">
+                                                <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Create New Student
+                                            </a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
 
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>
-                            <a href="@Url.Action("Index", new { sortOrder = nameSortParam, q = q, page = 1, pageSize = pageSize })">
-                                Name
-                                @if (currentSort == "Name")
-                                {
-                                    <span>&#9650;</span>
-                                }
-                                else if (currentSort == "name_desc")
-                                {
-                                    <span>&#9660;</span>
-                                }
-                            </a>
-                        </th>
-                        <th class="fixedCol">Parent/Employer</th>
-                        <th class="fixedCol">Phone Number</th>
-                        <th>Email</th>
-                        <th>PasswordReset?</th>
-                        <th>
-                            <a href="@Url.Action("Index", new { sortOrder = dateSortParam, q = q, page = 1, pageSize = pageSize })">
-                                Created Date
-                                @if (currentSort == "CreatedDate")
-                                {
-                                    <span>&#9650;</span>
-                                }
-                                else if (currentSort == "createdDate_desc")
-                                {
-                                    <span>&#9660;</span>
-                                }
-                            </a>
-                        </th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model.Items)
-                    {
-                        <tr>
-                            <td>@item.Name</td>
-                            <td>@item.ParentOrEmployer</td>
-                            <td class="fixedCol">@item.Phone</td>
-                            <td class="fixedCol">@item.Email</td>
-                            <td>
-                                @if (item.HasPasswordReset)
-                                {
-                                    <i class="fa-solid fa-check text-success" title="Password was set/reset"></i>
-                                }
-                            </td>
-                            <td>
-                                <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
-                            </td>
-                            <td>
-                                <a href="@Url.Action("Details", new { id = item.ID })"><i class="fa-solid fa-circle-info btn-lg text-dark"></i></a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-
-            @* Pager *@
-            <nav aria-label="Students pages">
-                <ul class="pagination">
-                    <li class="page-item @(pageNumber <= 1 ? "disabled" : "")">
-                        <a class="page-link" href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber - 1, pageSize = pageSize })">Prev</a>
-                    </li>
-                    <li class="page-item disabled">
-                        <span class="page-link">@(pageNumber) / @(totalPagesCount) (@total total)</span>
-                    </li>
-                    <li class="page-item @(pageNumber >= totalPagesCount ? "disabled" : "")">
-                        <a class="page-link" href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber + 1, pageSize = pageSize })">Next</a>
-                    </li>
-                </ul>
-            </nav>
+                @* Footer + pager *@
+                <footer class="sl-footer">
+                    <span>Showing <strong>@rangeStart–@rangeEnd</strong> of <strong>@total</strong></span>
+                    <nav class="sl-pager" aria-label="Students pages">
+                        <a class="sl-btn icon-only @(prevDisabled ? "disabled" : "")"
+                           aria-disabled="@(prevDisabled ? "true" : "false")" aria-label="Previous page" title="Previous page"
+                           href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber - 1, pageSize = pageSize })">
+                            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                        </a>
+                        <span class="sl-page-indicator">Page <strong>@pageNumber</strong> of @totalPagesCount</span>
+                        <a class="sl-btn icon-only @(nextDisabled ? "disabled" : "")"
+                           aria-disabled="@(nextDisabled ? "true" : "false")" aria-label="Next page" title="Next page"
+                           href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber + 1, pageSize = pageSize })">
+                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                        </a>
+                    </nav>
+                </footer>
+            </section>
         </div>
-    }
-    else
-    {
-        <div class="col-md-12">
-            <h2>Students List</h2>
-
-            <p>
-                <a href="@Url.Action("Create")" class="btn btn-primary">Create New Student</a>
-            </p>
-
-            @* Search + page size (non-admin view) *@
-            <form method="get" class="form-inline mb-3">
-                <input type="text" name="q" value="@q" class="form-control mr-2" style="min-width:280px"
-                       placeholder="Search name, phone, email, employer..." />
-                <input type="hidden" name="sortOrder" value="@currentSort" />
-                <input type="hidden" name="page" value="1" />
-                <select name="pageSize" class="form-control mr-2" onchange="this.form.submit()">
-                    @{
-                        int[] sizes = new[] { 25, 50, 100, 200 };
-                        foreach (var s in sizes)
-                        {
-                            if (s == pageSize)
-                            {
-                                <option value="@s" selected>@s / page</option>
-                            }
-                            else
-                            {
-                                <option value="@s">@s / page</option>
-                            }
-                        }
-                    }
-                </select>
-                <button type="submit" class="btn btn-secondary">Search</button>
-            </form>
-
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>
-                            <a href="@Url.Action("Index", new { sortOrder = nameSortParam, q = q, page = 1, pageSize = pageSize })">
-                                Name
-                                @if (currentSort == "Name")
-                                {
-                                    <span>&#9650;</span>
-                                }
-                                else if (currentSort == "name_desc")
-                                {
-                                    <span>&#9660;</span>
-                                }
-                            </a>
-                        </th>
-                        <th class="fixedCol">Parent/Employer</th>
-                        <th class="fixedCol">Phone Number</th>
-                        <th>Email</th>
-                        <th>
-                            <a href="@Url.Action("Index", new { sortOrder = dateSortParam, q = q, page = 1, pageSize = pageSize })">
-                                Created Date
-                                @if (currentSort == "CreatedDate")
-                                {
-                                    <span>&#9650;</span>
-                                }
-                                else if (currentSort == "createdDate_desc")
-                                {
-                                    <span>&#9660;</span>
-                                }
-                            </a>
-                        </th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model.Items)
-                    {
-                        <tr>
-                            <td>@item.Name</td>
-                            <td>@item.ParentOrEmployer</td>
-                            <td class="fixedCol">@item.Phone</td>
-                            <td class="fixedCol">@item.Email</td>
-                            <td>
-                                <span class="localDate" data-utc="@item.CreatedDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")"></span>
-                            </td>
-                            <td>
-                                <a href="@Url.Action("Details", new { id = item.ID })">🛈</a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-
-            @* Pager (non-admin) *@
-            <nav aria-label="Students pages">
-                <ul class="pagination">
-                    <li class="page-item @(pageNumber <= 1 ? "disabled" : "")">
-                        <a class="page-link" href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber - 1, pageSize = pageSize })">Prev</a>
-                    </li>
-                    <li class="page-item disabled">
-                        <span class="page-link">@(pageNumber) / @(totalPagesCount) (@total total)</span>
-                    </li>
-                    <li class="page-item @(pageNumber >= totalPagesCount ? "disabled" : "")">
-                        <a class="page-link" href="@Url.Action("Index", new { sortOrder = currentSort, q = q, page = pageNumber + 1, pageSize = pageSize })">Next</a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-    }
+    </main>
 </div>
 
 @section Scripts {

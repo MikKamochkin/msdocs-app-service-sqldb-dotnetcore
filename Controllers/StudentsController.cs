@@ -333,12 +333,32 @@ namespace DotNetCoreSqlDb.Controllers
                 })
                 .ToListAsync();
 
-            // If (for any reason) multiple tx rows point at the same schedule, take the most recent
+            // A lesson can have several rows (charge, later adjustments/refunds); show the net amount.
+            // After a currency change the old currency nets to 0, so prefer the currency still charged.
             var txBySchedule = txAttached
                 .GroupBy(t => t.ScheduleId!.Value)
                 .ToDictionary(
                     g => g.Key,
-                    g => g.OrderByDescending(x => x.DateTime ?? DateTime.MinValue).First()
+                    g =>
+                    {
+                        var latest = g.OrderByDescending(x => x.DateTime ?? DateTime.MinValue).First();
+                        var byCurrency = g
+                            .GroupBy(x => x.Currency)
+                            .Select(c => new { Currency = c.Key, Net = c.Sum(x => x.TransactionAmount ?? 0) })
+                            .ToList();
+                        var shown = byCurrency
+                            .Where(c => Math.Abs(c.Net) >= 0.005f)
+                            .OrderBy(c => c.Currency == latest.Currency ? 0 : 1)
+                            .FirstOrDefault();
+                        return new
+                        {
+                            latest.Id,
+                            TransactionAmount = (float?)(shown?.Net ?? 0f),
+                            Currency = shown?.Currency ?? latest.Currency,
+                            latest.PaymentType,
+                            latest.TeacherName
+                        };
+                    }
                 );
 
             // 5) Manual / standalone payments (no ScheduleId)
@@ -765,4 +785,4 @@ namespace DotNetCoreSqlDb.Controllers
         /*public async Task<IActionResult> Calendar()
         {return View();}*/
     }
-}
+}

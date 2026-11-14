@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@using DotNetCoreSqlDb.Helpers
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -36,6 +37,10 @@
         <div class="container-fluid body-content">
             @RenderBody()
         </div>
+        @if (User.IsInRole("teacher") && User.IsImpersonating())
+        {
+            <partial name="_ImpersonatingBanner" />
+        }
         @*<footer>
             <p>&copy; @DateTime.Now.Year - French TSL - Version 1.34</p>
         </footer>*@

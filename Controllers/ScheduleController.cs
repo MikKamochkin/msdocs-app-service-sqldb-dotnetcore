@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
+using DotNetCoreSqlDb.Helpers;
 using System;
 using System.Collections.Generic;   
 using System.Linq;
@@ -81,14 +82,6 @@ namespace DotNetCoreSqlDb.Controllers
                     Value = item.Value
                 })
                 .ToList();
-
-            ViewBag.LessonAccountingType = DropdownOptions.LessonAccountingType
-                .Select(item => new SelectListItem
-                {
-                    Text = item.Text,
-                    Value = item.Value,
-                    Selected = item.Value == "S100T100"
-                });
 
             // 5) Time zones
             var timeZones = TimeZoneMapping.GetTimeZones();
@@ -248,7 +241,6 @@ namespace DotNetCoreSqlDb.Controllers
                     Status = r.Status,
                     Duration = r.Duration,
                     Accounted = r.Accounted,
-                    LessonAccountingType = r.LessonAccountingType,
                     GroupName = r.Group?.Name ?? string.Empty,
                     MainNotes = string.Join(", ",
                         rowNotes
@@ -284,7 +276,6 @@ namespace DotNetCoreSqlDb.Controllers
             public string DateTime { get; set; } = "";
             public string Status { get; set; } = "";
             public int Duration { get; set; }
-            public string LessonAccountingType { get; set; } = "";
             public string MainNotes { get; set; } = "";
             public int? NotesPriority { get; set; }
             public bool Accounted { get; set; }
@@ -478,7 +469,6 @@ namespace DotNetCoreSqlDb.Controllers
                     DateTime = newDate,
                     Status = "Scheduled",
                     Duration = entry.Duration,
-                    LessonAccountingType = "S100T100",
                     Accounted = false,
                     HasReachedMinimumDuration = false
                 };
@@ -580,6 +570,12 @@ namespace DotNetCoreSqlDb.Controllers
                 if (def.Assignment == null || !def.Assignment.TeacherId.HasValue)
                     continue;
 
+                // Assignment prices are per unit duration; scale them to the default lesson's length.
+                var unitDuration = def.Assignment.StudentUnitDuration;
+                var durationScale = unitDuration > 0 && def.Duration > 0
+                    ? def.Duration / unitDuration
+                    : 1f;
+
                 var copy = new Schedule
                 {
                     Id = Guid.NewGuid(),
@@ -587,15 +583,14 @@ namespace DotNetCoreSqlDb.Controllers
                     GroupId = def.Assignment.GroupId,
                     TeacherId = def.Assignment.TeacherId.Value,
 
-                    StudentChargeAmount = def.Assignment.StudentUnitCost,
+                    StudentChargeAmount = ScaleAmount(def.Assignment.StudentUnitCost, durationScale),
                     StudentChargeCurrency = def.Assignment.StudentUnitType,
-                    TeacherPayAmount = def.Assignment.TeacherPayForUnit,
+                    TeacherPayAmount = ScaleAmount(def.Assignment.TeacherPayForUnit, durationScale),
                     TeacherPayCurrency = def.Assignment.TeacherPayUnitType,
 
                     DateTime = utcDateTime,
                     Status = "Scheduled",
                     Duration = def.Duration,
-                    LessonAccountingType = "S100T100",
                     Accounted = false,
                     HasReachedMinimumDuration = false
                 };
@@ -660,7 +655,11 @@ namespace DotNetCoreSqlDb.Controllers
             });
         }
 
-        
+        // Rounded to cents, matching the duration scaling on the Manage page.
+        private static float ScaleAmount(float amount, float scale) =>
+            MathF.Round(amount * scale, 2, MidpointRounding.AwayFromZero);
+
+
         [HttpPost]
         public async Task<IActionResult> SendEmailAboutScheduleChange(Guid teacherId, DateTime selectedDate)
         {
@@ -737,8 +736,6 @@ namespace DotNetCoreSqlDb.Controllers
             public string Status { get; set; } = "";
             public int Duration { get; set; }
 
-            public string LessonAccountingType { get; set; } = "";
-
             public bool Accounted { get; set; }
         }
 
@@ -753,7 +750,8 @@ namespace DotNetCoreSqlDb.Controllers
             var entity = await _context.Schedule
                 .FirstOrDefaultAsync(s => s.Id == dto.Id);
 
-            var chargeWasUndone = false;
+            // null = balances untouched; true = students owe the lesson's price; false = fully refunded
+            bool? setCharged = null;
 
             // 2) If it didn't exist, create + add it
             if (entity == null)
@@ -796,24 +794,19 @@ namespace DotNetCoreSqlDb.Controllers
                     Status = dto.Status,
                     Duration = dto.Duration,
 
-                    LessonAccountingType = dto.LessonAccountingType,
 
                     Accounted = false,
                     HasReachedMinimumDuration = false
                 };
 
                 _context.Schedule.Add(entity);
+
+                if (dto.Status == "Cancelled")
+                    setCharged = true;
             }
             else
             {
-                chargeWasUndone = await ProcessAccountingTypeChange(
-                    entity.LessonAccountingType,
-                    dto.LessonAccountingType,
-                    entity.Status,
-                    dto.Status,
-                    dto.StudentChargeAmount,
-                    dto.StudentChargeCurrency,
-                    entity);
+                setCharged = DecideChargeChange(entity, dto);
             }
 
             entity.GroupId = dto.GroupId;
@@ -828,11 +821,23 @@ namespace DotNetCoreSqlDb.Controllers
             entity.DateTime = dto.DateTime;
             entity.Status = dto.Status;
             entity.Duration = dto.Duration;
-            entity.LessonAccountingType = dto.LessonAccountingType;
 
-            // 5) Save and then do any "new" logic
-            await _context.SaveChangesAsync();
-            await ProcessNewAccountingType(entity.LessonAccountingType, entity, chargeWasUndone);
+            // 5) Save. When balances change, the lesson is saved together with them in one transaction.
+            if (setCharged is bool charged)
+            {
+                var saved = await _balanceSvc.SetLessonChargeAsync(entity.Id, charged, HttpContext.RequestAborted);
+                if (!saved)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, new
+                    {
+                        error = "Student balances could not be updated, so the lesson was not saved. Please try again."
+                    });
+                }
+            }
+            else
+            {
+                await _context.SaveChangesAsync();
+            }
 
             var teacherId = entity.TeacherId;
 
@@ -891,7 +896,6 @@ namespace DotNetCoreSqlDb.Controllers
                 dateTime = entity.DateTime.ToUniversalTime().ToString("o"),
                 status = entity.Status,
                 duration = entity.Duration,
-                lessonAccountingType = entity.LessonAccountingType,
 
                 mainNotes = string.Join(", ",
                     rowNotes
@@ -936,6 +940,11 @@ namespace DotNetCoreSqlDb.Controllers
                         await _zoomSvc.EndMeetingsAsync(entity.Id);
                     }
                     return BadRequest("Cannot delete an ongoing class.");
+                }
+
+                if (await ScheduleRules.IsDeleteBlockedAsync(_context, entity))
+                {
+                    return BadRequest(ScheduleRules.ChargedLessonDeleteMessage);
                 }
 
                 bool existsInZoomMeetingLog = await _context.ZoomMeetingLog.AnyAsync(z => z.ScheduleId == entity.Id);
@@ -991,41 +1000,28 @@ namespace DotNetCoreSqlDb.Controllers
             return Ok();
         }
         
-        // Runs before the entity is updated, so the undo refunds the amount that was originally charged.
-        // Returns true if the charge was undone and needs to be re-applied.
-        private async Task<bool> ProcessAccountingTypeChange(string oldAccountingType, string newAccountingType, string oldStatus, string newStatus, float newChargeAmount, string newChargeCurrency, Schedule schedule)
+        // Runs before the entity is updated. Decides whether this edit changes what students owe:
+        //   false -> refund the lesson fully (a charged cancelled lesson set back to scheduled; charged again when it starts)
+        //   true  -> students owe the lesson's (new) price; only the difference from what was charged is applied
+        //   null  -> balances untouched
+        private static bool? DecideChargeChange(Schedule schedule, ScheduleDto dto)
         {
-            //_logger.LogInformation("In ProcessAccountingTypeChange method");
-            // A cancelled lesson going back to scheduled is refunded and charged again when it starts
-            if (schedule.Accounted && oldStatus == "Cancelled" && newStatus == "Scheduled")
+            if (schedule.Accounted)
             {
-                await _balanceSvc.UndoTransactionAsync(HttpContext.RequestAborted, schedule.Id, oldAccountingType, markUnaccounted: true);
-                return false;
+                if (schedule.Status == "Cancelled" && dto.Status == "Scheduled")
+                    return false;
+
+                if ((schedule.Status == "Cancelled" && dto.Status != schedule.Status) ||
+                    schedule.StudentChargeAmount != dto.StudentChargeAmount ||
+                    schedule.StudentChargeCurrency != dto.StudentChargeCurrency ||
+                    schedule.Duration != dto.Duration)
+                    return true;
+
+                return null;
             }
 
-            if (schedule.Accounted &&
-                (oldAccountingType != newAccountingType ||
-                 (oldStatus == "Cancelled" && oldStatus != newStatus) ||
-                 schedule.StudentChargeAmount != newChargeAmount ||
-                 schedule.StudentChargeCurrency != newChargeCurrency))
-            {
-                _logger.LogInformation("In UNDO If statement--------");
-                await _balanceSvc.UndoTransactionAsync(HttpContext.RequestAborted, schedule.Id, oldAccountingType);
-                //await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, schedule.Id);
-                return true;
-            }
-            return false;
-        }
-
-        private async Task ProcessNewAccountingType(string newValue, Schedule schedule, bool chargeWasUndone)
-        {
-            //_logger.LogInformation("In ProcessNewAccountingType method");
-            //_logger.LogInformation("in process new, accounted: {1}", schedule.Accounted);
-            if (chargeWasUndone || (schedule.Status == "Cancelled" && schedule.Accounted == false))
-            {
-                //_logger.LogInformation("In ProcessNewAccountingType If statement-----");
-                await _balanceSvc.UpdateStudentBalanceAsync(HttpContext.RequestAborted, schedule.Id);
-            } 
+            // Cancelling a lesson charges it
+            return dto.Status == "Cancelled" ? true : null;
         }
     }
 }

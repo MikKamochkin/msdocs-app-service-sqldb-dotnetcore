@@ -87,7 +87,7 @@ namespace DotNetCoreSqlDb.Services
 
                 await client.DisconnectAsync(true);
                 
-                //await ProcessEmailsInQueue();
+                await ProcessEmailsInQueue();
             }
             catch (Exception ex)
             {

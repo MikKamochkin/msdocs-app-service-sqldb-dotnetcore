@@ -29,10 +29,6 @@ namespace DotNetCoreSqlDb.Models
         [Required]
         public required bool Accounted { get; set; } = false;
 
-        [DisplayName("LessonAccountingType")]
-        [Required]
-        public required string LessonAccountingType { get; set; } = "S100T100";
-
         [DisplayName("HasReachedMinimumDuration")]
         public bool? HasReachedMinimumDuration { get; set; } = false;
 

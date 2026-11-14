@@ -63,13 +63,5 @@ public static class DropdownOptions
         new SelectListItem { Text = "90 minutes", Value = "90" },
         new SelectListItem { Text = "120 minutes", Value = "120" }
     };
-    
-    public static List<SelectListItem> LessonAccountingType => new List<SelectListItem>
-    {
-        new SelectListItem { Text = "Student 0% Teacher 100%", Value = "S0T100" },
-        new SelectListItem { Text = "Student 50% Teacher 100%", Value = "S50T100" },
-        new SelectListItem { Text = "Student 100% Teacher 100%", Value = "S100T100" },
-        new SelectListItem { Text = "Student 0% Teacher 0%", Value = "S0T0" }
-    };
 
 }

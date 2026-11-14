@@ -526,12 +526,12 @@
         box-sizing: border-box;
     }
 
-    .schedule-manage-content #entriesTable th:nth-child(7),
-    .schedule-manage-content #entriesTable td:nth-child(7) {
+    .schedule-manage-content #entriesTable th:nth-child(6),
+    .schedule-manage-content #entriesTable td:nth-child(6) {
         text-align: center;
     }
 
-    .schedule-manage-content #entriesTable td:nth-child(7) .btn {
+    .schedule-manage-content #entriesTable td:nth-child(6) .btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -604,12 +604,6 @@
     .schedule-lesson-row.schedule-entry-fields>.form-group:last-child {
         flex-basis: 150px;
         width: 150px;
-    }
-
-    .schedule-lesson-card .schedule-accounting-field {
-        width: 240px;
-        max-width: 100%;
-        margin-top: 12px;
     }
 
     .schedule-price-card {
@@ -693,10 +687,6 @@
         .schedule-price-card .schedule-entry-actions {
             margin-top: 0;
         }
-    }
-
-    .schedule-price-stack.schedule-pricing-fields>.schedule-accounting-field {
-        width: 240px;
     }
 
     .schedule-editor-actions {
@@ -849,13 +839,6 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="schedule-accounting-field form-group">
-                                <label for="lessonAccountingType">Accounting Type</label>
-                                <select id="lessonAccountingType" class="form-control"
-                                        asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonAccountingType">
-                                    <option value="" selected>— select type —</option>
-                                </select>
-                            </div>
                         </div>
 
                     </div>
@@ -876,7 +859,6 @@
                                     <th style="width: 20%;">Student</th>
                                     <th style="width: 5%;">Status</th>
                                     <th style="width: 5%;">Duration</th>
-                                    <th style="width: 7%;">Accounting Type</th>
                                     <th style="width: 35%;">Notes</th>
                                     <th style="width: 5%;">Details</th>
                                     <th class="text-center" style="width: 5%;">🗑️</th>
@@ -935,19 +917,26 @@
                 $(function () {
                     makeSearchableSelect('teacherSelect', 'Search teachers…');
                     makeSearchableSelect('groupSelect', 'Search students…');
-                    // Blank-space clicks leave edit mode; controls and schedule rows keep it.
-                    document.querySelector('.schedule-manage-content').addEventListener('click', event => {
-                        if (!editingRow || !(event.target instanceof Element)) return;
-                        if (event.target.closest(
-                            'input, select, textarea, button, a, label, [role="button"], ' +
-                            '[role="combobox"], [contenteditable], .schedule-searchable, ' +
-                            '#entriesTable, .modal, [onclick], [tabindex]:not(.schedule-table-scroll)'
-                        )) return;
+                    // Blank-space clicks leave edit mode; controls, schedule rows and the lesson/price cards keep it.
+                    const manageContent = document.querySelector('.schedule-manage-content');
+                    const keepsEditing = target => !(target instanceof Element) || !!target.closest(
+                        'input, select, textarea, button, a, label, [role="button"], ' +
+                        '[role="combobox"], [contenteditable], .schedule-searchable, ' +
+                        '.schedule-lesson-card, .schedule-price-card, ' +
+                        '#entriesTable, .modal, [onclick], [tabindex]:not(.schedule-table-scroll)'
+                    );
+                    // A drag (e.g. selecting text in an input) fires click on the common ancestor,
+                    // so the press location has to be checked too.
+                    let pressTarget = null;
+                    manageContent.addEventListener('pointerdown', event => { pressTarget = event.target; });
+                    manageContent.addEventListener('click', event => {
+                        const pressedOn = pressTarget;
+                        pressTarget = null;
+                        if (!editingRow || keepsEditing(event.target) || (pressedOn && keepsEditing(pressedOn))) return;
                         // Only unused layout space counts; clicking text does not cancel editing.
                         if (event.target.matches(
                             '.schedule-manage-content, .schedule-manage-shell, .schedule-card, ' +
-                            '.schedule-entry-fields, .schedule-pricing-fields, .schedule-entry-actions, ' +
-                            '.schedule-filters, .schedule-filter-form, .form-group, ' +
+                            '.schedule-editor-grid, .schedule-entry-actions, .schedule-filters, .schedule-filter-form, .form-group, ' +
                             '.schedule-inline-controls, .schedule-table-scroll, .schedule-footer-actions'
                         )) cancelEdit();
                     });
@@ -1091,7 +1080,6 @@
                                     <td onclick="editRow(${i})">${r.GroupName}</td>
                                     <td onclick="editRow(${i})">${r.Status}</td>
                                     <td onclick="editRow(${i})">${r.Duration}</td>
-                                    <td onclick="editRow(${i})">${r.LessonAccountingType}</td>
                                     <td onclick="editRow(${i})" class="notes-cell ${notesPriorityClass}" title="${notesTitle}">
                                         ${shortNotes}
                                     </td>
@@ -1130,7 +1118,6 @@
                     $('#teacherPayCurrency').val(r.TeacherPayCurrency);
                     $('#statusSelect').val(r.Status);
                     $('#durationSelect').val(r.Duration);
-                    $('#lessonAccountingType').val(r.LessonAccountingType);
                     capturePricingBase();
 
                     // Highlight the selected row
@@ -1151,7 +1138,6 @@
                     $('#teacherPayCurrency').val('');
                     $('#statusSelect').val('');
                     $('#durationSelect').val('');
-                    $('#lessonAccountingType').val('');
 
                     // Remove all highlights
                     $('#entriesTable tbody tr').removeClass('table-info');
@@ -1175,7 +1161,6 @@
                     const s = $('#statusSelect').val();
                     const d0 = $('#selectedDate').val();
                     const dur = +$('#durationSelect').val();
-                    const lt = $('#lessonAccountingType').val();
                     const zone = $('#timeZoneSelect').val();
                     const token = $('#__RequestVerificationToken').val();
 
@@ -1185,7 +1170,6 @@
                         !teacherId ||
                         !s ||
                         !dur ||
-                        !lt ||
                         !studentChargeCurrency ||
                         !teacherPayCurrency
                     ) {
@@ -1211,8 +1195,7 @@
                             .toISO(),
 
                         Status: s,
-                        Duration: dur,
-                        LessonAccountingType: lt
+                        Duration: dur
                     };
 
                     // if we're editing an existing row, add its Id
@@ -1256,7 +1239,6 @@
 
                                 Status: response.status,
                                 Duration: response.duration,
-                                LessonAccountingType: response.lessonAccountingType,
 
                                 GroupName: $('#groupSelect option:selected').text(),
 

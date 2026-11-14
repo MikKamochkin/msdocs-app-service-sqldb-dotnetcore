@@ -113,15 +113,6 @@
                     </select>
                 </div>
 
-                <!-- Accounting Type -->
-                <div class="form-group">
-                    <label for="modalAccountingSelect">Accounting Type</label>
-                    <select id="modalAccountingSelect" class="form-control"
-                        asp-items="(IEnumerable<SelectListItem>)ViewBag.LessonAccountingType">
-                        <option value="">— select type —</option>
-                    </select>
-                </div>
-
                 <input type="hidden" id="modalDayOfWeek" />
             </div>
             <div class="modal-footer">
@@ -196,9 +187,6 @@
                 $('#modalDurationSelect').val('');
             }
 
-            const accounting = existing ? (existing.accountingType || existing.LessonAccountingType || 'S100T100') : 'S100T100';
-            $('#modalAccountingSelect').val(accounting);
-
             // show Delete only when editing an existing slot
             if (currentSlot.hasExisting) {
                 $('#modalDeleteBtn').show();
@@ -221,7 +209,6 @@
             const assignmentId = $('#modalGroupSelect').val() || null;
             const status = $('#modalStatusSelect').val() || 'Scheduled';
             const duration = parseInt($('#modalDurationSelect').val() || '0', 10);
-            const accountingType = $('#modalAccountingSelect').val() || 'S100T100';
 
             const payload = {
                 teacherId: teacherId,
@@ -229,8 +216,7 @@
                 time: time,
                 assignmentId: assignmentId,
                 status: status,
-                duration: duration,
-                lessonAccountingType: accountingType
+                duration: duration
             };
 
             $.ajax({
@@ -266,8 +252,7 @@
                 time: time,
                 assignmentId: null,          // <-- triggers delete on server
                 status: 'Scheduled',
-                duration: 0,
-                lessonAccountingType: 'S100T100'
+                duration: 0
             };
 
             $.ajax({
@@ -358,8 +343,7 @@
                     const existing = {
                         assignmentId: info.event.extendedProps.assignmentId,
                         status: ext.status,
-                        duration: ext.duration,
-                        accountingType: ext.accountingType
+                        duration: ext.duration
                     };
 
                     // use startStr instead of info.event.start

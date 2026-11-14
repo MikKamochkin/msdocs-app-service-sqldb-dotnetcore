@@ -5,6 +5,7 @@ using DotNetCoreSqlDb.Models;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using DotNetCoreSqlDb.Services;
 using DotNetCoreSqlDb.Helpers;
@@ -68,8 +69,77 @@ namespace DotNetCoreSqlDb.Controllers
             if (teacher == null)
                 return NotFound();
 
+            var user = await FindTeacherUserAsync(teacher.Id);
+            ViewBag.HasUser = user != null;
+            ViewBag.HasImpersonationPassword = user?.ImpersonationPasswordHash != null;
+
             return View(teacher);
         }
+
+        // POST: Teacher/SetImpersonationPassword
+        // Only touches the impersonation hash/salt; the teacher's own password, lockout counter and
+        // MustChangePassword flag are left alone so their normal sign-in is unaffected.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetImpersonationPassword(Guid teacherId)
+        {
+            var user = await FindTeacherUserAsync(teacherId);
+            if (user == null)
+                return NotFound();
+
+            string newPassword;
+            do
+            {
+                newPassword = RandomNumberGenerator.GetString(ImpersonationPasswordChars, 12);
+            }
+            // Login treats a password that matches the main one as a normal sign-in, so never reuse it
+            while (PasswordHelper.VerifyPassword(newPassword, user.PasswordHash, user.PasswordSalt));
+
+            PasswordHelper.CreatePasswordHash(
+                newPassword,
+                out byte[] passwordHash,
+                out byte[] passwordSalt
+            );
+
+            user.ImpersonationPasswordHash = passwordHash;
+            user.ImpersonationPasswordSalt = passwordSalt;
+
+            await _context.SaveChangesAsync();
+
+            // Plaintext is shown once on the Edit page
+            TempData["ImpersonationUsername"] = user.Username;
+            TempData["ImpersonationPassword"] = newPassword;
+
+            return RedirectToAction(nameof(Edit), new { id = teacherId });
+        }
+
+        // POST: Teacher/ClearImpersonationPassword
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ClearImpersonationPassword(Guid teacherId)
+        {
+            var user = await FindTeacherUserAsync(teacherId);
+            if (user == null)
+                return NotFound();
+
+            user.ImpersonationPasswordHash = null;
+            user.ImpersonationPasswordSalt = null;
+
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Edit), new { id = teacherId });
+        }
+
+        // Only teacher accounts: this controller is open to support, who must not get a password into an admin account
+        private Task<User?> FindTeacherUserAsync(Guid teacherId) =>
+            _context.User.FirstOrDefaultAsync(u =>
+                u.ID == teacherId &&
+                u.Role.ToLower() == "teacher" &&
+                _context.Teacher.Any(t => t.Id == teacherId));
+
+        // No look-alike characters (0/O, 1/l/I) so the password can be read off the screen
+        private const string ImpersonationPasswordChars =
+            "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
         // POST: Teacher/Edit/{id}
         [HttpPost]
