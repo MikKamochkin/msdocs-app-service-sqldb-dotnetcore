@@ -658,181 +658,183 @@
         </section>
     </main>
 
-    @section Scripts {
-        <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script>
-            // mobile burger toggle
-            $('#burger').on('click', function () {
-                $(this).toggleClass('active');
-                $('.nav-links').toggleClass('active');
-            });
-
-            const DateTime = luxon.DateTime;
-            const durationMap = @Html.Raw(ViewBag.DurationMapJson);
-            const existing = @Html.Raw(existingJson);
-            let rows = existing.slice();
-
-            const teacherId = '@ViewBag.TeacherId';
-
-            function prepareCopy(formId) {
-                const form = document.getElementById(formId);
-                if (!form) return;
-
-                const dt = document.getElementById('selectedDate').value;
-
-                form.querySelector('input[name="teacherId"]').value = teacherId;
-                form.querySelector('input[name="selectedDate"]').value = dt;
-            }
-
-            // Ensure day of week is bold immediately
-            $(function () {
-                $('#dayOfWeek').css('font-weight', 'bold');
-                renderTable();
-                const sel = $('#groupSelect').val();
-                if (sel) $('#durationSelect').val(durationMap[sel]);
-            });
-
-            $('#groupSelect').on('change', () => {
-                const groupId = $('#groupSelect').val();
-                $('#durationSelect').val(
-                    groupId ? durationMap[groupId] : ''
-                );
-            });
-
-            function shiftDay(delta) {
-                const input = $('#selectedDate')[0];
-                const d = new Date(input.value);
-                d.setDate(d.getDate() + delta);
-                input.value = d.toISOString().slice(0, 10);
-                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                $('#dayOfWeek').html('<span>' + days[d.getDay()] + '</span>').css('font-weight', 'bold');
-                input.form.submit();
-            }
-
-            function renderTable() {
-                const zone = $('#timeZoneSelect').val();
-
-                rows.sort((a, b) =>
-                    DateTime.fromISO(a.DateTime).toMillis() - DateTime.fromISO(b.DateTime).toMillis()
-                );
-
-                const tbody = $('#entriesTable tbody').empty();
-
-                rows.forEach((r, i) => {
-                    const dtIso = r?.DateTime;
-                    const groupName = r?.GroupName ?? '(unknown)';
-                    const duration = (r?.Duration ?? '') + (r?.Duration ? ' mins' : '');
-
-                    const dt = dtIso
-                        ? DateTime.fromISO(dtIso).setZone(zone).toFormat('HH:mm')
-                        : '(invalid time)';
-
-                    const canDeleteLesson = (r.CanDelete && r.Status != "Ongoing");
-
-                    //console.log("can delete? " + canDeleteLesson + " r.canDeleteLesson: " + r.canDeleteLesson + " r.Status: " + r.Status + " for lesson at: " + dt)
-
-                    const delBtn = `
-                        <button class="btn btn-sm btn-danger"
-                            ${canDeleteLesson ? '' : 'disabled'}
-                            onclick="deleteRow(${i})">×</button>
-                    `;
-
-                    tbody.append(`
-                    <tr>
-                        <td data-label="Time">${dt}</td>
-                        <td data-label="Student">${groupName}</td>
-                        <td data-label="Duration">${duration}</td>
-                        <td data-label="Delete">${delBtn}</td>
-                    </tr>
-                `);
-                });
-            }
-
-
-            function saveEntryAjax() {
-                const t = $('#timeSelect').val();
-                const g = $('#groupSelect').val();
-                const d0 = $('#selectedDate').val();
-                const dur = +$('#durationSelect').val();
-                const zone = $('#timeZoneSelect').val();
-                const token = $('#__RequestVerificationToken').val();
-
-                // tiny validation cleanup
-                if (!t || !g || !dur || !zone || !d0) {
-                    return alert('All fields are required.');
-                }
-
-                const dto = {
-                    GroupId: g,
-
-                    DateTime: luxon.DateTime
-                        .fromISO(`${d0}T${t}`, { zone })
-                        .toUTC()
-                        .toISO(),
-
-                    Duration: dur
-                };
-
-                $.ajax({
-                    url: '/Teachers/SaveEntry',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    headers: { 'RequestVerificationToken': token },
-                    data: JSON.stringify(dto),
-                    success(resp) {
-                        const added = {
-                            Id: resp.id,
-                            GroupId: resp.groupId,
-                            DateTime: resp.dateTime,
-                            Duration: resp.duration,
-                            GroupName: resp.groupName,
-                            IsExisting: true,
-                            CanDelete: true,
-                            Status: resp.status
-                        };
-                        rows.push(added);
-                        renderTable();
-
-                        // Reset form
-                        $('#timeSelect').val('');
-                        $('#groupSelect').val('');
-                        $('#durationSelect').val('');
-                    },
-                    error(err) {
-                        alert('Save failed: ' + (err.responseJSON?.error || err.responseText));
-                    }
-                });
-            }
-
-            function deleteRow(i) {
-                const entry = rows[i];
-                if (!entry || !entry.Id) return;
-
-                if (!confirm('Delete this lesson?')) return;
-
-                const token = $('#__RequestVerificationToken').val();
-
-                $.ajax({
-                    url: '/Teachers/DeleteEntry',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    headers: {
-                        'RequestVerificationToken': token
-                    },
-                    data: JSON.stringify(entry.Id),
-                    success() {
-                        rows.splice(i, 1);
-                        renderTable();
-                    },
-                    error(err) {
-                        alert('Delete failed: ' + (err.responseJSON?.error || err.responseText));
-                    }
-                });
-            }
-
-        </script>
-    }
 </body>
 
 </html>
+
+@* Must stay outside <body>: content inside the <body> tag helper is rendered lazily, so a section defined there can be missed by the layout. *@
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // mobile burger toggle
+        $('#burger').on('click', function () {
+            $(this).toggleClass('active');
+            $('.nav-links').toggleClass('active');
+        });
+
+        const DateTime = luxon.DateTime;
+        const durationMap = @Html.Raw(ViewBag.DurationMapJson);
+        const existing = @Html.Raw(existingJson);
+        let rows = existing.slice();
+
+        const teacherId = '@ViewBag.TeacherId';
+
+        function prepareCopy(formId) {
+            const form = document.getElementById(formId);
+            if (!form) return;
+
+            const dt = document.getElementById('selectedDate').value;
+
+            form.querySelector('input[name="teacherId"]').value = teacherId;
+            form.querySelector('input[name="selectedDate"]').value = dt;
+        }
+
+        // Ensure day of week is bold immediately
+        $(function () {
+            $('#dayOfWeek').css('font-weight', 'bold');
+            renderTable();
+            const sel = $('#groupSelect').val();
+            if (sel) $('#durationSelect').val(durationMap[sel]);
+        });
+
+        $('#groupSelect').on('change', () => {
+            const groupId = $('#groupSelect').val();
+            $('#durationSelect').val(
+                groupId ? durationMap[groupId] : ''
+            );
+        });
+
+        function shiftDay(delta) {
+            const input = $('#selectedDate')[0];
+            const d = new Date(input.value);
+            d.setDate(d.getDate() + delta);
+            input.value = d.toISOString().slice(0, 10);
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            $('#dayOfWeek').html('<span>' + days[d.getDay()] + '</span>').css('font-weight', 'bold');
+            input.form.submit();
+        }
+
+        function renderTable() {
+            const zone = $('#timeZoneSelect').val();
+
+            rows.sort((a, b) =>
+                DateTime.fromISO(a.DateTime).toMillis() - DateTime.fromISO(b.DateTime).toMillis()
+            );
+
+            const tbody = $('#entriesTable tbody').empty();
+
+            rows.forEach((r, i) => {
+                const dtIso = r?.DateTime;
+                const groupName = r?.GroupName ?? '(unknown)';
+                const duration = (r?.Duration ?? '') + (r?.Duration ? ' mins' : '');
+
+                const dt = dtIso
+                    ? DateTime.fromISO(dtIso).setZone(zone).toFormat('HH:mm')
+                    : '(invalid time)';
+
+                const canDeleteLesson = (r.CanDelete && r.Status != "Ongoing");
+
+                //console.log("can delete? " + canDeleteLesson + " r.canDeleteLesson: " + r.canDeleteLesson + " r.Status: " + r.Status + " for lesson at: " + dt)
+
+                const delBtn = `
+                    <button class="btn btn-sm btn-danger"
+                        ${canDeleteLesson ? '' : 'disabled'}
+                        onclick="deleteRow(${i})">×</button>
+                `;
+
+                tbody.append(`
+                <tr>
+                    <td data-label="Time">${dt}</td>
+                    <td data-label="Student">${groupName}</td>
+                    <td data-label="Duration">${duration}</td>
+                    <td data-label="Delete">${delBtn}</td>
+                </tr>
+            `);
+            });
+        }
+
+
+        function saveEntryAjax() {
+            const t = $('#timeSelect').val();
+            const g = $('#groupSelect').val();
+            const d0 = $('#selectedDate').val();
+            const dur = +$('#durationSelect').val();
+            const zone = $('#timeZoneSelect').val();
+            const token = $('#__RequestVerificationToken').val();
+
+            // tiny validation cleanup
+            if (!t || !g || !dur || !zone || !d0) {
+                return alert('All fields are required.');
+            }
+
+            const dto = {
+                GroupId: g,
+
+                DateTime: luxon.DateTime
+                    .fromISO(`${d0}T${t}`, { zone })
+                    .toUTC()
+                    .toISO(),
+
+                Duration: dur
+            };
+
+            $.ajax({
+                url: '/Teachers/SaveEntry',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': token },
+                data: JSON.stringify(dto),
+                success(resp) {
+                    const added = {
+                        Id: resp.id,
+                        GroupId: resp.groupId,
+                        DateTime: resp.dateTime,
+                        Duration: resp.duration,
+                        GroupName: resp.groupName,
+                        IsExisting: true,
+                        CanDelete: true,
+                        Status: resp.status
+                    };
+                    rows.push(added);
+                    renderTable();
+
+                    // Reset form
+                    $('#timeSelect').val('');
+                    $('#groupSelect').val('');
+                    $('#durationSelect').val('');
+                },
+                error(err) {
+                    alert('Save failed: ' + (err.responseJSON?.error || err.responseText));
+                }
+            });
+        }
+
+        function deleteRow(i) {
+            const entry = rows[i];
+            if (!entry || !entry.Id) return;
+
+            if (!confirm('Delete this lesson?')) return;
+
+            const token = $('#__RequestVerificationToken').val();
+
+            $.ajax({
+                url: '/Teachers/DeleteEntry',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                data: JSON.stringify(entry.Id),
+                success() {
+                    rows.splice(i, 1);
+                    renderTable();
+                },
+                error(err) {
+                    alert('Delete failed: ' + (err.responseJSON?.error || err.responseText));
+                }
+            });
+        }
+
+    </script>
+}
